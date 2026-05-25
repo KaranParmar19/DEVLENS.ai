@@ -1,0 +1,66 @@
+# ============================================================
+# DevLens AI — Backend Dependencies (pinned for reproducibility)
+# ============================================================
+
+# --- Core Framework ---
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+python-multipart==0.0.20
+
+# --- Configuration & Validation ---
+pydantic==2.10.3
+pydantic-settings==2.6.1
+
+# --- Database: Async PostgreSQL + pgvector ---
+sqlalchemy[asyncio]==2.0.36
+asyncpg==0.30.0
+pgvector==0.3.5
+alembic==1.14.0
+
+# --- Cache & Message Broker ---
+redis==5.2.0
+celery[redis]==5.4.0
+
+# --- AI / LLM ---
+openai==1.57.0                  # Embeddings (text-embedding-3-small) + GPT-4o (chat)
+langchain==0.3.9
+langchain-openai==0.2.11        # ChatOpenAI (gpt-4o) + OpenAIEmbeddings
+langchain-community==0.3.9
+langchain-core==0.3.24
+
+# --- Async HTTP Client (GitHub API) ---
+httpx==0.28.1
+
+# --- Git (sparse clone for private repos) ---
+gitpython==3.1.43
+
+# --- Code Parsing (AST-aware chunking) ---
+tree-sitter==0.23.2
+tree-sitter-python==0.23.6
+tree-sitter-javascript==0.23.1
+tree-sitter-typescript==0.23.2
+
+# --- Graph Processing & Layout ---
+networkx==3.4.2
+scipy==1.14.1
+numpy==1.26.4
+
+# --- Security (GitHub OAuth + JWT) ---
+python-jose[cryptography]==3.3.0
+cryptography==43.0.3
+
+# --- Structured Logging ---
+structlog==24.4.0
+colorama==0.4.6                 # Coloured dev console output
+
+# --- Utilities ---
+aiofiles==24.1.0
+python-dotenv==1.0.1
+click==8.1.8
+
+# --- Testing ---
+pytest==8.3.4
+pytest-asyncio==0.24.0
+pytest-cov==6.0.0
+factory-boy==3.3.1
+aiosqlite==0.20.0          # SQLite async engine for test fixtures
