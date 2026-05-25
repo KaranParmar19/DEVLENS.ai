@@ -1,0 +1,124 @@
+version: "3.9"
+
+# ============================================================
+# DevLens AI — Local Development Stack
+# Usage: docker-compose up --build
+# ============================================================
+
+services:
+
+  # ── PostgreSQL + pgvector ──────────────────────────────────
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: devlens_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: devlens
+      POSTGRES_PASSWORD: devlens_password
+      POSTGRES_DB: devlens
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devlens -d devlens"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis (Celery broker + rate limiter + session cache) ───
+  redis:
+    image: redis:7-alpine
+    container_name: devlens_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── FastAPI Application Server ─────────────────────────────
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: devlens_api
+    restart: unless-stopped
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app          # Live reload in dev
+      - repo_cache:/tmp/repos   # Temp storage for sparse clones
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://devlens:devlens_password@postgres:5432/devlens
+      - REDIS_URL=redis://redis:6379/0
+    env_file:
+      - ./backend/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── Celery Worker (background ingestion jobs) ──────────────
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: devlens_worker
+    restart: unless-stopped
+    command: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=2 -Q ingestion
+    volumes:
+      - ./backend:/app
+      - repo_cache:/tmp/repos
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://devlens:devlens_password@postgres:5432/devlens
+      - REDIS_URL=redis://redis:6379/0
+    env_file:
+      - ./backend/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── Celery Flower (job monitoring UI) ─────────────────────
+  flower:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: devlens_flower
+    restart: unless-stopped
+    command: celery -A app.tasks.celery_app flower --port=5555
+    ports:
+      - "5555:5555"
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - redis
+
+  # ── pgAdmin (DB management UI) ─────────────────────────────
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: devlens_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@devlens.ai
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
+  redis_data:
+  repo_cache:
