@@ -97,13 +97,22 @@ services:
       target: development
     container_name: devlens_flower
     restart: unless-stopped
-    command: celery -A app.tasks.celery_app flower --port=5555
+    # flower is a separate package (not bundled with celery since v5).
+    # It's now in requirements.txt. The --broker flag ensures it connects
+    # to Redis even before the first worker task is processed.
+    command: >
+      celery -A app.tasks.celery_app flower
+        --port=5555
+        --broker=redis://redis:6379/0
     ports:
       - "5555:5555"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
     env_file:
       - ./backend/.env
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
 
   # ── pgAdmin (DB management UI) ─────────────────────────────
   pgadmin:
