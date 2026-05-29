@@ -2,15 +2,19 @@
 DevLens AI — GitHub API Client
 Async wrapper around the GitHub REST API v3.
 Handles rate limiting, pagination, auth, and repo size validation.
-Strategy: Use GitHub Contents API (no clone) for public repos.
-          Fall back to sparse git clone for private repos.
+
+Strategy: Use GitHub Git Trees API for the file tree (one call, recursive)
+          then fetch individual files via Contents API (bounded concurrency).
+
+BUG-01 FIX: iter_repo_files no longer internally re-fetches the file tree.
+            Caller passes size_map so we avoid a duplicate API call.
 """
 
 import asyncio
 import base64
 import re
 import structlog
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import AsyncIterator
 
 import httpx
@@ -21,6 +25,9 @@ logger = structlog.get_logger(__name__)
 settings = get_settings()
 
 GITHUB_API_BASE = "https://api.github.com"
+
+# Back-off delays for rate-limit retries (seconds)
+_RATE_LIMIT_DELAYS = [30, 60, 120]
 
 
 @dataclass
@@ -37,7 +44,7 @@ class RepoMeta:
     forks: int
     default_branch: str
     size_kb: int
-    languages: dict[str, int]  # {"TypeScript": 62, ...} as percentages
+    languages: dict[str, int]   # {"TypeScript": 62, ...} as percentages
     latest_commit_sha: str
 
 
@@ -46,8 +53,8 @@ class RepoFile:
     """A single file fetched from the GitHub Contents API."""
     path: str
     size_bytes: int
-    content: str          # Decoded UTF-8 content
-    language: str = ""    # Populated by language_detector
+    content: str           # Decoded UTF-8 content
+    language: str = ""     # Populated by language_detector
 
 
 class GitHubClient:
@@ -73,7 +80,7 @@ class GitHubClient:
         self._client = httpx.AsyncClient(
             base_url=GITHUB_API_BASE,
             headers=headers,
-            timeout=30.0,
+            timeout=httpx.Timeout(connect=10.0, read=60.0, write=10.0, pool=5.0),
             follow_redirects=True,
         )
 
@@ -86,20 +93,40 @@ class GitHubClient:
     # ── Core Request ───────────────────────────────────────────────────────
 
     async def _get(self, path: str, **params) -> dict | list:
-        """Make a GET request, handle rate limiting with exponential backoff."""
-        for attempt in range(3):
-            resp = await self._client.get(path, params=params)
+        """
+        Make a GET request.
+        Handles rate limiting (403/429) with exponential back-off.
+        Raises httpx.HTTPStatusError for non-transient errors.
+        """
+        delays = iter(_RATE_LIMIT_DELAYS)
+        while True:
+            resp = await self._client.get(path, params=params or None)
 
-            if resp.status_code == 403 and "rate limit" in resp.text.lower():
-                wait = 2 ** attempt * 30
-                logger.warning("github_rate_limited", wait_seconds=wait)
-                await asyncio.sleep(wait)
-                continue
+            # Primary rate limit (unauthenticated: 60/hr; authenticated: 5000/hr)
+            if resp.status_code in (403, 429):
+                body_lower = resp.text.lower()
+                if "rate limit" in body_lower or resp.status_code == 429:
+                    # Check GitHub's Retry-After or x-ratelimit-reset headers
+                    retry_after = resp.headers.get("Retry-After")
+                    reset_ts = resp.headers.get("x-ratelimit-reset")
+                    if retry_after:
+                        wait = int(retry_after)
+                    elif reset_ts:
+                        import time
+                        wait = max(0, int(reset_ts) - int(time.time())) + 2
+                    else:
+                        try:
+                            wait = next(delays)
+                        except StopIteration:
+                            raise RuntimeError(
+                                f"GitHub rate limit exceeded after all retries for {path}"
+                            )
+                    logger.warning("github_rate_limited", path=path, wait_seconds=wait)
+                    await asyncio.sleep(wait)
+                    continue
 
             resp.raise_for_status()
             return resp.json()
-
-        raise RuntimeError("GitHub rate limit exceeded after retries.")
 
     # ── Repo Metadata ──────────────────────────────────────────────────────
 
@@ -107,7 +134,7 @@ class GitHubClient:
         """Fetch repository metadata and language breakdown."""
         data = await self._get(f"/repos/{owner}/{name}")
 
-        # Get language percentages
+        # Get language percentages (bytes per language → percent)
         lang_raw: dict = await self._get(f"/repos/{owner}/{name}/languages")
         total_bytes = sum(lang_raw.values()) or 1
         languages = {
@@ -115,10 +142,13 @@ class GitHubClient:
             for lang, bytes_ in sorted(lang_raw.items(), key=lambda x: -x[1])
         }
 
-        # Get latest commit SHA on default branch
+        # Get latest commit SHA on the repo's real default branch
         branch = data.get("default_branch", "main")
-        branch_data = await self._get(f"/repos/{owner}/{name}/branches/{branch}")
-        commit_sha = branch_data["commit"]["sha"]
+        try:
+            branch_data = await self._get(f"/repos/{owner}/{name}/branches/{branch}")
+            commit_sha = branch_data["commit"]["sha"]
+        except Exception:
+            commit_sha = "unknown"
 
         return RepoMeta(
             github_id=data["id"],
@@ -144,7 +174,10 @@ class GitHubClient:
         """
         Fetch the full recursive file tree using the Git Trees API.
         This single API call returns ALL paths — no pagination needed.
-        Filtered: skips directories, returns only blobs (files).
+        Returns only blob (file) entries, not trees/dirs.
+
+        Also returns a size_map {path: size_bytes} for the caller to use
+        so they don't need to re-fetch the tree.
         """
         data = await self._get(
             f"/repos/{owner}/{name}/git/trees/{branch}",
@@ -168,8 +201,7 @@ class GitHubClient:
     ) -> str | None:
         """
         Fetch a single file's content via Contents API.
-        Returns decoded UTF-8 string, or None if binary/too large.
-        Max file size: GITHUB_API_CONTENTS_MAX = 1MB (GitHub limit).
+        Returns decoded UTF-8 string, or None if binary/too large/not found.
         """
         try:
             data = await self._get(
@@ -186,7 +218,7 @@ class GitHubClient:
             logger.debug("file_fetch_skipped", path=path, reason=str(exc))
             return None
 
-    # ── Batch File Fetcher ─────────────────────────────────────────────────
+    # ── Batch File Fetcher (BUG-01 FIXED) ─────────────────────────────────
 
     async def iter_repo_files(
         self,
@@ -194,11 +226,16 @@ class GitHubClient:
         name: str,
         branch: str,
         allowed_paths: list[str],
+        size_map: dict[str, int],          # ← NEW: pre-built from get_file_tree
         concurrency: int = 10,
     ) -> AsyncIterator[RepoFile]:
         """
         Fetch multiple files concurrently (bounded by semaphore).
         Yields RepoFile objects as they complete.
+
+        BUG-01 FIX: size_map is now passed in by the caller.
+        We no longer call get_file_tree() internally, avoiding
+        a duplicate API call that could exhaust rate limits.
         """
         semaphore = asyncio.Semaphore(concurrency)
 
@@ -208,10 +245,6 @@ class GitHubClient:
                 if content is None:
                     return None
                 return RepoFile(path=path, size_bytes=size_bytes, content=content)
-
-        # Build tree lookup for sizes
-        tree = await self.get_file_tree(owner, name, branch)
-        size_map = {item["path"]: item.get("size", 0) for item in tree}
 
         tasks = [
             fetch_one(path, size_map.get(path, 0))
@@ -227,7 +260,11 @@ class GitHubClient:
 def parse_github_url(url: str) -> tuple[str, str]:
     """
     Extract (owner, repo_name) from a GitHub URL.
-    Handles: https://github.com/org/repo, github.com/org/repo, org/repo
+    Handles:
+      https://github.com/org/repo
+      https://github.com/org/repo.git
+      github.com/org/repo
+      org/repo
     """
     url = url.strip().rstrip("/")
     # Match: optional protocol + optional github.com/ + owner/name
@@ -238,4 +275,4 @@ def parse_github_url(url: str) -> tuple[str, str]:
     parts = url.split("/")
     if len(parts) == 2:
         return parts[0], parts[1]
-    raise ValueError(f"Cannot parse GitHub URL: {url}")
+    raise ValueError(f"Cannot parse GitHub URL: {url!r}")
