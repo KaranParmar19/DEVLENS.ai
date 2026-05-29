@@ -20,6 +20,7 @@ alembic==1.14.0
 # --- Cache & Message Broker ---
 redis==5.2.0
 celery[redis]==5.4.0
+flower==2.0.1                   # Celery monitoring UI (separate package since Celery 5)
 
 # --- AI / LLM ---
 openai==1.57.0                  # Embeddings (text-embedding-3-small) + GPT-4o (chat)
@@ -27,6 +28,7 @@ langchain==0.3.9
 langchain-openai==0.2.11        # ChatOpenAI (gpt-4o) + OpenAIEmbeddings
 langchain-community==0.3.9
 langchain-core==0.3.24
+tenacity==8.5.0                 # Exponential back-off with jitter for retry logic
 
 # --- Async HTTP Client (GitHub API) ---
 httpx==0.28.1
