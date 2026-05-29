@@ -345,11 +345,11 @@ function OnboardingFlow() {
       {step === 1 && (
         <WelcomeStep
           onStart={() => setStep(2)}
-          onSkip={() => window.location.href = "/"}
+          onSkip={() => window.location.href = "/dashboard"}
         />
       )}
       {step === 2 && <AnalysisStep onDone={() => setStep(3)} />}
-      {step === 3 && <TourStep onComplete={() => { window.location.href = "/"; }} />}
+      {step === 3 && <TourStep onComplete={() => { window.location.href = "/dashboard"; }} />}
     </div>
   );
 }

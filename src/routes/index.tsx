@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { LoadingShowcase } from "@/components/loading-showcase";
 import {
   InterrogationSection,
@@ -49,6 +49,7 @@ const getRandomChar = () => CORRUPT_CHARS[Math.floor(Math.random() * CORRUPT_CHA
 
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────────────
 function Index() {
+  const navigate = useNavigate({ from: "/" });
   const [repoUrl, setRepoUrl] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
@@ -122,6 +123,15 @@ function Index() {
     }, 300); // severing duration
   };
 
+  const handleAnalyze = (url: string) => {
+    if (url.trim()) {
+      navigate({
+        to: "/dashboard",
+        search: { repo: url.trim() },
+      });
+    }
+  };
+
   // State-derived UI
   const isConnectFlow = ["establishing", "established", "severing"].includes(tunnelState);
   
@@ -183,13 +193,52 @@ function Index() {
         <div className="font-mono text-xs font-semibold -rotate-90 tracking-tighter text-brand-heading py-4 whitespace-nowrap">
           DEVLENS_v2
         </div>
-        <div className="flex flex-1 flex-col gap-8 items-center">
+        <div className="flex flex-1 flex-col gap-6 items-center">
           <div className="h-px w-4 bg-white/10" />
-          {/* Default icons */}
-          <div className="size-2 rounded-full bg-brand-accent transition-colors" />
-          <div className="size-2 rounded-full bg-brand-accent transition-colors" />
-          <div className="size-2 rounded-full bg-brand-accent transition-colors" />
-          <div className="size-2 rounded-full bg-zinc-100 ring-4 ring-zinc-100/10 shadow-[0_0_15px_rgba(255,255,255,0.2)]" />
+          
+          {/* Home Link */}
+          <Link
+            to="/"
+            activeProps={{ className: "bg-zinc-100 text-zinc-950 ring-4 ring-zinc-100/10" }}
+            inactiveProps={{ className: "bg-zinc-900 border border-white/5 text-zinc-400 hover:text-brand-heading hover:bg-zinc-800" }}
+            className="size-8 rounded-full flex items-center justify-center font-mono text-[9px] font-bold tracking-tighter transition-all cursor-pointer"
+            title="Home"
+          >
+            H
+          </Link>
+
+          {/* Onboarding Link */}
+          <Link
+            to="/onboarding"
+            activeProps={{ className: "bg-zinc-100 text-zinc-950 ring-4 ring-zinc-100/10" }}
+            inactiveProps={{ className: "bg-zinc-900 border border-white/5 text-zinc-400 hover:text-brand-heading hover:bg-zinc-800" }}
+            className="size-8 rounded-full flex items-center justify-center font-mono text-[9px] font-bold tracking-tighter transition-all cursor-pointer"
+            title="Onboarding"
+          >
+            O
+          </Link>
+
+          {/* Dashboard Link */}
+          <Link
+            to="/dashboard"
+            activeProps={{ className: "bg-zinc-100 text-zinc-950 ring-4 ring-zinc-100/10" }}
+            inactiveProps={{ className: "bg-zinc-900 border border-white/5 text-zinc-400 hover:text-brand-heading hover:bg-zinc-800" }}
+            className="size-8 rounded-full flex items-center justify-center font-mono text-[9px] font-bold tracking-tighter transition-all cursor-pointer"
+            title="Dashboard"
+          >
+            D
+          </Link>
+
+          {/* Pricing Link */}
+          <Link
+            to="/pricing"
+            activeProps={{ className: "bg-zinc-100 text-zinc-950 ring-4 ring-zinc-100/10" }}
+            inactiveProps={{ className: "bg-zinc-900 border border-white/5 text-zinc-400 hover:text-brand-heading hover:bg-zinc-800" }}
+            className="size-8 rounded-full flex items-center justify-center font-mono text-[9px] font-bold tracking-tighter transition-all cursor-pointer"
+            title="Pricing"
+          >
+            $
+          </Link>
         </div>
         {avatarUrl ? (
           <div className="group relative flex flex-col items-center gap-1">
@@ -214,13 +263,6 @@ function Index() {
             </svg>
           </button>
         )}
-        <Link
-          to="/pricing"
-          className="size-8 rounded-sm bg-zinc-100 flex items-center justify-center text-zinc-950 font-mono text-[9px] font-semibold tracking-tighter hover:bg-white transition-colors"
-          title="Pricing"
-        >
-          $
-        </Link>
       </nav>
 
       <div className="pl-16">
@@ -263,7 +305,7 @@ function Index() {
 
                 {/* Command bar */}
                 <form
-                  onSubmit={(e) => { e.preventDefault(); setAnalyzing(true); }}
+                  onSubmit={(e) => { e.preventDefault(); handleAnalyze(repoUrl); }}
                   className="mt-16 group relative max-w-xl"
                 >
                   <div 
@@ -350,7 +392,7 @@ function Index() {
           repoUrl={repoUrl}
           setRepoUrl={setRepoUrl}
           analyzing={analyzing}
-          onSubmit={() => setAnalyzing(true)}
+          onSubmit={() => handleAnalyze(repoUrl)}
         />
       </div>
     </div>
