@@ -61,8 +61,10 @@ class Settings(BaseSettings):
     # ── CORS ───────────────────────────────────────────────────────────────
     frontend_url: str = "http://localhost:8081"
     cors_origins: List[str] | str = [
-        "http://localhost:5173",
         "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost:8080",
+        "http://localhost:8081",
     ]
 
     # ── Rate Limiting ──────────────────────────────────────────────────────
