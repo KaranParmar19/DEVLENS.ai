@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { LoadingShowcase } from "@/components/loading-showcase";
 import {
   InterrogationSection,
@@ -8,12 +8,19 @@ import {
   FinalCTASection,
 } from "@/components/landing-sections";
 import { PortalTransform } from "@/components/portal-transform";
+import { NeuralMesh } from "@/components/neural-mesh";
+import { ScrollNarrative } from "@/components/scroll-narrative";
+import { HeroExtras } from "@/components/hero-extras";
 
 export const Route = createFileRoute("/")({
   component: Index,
   head: () => ({
     meta: [
       { title: "DevLens AI — Understand any codebase in seconds" },
+      { name: "description", content: "DevLens AI gives you an interactive cognitive layer for any codebase. Architecture maps, code flow, smart Q&A, and auto-generated onboarding docs — in under 8 seconds." },
+      { property: "og:title", content: "DevLens AI — Understand any codebase in seconds" },
+      { property: "og:description", content: "Map architecture, trace flows, and query any GitHub repository like a senior engineer who's read every line." },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -154,6 +161,10 @@ function Index() {
 
   return (
     <div className="min-h-screen bg-[#09090b] font-sans text-brand-text selection:bg-zinc-800 selection:text-zinc-100">
+      {/* Neural Mesh — fixed background */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <NeuralMesh opacity={0.08} />
+      </div>
       <style>{`
         @keyframes pulseHeartbeat {
           0%, 100% { opacity: 0.4; }
@@ -168,7 +179,7 @@ function Index() {
       <PortalTransform open={analyzing} repoUrl={repoUrl} onClose={() => setAnalyzing(false)} />
 
       {/* Fixed Gutter Navigation */}
-      <nav className="fixed top-0 bottom-0 left-0 z-50 w-16 border-r border-white/5 bg-[#09090b] flex flex-col items-center py-8 gap-12">
+      <nav className="fixed top-0 bottom-0 left-0 z-50 w-16 border-r border-white/5 bg-[#09090b]/95 backdrop-blur flex flex-col items-center py-8 gap-12">
         <div className="font-mono text-xs font-semibold -rotate-90 tracking-tighter text-brand-heading py-4 whitespace-nowrap">
           DEVLENS_v2
         </div>
@@ -203,12 +214,13 @@ function Index() {
             </svg>
           </button>
         )}
-        <button
-          type="button"
-          className="size-8 rounded-sm bg-zinc-100 flex items-center justify-center text-zinc-950 font-mono text-[10px] font-semibold tracking-tighter cursor-pointer"
+        <Link
+          to="/pricing"
+          className="size-8 rounded-sm bg-zinc-100 flex items-center justify-center text-zinc-950 font-mono text-[9px] font-semibold tracking-tighter hover:bg-white transition-colors"
+          title="Pricing"
         >
-          AI
-        </button>
+          $
+        </Link>
       </nav>
 
       <div className="pl-16">
@@ -324,8 +336,22 @@ function Index() {
             </div>
           </div>
         </section>
-        
+
+        {/* Scroll-driven narrative */}
+        <ScrollNarrative />
+
+        {/* Loading showcase + other landing sections */}
         <LoadingShowcase />
+        <HeroExtras />
+        <InterrogationSection />
+        <TimeDeltaSection />
+        <FieldReportsSection />
+        <FinalCTASection
+          repoUrl={repoUrl}
+          setRepoUrl={setRepoUrl}
+          analyzing={analyzing}
+          onSubmit={() => setAnalyzing(true)}
+        />
       </div>
     </div>
   );

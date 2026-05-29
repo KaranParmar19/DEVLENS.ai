@@ -741,41 +741,205 @@ function ChatInput({ onSend, repoLabel, disabled }: { onSend: (msg: string) => v
 /* --------------------------- Center placeholders -------------------------- */
 
 function CodeFlowPlaceholder() {
+  const LANES = [
+    { id: "client",  label: "Client",     color: "#4A8FFF" },
+    { id: "gateway", label: "APIGateway",  color: "#00E5A0" },
+    { id: "auth",    label: "AuthService", color: "#FF6B6B" },
+    { id: "db",      label: "Database",    color: "#A78BFA" },
+  ];
+
+  const STEPS = [
+    { from: 0, to: 1, label: "POST /api/analyze",       y: 80 },
+    { from: 1, to: 2, label: "validateJWT(token)",       y: 130 },
+    { from: 2, to: 1, label: "✓ user: { id, plan }",    y: 160, dashed: true },
+    { from: 1, to: 3, label: "repos.findOrCreate(url)",  y: 210 },
+    { from: 3, to: 1, label: "✓ repo_id: 4821",         y: 240, dashed: true },
+    { from: 1, to: 0, label: "202 Accepted · job_id",   y: 290, dashed: true },
+    { from: 0, to: 1, label: "WS /analysis/{id}/status",y: 350 },
+    { from: 1, to: 0, label: "{ step: 'cloning', pct: 12 }", y: 400, dashed: true },
+    { from: 1, to: 0, label: "{ step: 'done', pct: 100 }",  y: 450, dashed: true },
+  ];
+
+  const W = 600;
+  const H = 520;
+  const LANE_W = W / LANES.length;
+  const CENTER = (i: number) => LANE_W * i + LANE_W / 2;
+
   return (
-    <div className="absolute inset-0 grid place-items-center text-center">
-      <div>
-        <div className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
-          Code_Flow
+    <div className="absolute inset-0 overflow-auto bg-brand-bg">
+      <div className="p-4">
+        <div className="font-mono text-[10px] uppercase tracking-widest text-zinc-600 mb-4">
+          Code_Flow · POST /api/repos/analyze · Execution Trace
         </div>
-        <div className="text-zinc-500 text-sm mt-2 max-w-sm">
-          Trace execution paths across modules. Select a function to see callers and callees.
-        </div>
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          className="w-full max-w-3xl mx-auto"
+          style={{ fontFamily: "'Geist Mono', monospace" }}
+        >
+          {/* Lane headers */}
+          {LANES.map((lane, i) => (
+            <g key={lane.id}>
+              <rect x={CENTER(i) - 44} y={4} width={88} height={28} rx={4}
+                fill="#111" stroke={lane.color} strokeWidth="0.8" />
+              <text x={CENTER(i)} y={23} textAnchor="middle" fill={lane.color}
+                fontSize={9} fontWeight={600}>
+                {lane.label}
+              </text>
+              {/* Lifeline */}
+              <line x1={CENTER(i)} y1={36} x2={CENTER(i)} y2={H - 20}
+                stroke="#2A2A2A" strokeWidth={0.8} strokeDasharray="4 4" />
+            </g>
+          ))}
+
+          {/* Arrows */}
+          {STEPS.map((step, idx) => {
+            const x1 = CENTER(step.from);
+            const x2 = CENTER(step.to);
+            const dir = x2 > x1 ? 1 : -1;
+            const arrX = x2 - dir * 8;
+            const midX = (x1 + x2) / 2;
+            const color = step.dashed ? "#3A3A3A" : "#555";
+            return (
+              <g key={idx}>
+                <line
+                  x1={x1} y1={step.y} x2={arrX} y2={step.y}
+                  stroke={color} strokeWidth={0.9}
+                  strokeDasharray={step.dashed ? "4 3" : undefined}
+                />
+                <polygon
+                  points={`${x2},${step.y} ${arrX - dir*4},${step.y - 4} ${arrX - dir*4},${step.y + 4}`}
+                  fill={color}
+                />
+                {/* Label */}
+                <text
+                  x={midX} y={step.y - 5}
+                  textAnchor="middle" fill={step.dashed ? "#3A3A3A" : "#555"}
+                  fontSize={8}
+                >
+                  {step.label}
+                </text>
+                {/* Activation box */}
+                <rect
+                  x={x1 - 4} y={step.y - 2} width={8} height={16}
+                  fill="#1C1C1C" stroke={LANES[step.from].color} strokeWidth={0.6}
+                  opacity={0.7}
+                />
+              </g>
+            );
+          })}
+        </svg>
+        <p className="text-center font-mono text-[10px] text-zinc-700 mt-4">
+          // Select a function in the graph to trace its execution path
+        </p>
       </div>
     </div>
   );
 }
 
 function OnboardingDocPlaceholder({ repo }: { repo: string }) {
+  const sections = [
+    {
+      title: "Overview",
+      content: `${repo} is a production-grade application with a modular architecture. The codebase follows domain-driven design principles with clear separation of concerns across Auth, API, Database, and UI layers.`,
+    },
+    {
+      title: "Tech Stack",
+      content: "TypeScript · React 18 · FastAPI · PostgreSQL · Redis · OpenAI GPT-4",
+      isBadges: true,
+    },
+    {
+      title: "Architecture",
+      content: "Requests flow through APIGateway → AuthService (JWT validation) → domain controllers → PostgreSQL via connection pool. CacheLayer (Redis) sits in front of hot read paths.",
+    },
+    {
+      title: "Key Modules",
+      items: [
+        { path: "src/services/api.gateway.ts", desc: "Central request router. All HTTP traffic enters here." },
+        { path: "src/services/auth.service.ts", desc: "JWT issuance, validation, refresh token rotation." },
+        { path: "src/controllers/user.controller.ts", desc: "User CRUD, profile management, plan enforcement." },
+        { path: "src/db/index.ts", desc: "PostgreSQL connection pool, migration runner." },
+        { path: "src/services/cache.layer.ts", desc: "Redis-backed read-through cache with TTL management." },
+      ],
+    },
+    {
+      title: "How to Contribute",
+      content: "1. Fork the repo and create a feature branch.\n2. Run tests: npm test.\n3. Submit a PR with a description of changes.\n4. All PRs require review from a CODEOWNER.",
+    },
+    {
+      title: "Common Patterns",
+      content: "Dependency injection via constructor params. Services are singletons. Controllers are stateless. All database access through the repository pattern.",
+    },
+    {
+      title: "⚠️ Gotchas",
+      content: "Never import from src/db directly in controllers — use repositories. AuthService caches tokens in Redis with a 15-min TTL; invalidation requires explicit cache.del(). The EventBus is not persistent — missed events are dropped.",
+      isWarning: true,
+    },
+  ];
+
   return (
-    <div className="absolute inset-0 overflow-auto p-10">
-      <div className="max-w-2xl mx-auto space-y-4">
-        <div className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
-          Onboarding_Doc
+    <div className="absolute inset-0 overflow-auto">
+      <div className="max-w-2xl mx-auto px-8 py-8 space-y-8">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">Onboarding_Doc</div>
+            <h3 className="text-xl font-medium text-white mt-1">Getting started with {repo}</h3>
+            <p className="text-xs text-zinc-500 mt-1">
+              Auto-generated by DevLens AI · GPT-4 · Based on full codebase analysis
+            </p>
+          </div>
+          <div className="flex gap-2">
+            {["Markdown", "Notion", "PDF"].map((fmt) => (
+              <button key={fmt} type="button"
+                className="font-mono text-[10px] px-2 py-1 rounded border border-zinc-800 text-zinc-500 hover:border-zinc-600 hover:text-zinc-300 transition-colors">
+                {fmt}
+              </button>
+            ))}
+          </div>
         </div>
-        <h3 className="text-2xl font-medium text-brand-heading">Getting started with {repo}</h3>
-        <p className="text-sm text-zinc-500 leading-relaxed">
-          A senior-engineer-grade walkthrough auto-generated from the codebase. Architecture,
-          critical paths, gotchas, and a "first PR" suggestion.
-        </p>
-        <div className="grid grid-cols-2 gap-3 pt-4">
-          {["Architecture", "Critical paths", "Conventions", "First PR"].map((s) => (
-            <div
-              key={s}
-              className="rounded bg-zinc-900/60 ring-1 ring-white/10 p-4 font-mono text-[11px] uppercase tracking-widest text-zinc-500"
-            >
-              {s}
-            </div>
-          ))}
+
+        {/* Sections */}
+        {sections.map((sec) => (
+          <div key={sec.title} className="border-l-2 pl-4"
+            style={{ borderColor: sec.isWarning ? "#FF4444" : "#2A2A2A" }}>
+            <h4 className="font-mono text-[11px] uppercase tracking-widest mb-3"
+              style={{ color: sec.isWarning ? "#FF4444" : "#00E5A0" }}>
+              {sec.title}
+            </h4>
+
+            {sec.isBadges && (
+              <div className="flex flex-wrap gap-2">
+                {(sec.content as string).split(" · ").map((b) => (
+                  <span key={b}
+                    className="font-mono text-[11px] px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400">
+                    {b}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {!sec.isBadges && sec.content && (
+              <p className="text-sm leading-relaxed"
+                style={{ color: sec.isWarning ? "#FF6666" : "#666", whiteSpace: "pre-line" }}>
+                {sec.content}
+              </p>
+            )}
+
+            {sec.items && (
+              <div className="space-y-2">
+                {sec.items.map((item) => (
+                  <div key={item.path}>
+                    <span className="font-mono text-[11px] text-[#00E5A0]">{item.path}</span>
+                    <p className="text-xs text-zinc-600 mt-0.5">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+
+        <div className="pt-4 border-t border-zinc-900 font-mono text-[10px] text-zinc-700">
+          // Generated {new Date().toLocaleDateString()} · DevLens AI v2 · GPT-4o · Full codebase indexed
         </div>
       </div>
     </div>

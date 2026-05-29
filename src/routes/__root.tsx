@@ -72,14 +72,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "DevLens AI — Understand any codebase in seconds" },
+      { name: "description", content: "DevLens AI gives you an interactive cognitive layer for any codebase. Architecture maps, code flow, smart Q&A, and onboarding docs in under 8 seconds." },
+      { name: "author", content: "DevLens AI" },
+      { property: "og:title", content: "DevLens AI — Understand any codebase in seconds" },
+      { property: "og:description", content: "Map architecture, trace flows, and query any GitHub repository like a senior engineer who's read every line." },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:site", content: "@DevLensAI" },
+      { name: "theme-color", content: "#09090b" },
     ],
     links: [
       {
