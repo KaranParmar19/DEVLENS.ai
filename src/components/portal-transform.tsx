@@ -77,11 +77,6 @@ export function PortalTransform({
       const t = setTimeout(() => setProcessingDone(true), 400);
       return () => clearTimeout(t);
     }
-    // Fallback fake ticker if backend is not connected
-    if (!isRunning && shown && !processingDone && activeStep < STEPS.length) {
-      const t = setTimeout(() => setActiveStep((s) => s + 1), STEP_INTERVAL);
-      return () => clearTimeout(t);
-    }
   }, [currentStepIndex, analysisState.isComplete, isRunning, shown, activeStep, processingDone]);
 
   // After overlay dissolves → flash + draw nodes
@@ -100,11 +95,8 @@ export function PortalTransform({
     };
   }, [processingDone]);
 
-  // Smooth progress bar driven by activeStep (with eased interpolation via CSS)
-  const progressPct = useMemo(() => {
-    const base = Math.min(activeStep, STEPS.length) / STEPS.length;
-    return Math.round(base * 100);
-  }, [activeStep]);
+  // Use real backend progress percentage
+  const progressPct = analysisState.progressPct;
 
   if (!mounted) return null;
 
@@ -133,8 +125,9 @@ export function PortalTransform({
         <DashboardShell
           repoUrl={repoUrl}
           onClose={onClose}
-          drawNodes={drawNodes}
-          showFlash={showFlash}
+          drawNodes={true}
+          showFlash={false}
+          sessionId={analysisState.sessionId ?? undefined}
           graphData={analysisState.graphData ?? undefined}
           fileTree={analysisState.filesData?.tree}
           entryPoints={analysisState.filesData?.entry_points}
@@ -143,24 +136,28 @@ export function PortalTransform({
       </div>
 
       {/* ===== Phase 3 — Processing overlay ===== */}
-      <div
-        className="absolute inset-0 grid place-items-center"
-        style={{
-          backgroundColor: "rgba(0,0,0,0.85)",
-          backdropFilter: "blur(2px)",
-          opacity: processingDone ? 0 : 1,
-          transition: `opacity ${OVERLAY_FADE_OUT}ms ${ease}`,
-          pointerEvents: processingDone ? "none" : "auto",
-          willChange: "opacity",
-        }}
-      >
-        <ProcessingModal
-          repoUrl={repoUrl}
-          activeStep={activeStep}
-          progressPct={progressPct}
-          appear={shown}
-        />
-      </div>
+      {!processingDone && (
+        <div
+          className="absolute inset-0 grid place-items-center z-50"
+          style={{
+            backgroundColor: "rgba(0,0,0,0.85)",
+            backdropFilter: "blur(2px)",
+            opacity: processingDone ? 0 : 1,
+            transition: `opacity ${OVERLAY_FADE_OUT}ms ${ease}`,
+            pointerEvents: processingDone ? "none" : "auto",
+            willChange: "opacity",
+          }}
+        >
+          <ProcessingModal
+            repoUrl={repoUrl}
+            activeStep={activeStep}
+            progressPct={progressPct}
+            appear={shown}
+            repoMeta={analysisState.repoMeta}
+            jobId={analysisState.jobId}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -172,171 +169,329 @@ function ProcessingModal({
   activeStep,
   progressPct,
   appear,
+  repoMeta,
+  jobId,
 }: {
   repoUrl: string;
   activeStep: number;
   progressPct: number;
   appear: boolean;
+  repoMeta: {
+    stars: number;
+    files: number;
+    languages: Record<string, number>;
+    sizeKb: number;
+  } | null;
+  jobId: string | null;
 }) {
-  const ease = "cubic-bezier(0.22, 1, 0.36, 1)";
-  const remaining = Math.max(0, Math.ceil(((STEPS.length - activeStep) * STEP_INTERVAL) / 1000));
+  const [logs, setLogs] = useState<{ time: string; msg: React.ReactNode }[]>([]);
+  const logContainerRef = useRef<HTMLDivElement>(null);
+  const loggedSteps = useRef(new Set<string>());
   const repoLabel = repoUrl?.replace(/^https?:\/\/(www\.)?github\.com\//, "") || "facebook/react";
 
+  // Fix log duplication using a ref to track what has been pushed
+  useEffect(() => {
+    const pushLog = (key: string, msg: string) => {
+      if (loggedSteps.current.has(key)) return;
+      loggedSteps.current.add(key);
+      setLogs(prev => [...prev, {
+        time: new Date().toLocaleTimeString([], { hour12: false }),
+        msg
+      }].slice(-30));
+    };
+
+    pushLog(`phase-${activeStep}`, `[Phase ${activeStep + 1}] ${STEPS[Math.min(activeStep, STEPS.length - 1)]}...`);
+
+    if (activeStep === 0 && jobId) {
+      pushLog('connected', `Successfully connected to worker node ${jobId.substring(0, 8)}.`);
+    }
+
+    if (activeStep >= 1 && repoMeta) {
+      pushLog('files', `Detected ${repoMeta.files.toLocaleString()} files. Total size: ${(repoMeta.sizeKb / 1024).toFixed(2)} MB.`);
+    }
+
+    if (activeStep >= 2 && repoMeta?.languages) {
+      const langs = Object.keys(repoMeta.languages).slice(0, 3).join(", ");
+      if (langs) {
+        pushLog('langs', `Identified primary languages: ${langs}.`);
+      }
+    }
+
+    if (progressPct === 100) {
+       pushLog('complete', `Analysis complete. Rendering visualization...`);
+    }
+  }, [activeStep, repoLabel, jobId, repoMeta, progressPct]);
+
+  // Smooth real-time size counter
+  const [displaySizeMb, setDisplaySizeMb] = useState(0);
+  useEffect(() => {
+    if (!repoMeta?.sizeKb) return;
+    const targetMb = (repoMeta.sizeKb / 1024) * (Math.max(2, progressPct) / 100);
+    
+    let active = true;
+    const animate = () => {
+      setDisplaySizeMb(prev => {
+        const diff = targetMb - prev;
+        if (Math.abs(diff) < 0.01) return targetMb;
+        return prev + diff * 0.1;
+      });
+      if (active) requestAnimationFrame(animate);
+    };
+    requestAnimationFrame(animate);
+    return () => { active = false; };
+  }, [progressPct, repoMeta]);
+
+  // Tech stack cycling
+  const langsList = useMemo(() => {
+    if (!repoMeta?.languages) return ["Detecting..."];
+    const keys = Object.keys(repoMeta.languages);
+    return keys.length > 0 ? keys : ["Unknown"];
+  }, [repoMeta]);
+
+  const [activeLangIdx, setActiveLangIdx] = useState(0);
+  useEffect(() => {
+    if (langsList.length <= 1) return;
+    const int = setInterval(() => {
+      setActiveLangIdx(prev => (prev + 1) % langsList.length);
+    }, 1800);
+    return () => clearInterval(int);
+  }, [langsList]);
+
+  useEffect(() => {
+    if (logContainerRef.current) {
+      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+    }
+  }, [logs]);
+
+  const SHORT_STEPS = [
+    "Discovery",
+    "AST Parsing",
+    "Graph Build",
+    "Architecture",
+    "Semantic Map",
+  ];
+
   return (
-    <div
-      className="w-[min(720px,92vw)] rounded-xl bg-[#0c0c0e] ring-1 ring-white/10 shadow-[0_60px_120px_-30px_rgba(0,0,0,0.9)] p-8"
-      style={{
-        transform: appear ? "translateY(0) scale(1)" : "translateY(12px) scale(0.98)",
-        opacity: appear ? 1 : 0,
-        transition: `opacity 350ms ${ease}, transform 350ms ${ease}`,
-        willChange: "opacity, transform",
-      }}
-    >
-      <div className="flex items-start justify-between mb-8">
-        <div className="space-y-2">
-          <div className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
-            Repository
-          </div>
-          <div className="font-mono text-base text-brand-heading">{repoLabel}</div>
-        </div>
-        <div className="text-right space-y-2">
-          <div className="font-mono text-[10px] uppercase tracking-widest text-zinc-600 flex items-center gap-2 justify-end">
-            <span className="size-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)] animate-pulse" />
-            Analyzing
-          </div>
-          <div className="font-mono text-xs text-zinc-500">~{remaining}s remaining</div>
-        </div>
-      </div>
+    <>
+      <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+      <style>{`
+        .glass-panel {
+          background: rgba(26, 26, 26, 0.8);
+          backdrop-filter: blur(20px);
+          border: 1px solid #333333;
+        }
+        .progress-segment {
+          height: 4px;
+          background: #1a1a1a;
+          position: relative;
+          overflow: hidden;
+        }
+        .scanning-line {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 2px;
+          background: linear-gradient(90deg, transparent, #ffffff, transparent);
+          animation: dl-scan-line-2 3s linear infinite;
+          opacity: 0.2;
+          pointer-events: none;
+          z-index: 50;
+        }
+        @keyframes dl-scan-line-2 {
+          0% { transform: translateY(0); }
+          100% { transform: translateY(100vh); }
+        }
+        .status-pulse {
+          animation: dl-status-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes dl-status-pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: .4; }
+        }
+        .log-scroll::-webkit-scrollbar {
+          width: 4px;
+        }
+        .log-scroll::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .log-scroll::-webkit-scrollbar-thumb {
+          background: #333333;
+          border-radius: 2px;
+        }
+      `}</style>
 
-      <div className="grid grid-cols-2 gap-8">
-        {/* Metadata column — staggered fade-in */}
-        <div className="space-y-6">
-          <MetaRow label="Stars" value="228.4k" delay={120} />
-          <MetaRow label="Files" value="4,812" delay={240} />
-          <div style={{ animation: `dl-fade-up 500ms ${ease} 360ms both` }}>
-            <div className="font-mono text-[10px] uppercase tracking-widest text-zinc-600 mb-3">
-              Languages
-            </div>
-            <div className="space-y-2">
-              <LangBar color="#3b82f6" name="TypeScript" pct={62} />
-              <LangBar color="#facc15" name="JavaScript" pct={31} />
-              <LangBar color="#a855f7" name="CSS" pct={7} />
-            </div>
-          </div>
-        </div>
-
-        {/* Checklist column */}
-        <div className="space-y-3">
-          {STEPS.map((label, i) => {
-            const status: StepStatus =
-              i < activeStep ? "done" : i === activeStep ? "active" : "pending";
-            return <ChecklistItem key={label} label={label} status={status} index={i} />;
-          })}
-        </div>
-      </div>
-
-      {/* Progress bar */}
-      <div className="mt-8">
-        <div className="h-1 w-full rounded-full bg-white/5 overflow-hidden">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-zinc-400 to-zinc-100"
-            style={{
-              width: `${progressPct}%`,
-              transition: `width ${STEP_INTERVAL}ms ${ease}`,
-              willChange: "width",
-            }}
-          />
-        </div>
-        <div className="mt-2 flex justify-between font-mono text-[10px] uppercase tracking-widest text-zinc-600">
-          <span>Processing</span>
-          <span className="tabular-nums">{progressPct}%</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MetaRow({ label, value, delay }: { label: string; value: string; delay: number }) {
-  return (
-    <div
-      style={{
-        animation: `dl-fade-up 500ms cubic-bezier(0.22,1,0.36,1) ${delay}ms both`,
-      }}
-    >
-      <div className="font-mono text-[10px] uppercase tracking-widest text-zinc-600 mb-1">
-        {label}
-      </div>
-      <div className="text-2xl font-medium text-brand-heading tabular-nums">{value}</div>
-    </div>
-  );
-}
-
-function LangBar({ color, name, pct }: { color: string; name: string; pct: number }) {
-  return (
-    <div className="flex items-center gap-3 font-mono text-[11px] text-zinc-400">
-      <span className="size-2 rounded-full" style={{ backgroundColor: color }} />
-      <span className="flex-1">{name}</span>
-      <span className="tabular-nums text-zinc-500">{pct}%</span>
-    </div>
-  );
-}
-
-function ChecklistItem({
-  label,
-  status,
-  index,
-}: {
-  label: string;
-  status: StepStatus;
-  index: number;
-}) {
-  const ease = "cubic-bezier(0.22, 1, 0.36, 1)";
-  return (
-    <div
-      className="flex items-center gap-3"
-      style={{
-        opacity: status === "pending" ? 0.45 : 1,
-        transition: `opacity 300ms ${ease}`,
-        animation: `dl-fade-up 400ms ${ease} ${index * 80}ms both`,
-      }}
-    >
-      <div className="size-5 grid place-items-center shrink-0">
-        {status === "done" && (
-          <svg
-            viewBox="0 0 16 16"
-            className="size-4"
-            style={{ animation: `dl-pop 280ms ${ease} both` }}
-          >
-            <path
-              d="M3 8.5l3 3 7-7"
-              fill="none"
-              stroke="rgb(16,185,129)"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        )}
-        {status === "active" && (
-          <span className="size-3 rounded-full border-2 border-zinc-700 border-t-zinc-100 animate-spin" />
-        )}
-        {status === "pending" && (
-          <span className="size-2 rounded-full border border-zinc-700" />
-        )}
-      </div>
-      <span
-        className={`text-sm ${
-          status === "done"
-            ? "text-zinc-500 line-through decoration-zinc-700"
-            : status === "active"
-              ? "text-brand-heading"
-              : "text-zinc-600"
-        }`}
+      <div className="scanning-line"></div>
+      
+      <main 
+        className="w-full max-w-[900px] flex flex-col gap-6"
+        style={{
+          transform: appear ? "translateY(0) scale(1)" : "translateY(12px) scale(0.98)",
+          opacity: appear ? 1 : 0,
+          transition: "opacity 500ms ease, transform 500ms ease",
+          willChange: "opacity, transform",
+        }}
       >
-        {label}
-        {status === "active" && "..."}
-      </span>
-    </div>
+        {/* Header Branding */}
+        <div className="flex justify-between items-end px-1">
+          <div className="flex flex-col">
+            <span className="font-mono text-xs font-medium tracking-widest text-zinc-400 uppercase">System Status</span>
+            <h1 className="font-sans text-3xl font-semibold text-white tracking-tighter">DEVLENS AI</h1>
+          </div>
+          <div className="font-mono text-sm font-medium text-zinc-400 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-white status-pulse"></span>
+            ACTIVE SESSION
+          </div>
+        </div>
+
+        {/* Central Analysis Card */}
+        <div className="glass-panel rounded-xl overflow-hidden shadow-2xl relative">
+          <div className="p-6 md:p-10 flex flex-col gap-10">
+            {/* Progress Header */}
+            <div className="flex flex-col gap-1">
+              <div className="flex justify-between items-baseline">
+                <h2 className="font-sans text-2xl font-semibold text-white">Analyzing Repository</h2>
+                <div className="font-mono text-sm font-medium text-white tracking-wide">{progressPct}% COMPLETE</div>
+              </div>
+              <p className="font-sans text-base text-zinc-400">
+                Deconstructing <span className="text-white font-medium">{repoLabel}</span> architecture...
+              </p>
+            </div>
+
+            {/* Progress Visual */}
+            <div className="flex flex-col gap-2">
+              <div className="flex justify-between font-mono text-xs font-medium text-zinc-400 uppercase tracking-widest">
+                <span>Phase {Math.min(activeStep + 1, STEPS.length)}: {STEPS[Math.min(activeStep, STEPS.length - 1)]}</span>
+                <span className="font-medium text-white">Mapping Object Relations</span>
+              </div>
+              <div className="progress-segment rounded-full">
+                <div 
+                  className="h-full bg-white rounded-full transition-all duration-500 ease-out shadow-[0_0_15px_rgba(255,255,255,0.3)]"
+                  style={{ width: `${progressPct}%` }}
+                ></div>
+              </div>
+            </div>
+
+            {/* Phase Indicators */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {STEPS.map((label, i) => {
+                const isDone = i < activeStep;
+                const isActive = i === activeStep;
+                const isPending = i > activeStep;
+                
+                return (
+                  <div key={label} className={`flex items-center gap-2 p-3 border rounded relative overflow-hidden ${
+                    isActive ? "border-white/50 bg-white/5" :
+                    isDone ? "border-white/10 bg-[#0e0e0e]" :
+                    "border-white/5 bg-[#0e0e0e]/50 opacity-40"
+                  }`}>
+                    {isActive && <div className="absolute inset-0 bg-white/5 status-pulse" />}
+                    
+                    <span className={`material-symbols-outlined text-[20px] relative z-10 ${
+                      isPending ? "text-zinc-500" : "text-white"
+                    }`} style={{ fontVariationSettings: isDone ? "'FILL' 1" : undefined }}>
+                      {isDone ? "check_circle" : isActive ? "sync" : "pending"}
+                    </span>
+                    
+                    <div className="flex flex-col relative z-10">
+                      <span className={`font-mono text-[10px] font-medium tracking-widest ${isActive ? 'text-white' : 'text-zinc-500'}`}>
+                        STEP {i + 1}
+                      </span>
+                      <span className={`font-sans text-sm ${isActive ? 'text-white font-bold' : isPending ? 'text-zinc-500' : 'text-white'}`}>
+                        {SHORT_STEPS[i]}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* System Log & Technical Metrics Split */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 border-t border-white/10 pt-6">
+              {/* Log */}
+              <div className="md:col-span-2 flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xs font-medium tracking-widest text-zinc-400 uppercase">System Log</span>
+                  <span className="font-mono text-xs font-medium tracking-widest text-zinc-500">Streaming...</span>
+                </div>
+                <div ref={logContainerRef} className="log-scroll h-40 overflow-y-auto font-mono text-xs flex flex-col gap-1 pr-2">
+                  {logs.map((log, i) => (
+                    <div key={i} className="flex gap-4 animate-in fade-in duration-500">
+                      <span className="text-zinc-600 shrink-0">{log.time}</span>
+                      <span className="text-zinc-200">{log.msg}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Metrics */}
+              <div className="flex flex-col gap-4 bg-[#1c1b1b] p-4 rounded border border-white/10">
+                <span className="font-mono text-xs font-medium tracking-widest text-zinc-400 uppercase">Technical Metrics</span>
+                <div className="flex flex-col gap-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-sans text-sm text-zinc-400">Files Processed</span>
+                    <span className="font-mono text-xs font-medium text-white">
+                      {repoMeta ? Math.floor((progressPct / 100) * repoMeta.files).toLocaleString() : "..."} / {repoMeta ? repoMeta.files.toLocaleString() : "..."}
+                    </span>
+                  </div>
+                  <div className="w-full bg-white/5 h-1 rounded-full">
+                    <div className="bg-zinc-400 h-full rounded-full transition-all" style={{ width: `${Math.max(10, progressPct)}%` }}></div>
+                  </div>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <span className="font-sans text-sm text-zinc-400">Repository Size</span>
+                  <span className="font-mono text-xs font-medium text-white">
+                    {repoMeta ? `${displaySizeMb.toFixed(2)} MB` : "..."}
+                  </span>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <span className="font-sans text-sm text-zinc-400">Tech Stack</span>
+                  <div className="relative h-4 overflow-hidden w-32">
+                    {langsList.map((lang, idx) => (
+                      <span 
+                        key={lang}
+                        className={`absolute right-0 font-mono text-xs font-medium transition-all duration-500 ${
+                          idx === activeLangIdx 
+                            ? "opacity-100 translate-y-0 text-emerald-400" 
+                            : "opacity-0 translate-y-4 text-zinc-500"
+                        }`}
+                      >
+                        {lang}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <span className="font-sans text-sm text-zinc-400">Complexity Index</span>
+                  <span className="font-mono text-[10px] tracking-widest px-1.5 py-0.5 bg-white text-black rounded-sm font-bold">
+                    {repoMeta ? (repoMeta.files > 50 ? "HIGH" : repoMeta.files > 15 ? "MEDIUM" : "LOW") : "..."}
+                  </span>
+                </div>
+                
+                <div className="mt-auto pt-4 border-t border-white/10">
+                  <div className="flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-white text-[16px]">terminal</span>
+                    <span className="font-mono text-xs font-medium text-zinc-400">Worker node: {jobId ? jobId.substring(0, 8) : "Pending..."}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer Visual Hint */}
+        <div className="flex justify-center mt-4">
+          <div className="flex items-center gap-10 opacity-30">
+            <div className="w-24 h-px bg-gradient-to-r from-transparent to-white"></div>
+            <span className="font-mono text-xs font-medium text-zinc-200 tracking-[0.3em] uppercase">Processing Core v4.1.0</span>
+            <div className="w-24 h-px bg-gradient-to-l from-transparent to-white"></div>
+          </div>
+        </div>
+      </main>
+    </>
   );
 }
 
@@ -350,8 +505,10 @@ function DashboardShell({
   onClose,
   drawNodes,
   showFlash,
+  sessionId,
   graphData,
   fileTree,
+  modules,
   entryPoints,
   chat,
 }: {
@@ -359,8 +516,10 @@ function DashboardShell({
   onClose: () => void;
   drawNodes: boolean;
   showFlash: boolean;
+  sessionId?: string;
   graphData?: { nodes: Node[]; edges: [string, string][]; meta?: Record<string, unknown> };
   fileTree?: FileNode[];
+  modules?: Array<{ name: string; file_count: number; files: string[] }>;
   entryPoints?: string[];
   chat: ReturnType<typeof useChat>;
 }) {
@@ -369,6 +528,16 @@ function DashboardShell({
   const [centerTab, setCenterTab] = useState<CenterTab>("ARCHITECTURE");
   const [activeFile, setActiveFile] = useState("src/components/Button.tsx");
   const [fileFilter, setFileFilter] = useState("");
+
+  // Auto-select first real file when tree is loaded
+  useEffect(() => {
+    if (fileTree && fileTree.length > 0) {
+      const firstRealFile = fileTree.find(f => !f.is_dir);
+      if (firstRealFile) {
+        setActiveFile(firstRealFile.path);
+      }
+    }
+  }, [fileTree]);
 
   return (
     <>
@@ -448,11 +617,10 @@ function DashboardShell({
               key={t}
               type="button"
               onClick={() => setLeftTab(t)}
-              className={`flex-1 py-2 font-mono text-[9px] uppercase tracking-widest transition-colors relative ${
-                leftTab === t
+              className={`flex-1 py-2 font-mono text-[9px] uppercase tracking-widest transition-colors relative ${leftTab === t
                   ? "text-brand-heading"
                   : "text-zinc-600 hover:text-zinc-400"
-              }`}
+                }`}
             >
               {t}
               {leftTab === t && (
@@ -471,7 +639,7 @@ function DashboardShell({
               items={fileTree}
             />
           )}
-          {leftTab === "MODULES" && <ModulesList />}
+          {leftTab === "MODULES" && <ModulesList items={modules} />}
           {leftTab === "ENTRY POINTS" && <EntryPointsList items={entryPoints} />}
         </div>
       </aside>
@@ -484,11 +652,10 @@ function DashboardShell({
               key={t}
               type="button"
               onClick={() => setCenterTab(t)}
-              className={`px-4 py-3 font-mono text-[10px] uppercase tracking-widest transition-colors relative ${
-                centerTab === t
+              className={`px-4 py-3 font-mono text-[10px] uppercase tracking-widest transition-colors relative ${centerTab === t
                   ? "text-brand-heading"
                   : "text-zinc-600 hover:text-zinc-400"
-              }`}
+                }`}
             >
               {t}
               {centerTab === t && (
@@ -501,7 +668,13 @@ function DashboardShell({
         <div className="flex-1 relative overflow-hidden">
           {centerTab === "ARCHITECTURE" && <ArchitectureGraph draw={drawNodes} graphData={graphData} />}
           {centerTab === "CODE FLOW" && <CodeFlowPlaceholder />}
-          {centerTab === "ONBOARDING DOC" && <OnboardingDocPlaceholder repo={repoLabel} />}
+          {centerTab === "ONBOARDING DOC" && (
+            sessionId ? (
+              <OnboardingDoc sessionId={sessionId} repo={repoLabel} />
+            ) : (
+              <OnboardingDocPlaceholder repo={repoLabel} />
+            )
+          )}
         </div>
       </main>
 
@@ -518,7 +691,7 @@ function DashboardShell({
         <div className="p-4 border-b border-white/5">
           <div className="font-mono text-[9px] uppercase tracking-widest text-zinc-600 mb-2">Suggested</div>
           <div className="flex flex-wrap gap-1.5">
-            {["What does this repo do?","Explain the auth flow","What are the entry points?"].map((q) => (
+            {["What does this repo do?", "Explain the auth flow", "What are the entry points?"].map((q) => (
               <button key={q} type="button"
                 onClick={() => chat.sendMessage(q)}
                 className="text-[11px] text-zinc-400 bg-white/5 ring-1 ring-white/5 hover:ring-white/15 hover:text-brand-heading rounded-full px-2.5 py-1 transition-colors"
@@ -542,15 +715,13 @@ function DashboardShell({
             </div>
           ) : (
             chat.messages.map((msg, i) => (
-              <div key={i} className={`text-xs leading-relaxed ${
-                msg.role === "user" ? "text-brand-heading text-right" : "text-zinc-400"
-              }`}>
+              <div key={i} className={`text-xs leading-relaxed ${msg.role === "user" ? "text-brand-heading text-right" : "text-zinc-400"
+                }`}>
                 {msg.role === "assistant" && (
                   <span className="font-mono text-[9px] uppercase text-zinc-600 block mb-1">DevLens</span>
                 )}
-                <span className={`inline-block px-3 py-2 rounded-lg ${
-                  msg.role === "user" ? "bg-white/10" : "bg-zinc-900 ring-1 ring-white/5"
-                }`}>{msg.content}</span>
+                <span className={`inline-block px-3 py-2 rounded-lg ${msg.role === "user" ? "bg-white/10" : "bg-zinc-900 ring-1 ring-white/5"
+                  }`}>{msg.content}</span>
                 {msg.sources && msg.sources.length > 0 && (
                   <div className="mt-1 flex flex-wrap gap-1">
                     {msg.sources.map((s) => (
@@ -575,11 +746,10 @@ function TopBarButton({ label, primary }: { label: string; primary?: boolean }) 
   return (
     <button
       type="button"
-      className={`font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 rounded transition-colors ${
-        primary
+      className={`font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 rounded transition-colors ${primary
           ? "bg-zinc-100 text-zinc-950 hover:bg-white"
           : "text-zinc-400 hover:text-brand-heading hover:bg-white/5"
-      }`}
+        }`}
     >
       {label}
     </button>
@@ -640,9 +810,8 @@ function FileTree({
       <div className="font-mono text-xs space-y-0.5">
         {filtered.map((f) => (
           <button key={f.path} type="button" onClick={() => onSelect(f.path)}
-            className={`w-full text-left flex items-center gap-1.5 px-2 py-0.5 rounded transition-colors ${
-              f.path === active ? "bg-white/10 text-brand-heading ring-1 ring-white/10" : "text-zinc-500 hover:text-brand-heading hover:bg-white/5"
-            }`}
+            className={`w-full text-left flex items-center gap-1.5 px-2 py-0.5 rounded transition-colors ${f.path === active ? "bg-white/10 text-brand-heading ring-1 ring-white/10" : "text-zinc-500 hover:text-brand-heading hover:bg-white/5"
+              }`}
             style={{ paddingLeft: 6 + f.depth * 10 }}>
             <span className="truncate">{f.name}</span>
             {f.language && <span className="ml-auto text-zinc-700 text-[9px] shrink-0">{f.language}</span>}
@@ -663,9 +832,8 @@ function FileTree({
         return (
           <button key={f.path ?? `fallback-${i}`} type="button" onClick={() => f.path && onSelect(f.path)}
             disabled={isFolder}
-            className={`w-full text-left flex items-center gap-1.5 px-1.5 py-0.5 rounded transition-colors ${
-              isActive ? "bg-white/10 text-brand-heading ring-1 ring-white/10" : "text-zinc-500 hover:text-brand-heading hover:bg-white/5"
-            }`}
+            className={`w-full text-left flex items-center gap-1.5 px-1.5 py-0.5 rounded transition-colors ${isActive ? "bg-white/10 text-brand-heading ring-1 ring-white/10" : "text-zinc-500 hover:text-brand-heading hover:bg-white/5"
+              }`}
             style={{ paddingLeft: 6 + f.d * 12 }}>
             <span className="text-zinc-700 w-3 shrink-0">{isFolder ? (f.o ? "▾" : "▸") : ""}</span>
             <span className="truncate">{f.n}</span>
@@ -676,15 +844,17 @@ function FileTree({
   );
 }
 
-function ModulesList() {
-  const mods = [
-    { n: "auth", c: 12 },
-    { n: "api", c: 28 },
-    { n: "ui", c: 41 },
-    { n: "store", c: 9 },
-    { n: "utils", c: 17 },
-    { n: "cache", c: 6 },
-  ];
+function ModulesList({ items }: { items?: Array<{ name: string; file_count: number }> }) {
+  const mods = items && items.length > 0
+    ? items.map(m => ({ n: m.name, c: m.file_count }))
+    : [
+        { n: "auth", c: 12 },
+        { n: "api", c: 28 },
+        { n: "ui", c: 41 },
+        { n: "store", c: 9 },
+        { n: "utils", c: 17 },
+        { n: "cache", c: 6 },
+      ];
   return (
     <div className="space-y-1">
       {mods.map((m) => (
@@ -742,22 +912,22 @@ function ChatInput({ onSend, repoLabel, disabled }: { onSend: (msg: string) => v
 
 function CodeFlowPlaceholder() {
   const LANES = [
-    { id: "client",  label: "Client",     color: "#4A8FFF" },
-    { id: "gateway", label: "APIGateway",  color: "#00E5A0" },
-    { id: "auth",    label: "AuthService", color: "#FF6B6B" },
-    { id: "db",      label: "Database",    color: "#A78BFA" },
+    { id: "client", label: "Client", color: "#4A8FFF" },
+    { id: "gateway", label: "APIGateway", color: "#00E5A0" },
+    { id: "auth", label: "AuthService", color: "#FF6B6B" },
+    { id: "db", label: "Database", color: "#A78BFA" },
   ];
 
   const STEPS = [
-    { from: 0, to: 1, label: "POST /api/analyze",       y: 80 },
-    { from: 1, to: 2, label: "validateJWT(token)",       y: 130 },
-    { from: 2, to: 1, label: "✓ user: { id, plan }",    y: 160, dashed: true },
-    { from: 1, to: 3, label: "repos.findOrCreate(url)",  y: 210 },
-    { from: 3, to: 1, label: "✓ repo_id: 4821",         y: 240, dashed: true },
-    { from: 1, to: 0, label: "202 Accepted · job_id",   y: 290, dashed: true },
-    { from: 0, to: 1, label: "WS /analysis/{id}/status",y: 350 },
+    { from: 0, to: 1, label: "POST /api/analyze", y: 80 },
+    { from: 1, to: 2, label: "validateJWT(token)", y: 130 },
+    { from: 2, to: 1, label: "✓ user: { id, plan }", y: 160, dashed: true },
+    { from: 1, to: 3, label: "repos.findOrCreate(url)", y: 210 },
+    { from: 3, to: 1, label: "✓ repo_id: 4821", y: 240, dashed: true },
+    { from: 1, to: 0, label: "202 Accepted · job_id", y: 290, dashed: true },
+    { from: 0, to: 1, label: "WS /analysis/{id}/status", y: 350 },
     { from: 1, to: 0, label: "{ step: 'cloning', pct: 12 }", y: 400, dashed: true },
-    { from: 1, to: 0, label: "{ step: 'done', pct: 100 }",  y: 450, dashed: true },
+    { from: 1, to: 0, label: "{ step: 'done', pct: 100 }", y: 450, dashed: true },
   ];
 
   const W = 600;
@@ -807,7 +977,7 @@ function CodeFlowPlaceholder() {
                   strokeDasharray={step.dashed ? "4 3" : undefined}
                 />
                 <polygon
-                  points={`${x2},${step.y} ${arrX - dir*4},${step.y - 4} ${arrX - dir*4},${step.y + 4}`}
+                  points={`${x2},${step.y} ${arrX - dir * 4},${step.y - 4} ${arrX - dir * 4},${step.y + 4}`}
                   fill={color}
                 />
                 {/* Label */}
@@ -831,6 +1001,148 @@ function CodeFlowPlaceholder() {
         <p className="text-center font-mono text-[10px] text-zinc-700 mt-4">
           // Select a function in the graph to trace its execution path
         </p>
+      </div>
+    </div>
+  );
+}
+
+function parseMarkdown(md: string) {
+  if (!md) return null;
+  const lines = md.split("\n");
+  let inCode = false;
+  const codeBlock: string[] = [];
+
+  return lines
+    .map((line, idx) => {
+      if (line.startsWith("```")) {
+        if (inCode) {
+          inCode = false;
+          const code = codeBlock.join("\n");
+          codeBlock.length = 0;
+          return (
+            <pre
+              key={idx}
+              className="bg-zinc-950 border border-zinc-900 rounded-md p-4 font-mono text-xs text-zinc-300 my-4 overflow-x-auto"
+            >
+              <code>{code}</code>
+            </pre>
+          );
+        } else {
+          inCode = true;
+          return null;
+        }
+      }
+
+      if (inCode) {
+        codeBlock.push(line);
+        return null;
+      }
+
+      if (line.startsWith("# ")) {
+        return (
+          <h1 key={idx} className="text-2xl font-bold text-white mt-6 mb-4">
+            {line.slice(2)}
+          </h1>
+        );
+      }
+      if (line.startsWith("## ")) {
+        return (
+          <h2 key={idx} className="text-xl font-bold text-[#00E5A0] mt-6 mb-3">
+            {line.slice(3)}
+          </h2>
+        );
+      }
+      if (line.startsWith("### ")) {
+        return (
+          <h3 key={idx} className="text-lg font-semibold text-zinc-200 mt-4 mb-2">
+            {line.slice(4)}
+          </h3>
+        );
+      }
+      if (line.startsWith("- ") || line.startsWith("* ")) {
+        return (
+          <li key={idx} className="ml-6 list-disc text-sm text-zinc-400 my-1">
+            {line.slice(2)}
+          </li>
+        );
+      }
+      if (line.trim() === "") {
+        return <div key={idx} className="h-2" />;
+      }
+
+      return (
+        <p key={idx} className="text-sm text-zinc-400 my-2 leading-relaxed">
+          {line}
+        </p>
+      );
+    })
+    .filter(Boolean);
+}
+
+function OnboardingDoc({ sessionId, repo }: { sessionId: string; repo: string }) {
+  const [doc, setDoc] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    async function load() {
+      try {
+        setLoading(true);
+        const data = await api.getOnboardingDoc(sessionId);
+        if (active) {
+          setDoc(data.markdown);
+          setLoading(false);
+        }
+      } catch (err) {
+        if (active) {
+          setError(err instanceof Error ? err.message : "Failed to load document.");
+          setLoading(false);
+        }
+      }
+    }
+    load();
+    return () => {
+      active = false;
+    };
+  }, [sessionId]);
+
+  if (loading) {
+    return (
+      <div className="absolute inset-0 grid place-items-center bg-[#070708]">
+        <div className="text-center space-y-3">
+          <span className="size-6 rounded-full border-2 border-zinc-800 border-t-[#00E5A0] animate-spin inline-block" />
+          <div className="font-mono text-[10px] text-zinc-500 uppercase tracking-widest">
+            Generating Onboarding Doc...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="absolute inset-0 grid place-items-center bg-[#070708] text-center">
+        <div className="font-mono text-xs text-zinc-500">
+          Error loading onboarding doc. Using placeholder.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="absolute inset-0 overflow-auto bg-[#070708]">
+      <div className="max-w-3xl mx-auto px-8 py-8 space-y-6">
+        <div className="border-b border-white/5 pb-4">
+          <div className="font-mono text-[10px] uppercase tracking-widest text-zinc-500">
+            Onboarding_Doc
+          </div>
+          <h3 className="text-xl font-medium text-white mt-1">Getting started with {repo}</h3>
+          <p className="text-xs text-zinc-500 mt-1">Auto-generated by DevLens AI</p>
+        </div>
+        <div className="text-sm leading-relaxed text-zinc-300 font-sans">
+          {parseMarkdown(doc)}
+        </div>
       </div>
     </div>
   );
@@ -979,17 +1291,17 @@ const EDGES: Array<[string, string]> = [
   ["config", "db"],
 ];
 
-const NODE_PX = 48; // visual circle size
-const NODE_HALF_VB = 3.2; // ~ NODE_PX/2 in viewBox units (assuming ~750px canvas)
+const NODE_PX = 32; // visual circle size
+const RADIUS = NODE_PX / 2;
 
-function ArchitectureGraph({ draw, graphData }: { draw: boolean; graphData?: { nodes: Node[]; edges: [string,string][] } }) {
+function ArchitectureGraph({ draw, graphData }: { draw: boolean; graphData?: { nodes: Node[]; edges: [string, string][] } }) {
   const ease = "cubic-bezier(0.22, 1, 0.36, 1)";
   const [hover, setHover] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   // Use real API nodes/edges if available, else fall back to static demo
   const activeNodes = (graphData?.nodes?.length ? graphData.nodes : NODES) as Node[];
-  const activeEdges = (graphData?.edges?.length ? graphData.edges : EDGES) as [string,string][];
+  const activeEdges = (graphData?.edges?.length ? graphData.edges : EDGES) as [string, string][];
   const focus = selected ?? hover;
   const focused = activeNodes.find((n) => n.id === focus);
   const selectedNode = activeNodes.find((n) => n.id === selected);
@@ -1003,6 +1315,11 @@ function ArchitectureGraph({ draw, graphData }: { draw: boolean; graphData?: { n
     }
     return ids;
   }, [selected, activeEdges]);
+
+  const spread = activeNodes.length > 40 ? 3 : activeNodes.length > 15 ? 2 : 1;
+  const canvasSize = spread * 100;
+  const offset = -((spread - 1) * 50);
+  const initialScale = 1 / spread;
 
   return (
     <div
@@ -1020,49 +1337,54 @@ function ArchitectureGraph({ draw, graphData }: { draw: boolean; graphData?: { n
       />
 
       <div
-        className="absolute inset-0"
+        className="absolute"
         style={{
-          transform: `scale(${zoom})`,
+          width: `${canvasSize}%`,
+          height: `${canvasSize}%`,
+          left: `${offset}%`,
+          top: `${offset}%`,
+          transform: `scale(${zoom * initialScale})`,
           transformOrigin: "center center",
           transition: `transform 200ms ${ease}`,
         }}
       >
         <svg
-          viewBox="0 0 100 100"
           className="absolute inset-0 w-full h-full"
-          preserveAspectRatio="none"
         >
           <defs>
             <marker
               id="arrow-default"
+              markerUnits="userSpaceOnUse"
               viewBox="0 0 10 10"
-              refX="9"
+              refX={RADIUS + 10}
               refY="5"
-              markerWidth="5"
-              markerHeight="5"
-              orient="auto-start-reverse"
+              markerWidth="10"
+              markerHeight="10"
+              orient="auto"
             >
               <path d="M0,0 L10,5 L0,10 z" fill="rgba(255,255,255,0.35)" />
             </marker>
             <marker
               id="arrow-active"
+              markerUnits="userSpaceOnUse"
               viewBox="0 0 10 10"
-              refX="9"
+              refX={RADIUS + 10}
               refY="5"
-              markerWidth="6"
-              markerHeight="6"
-              orient="auto-start-reverse"
+              markerWidth="10"
+              markerHeight="10"
+              orient="auto"
             >
               <path d="M0,0 L10,5 L0,10 z" fill="#00E5A0" />
             </marker>
             <marker
               id="arrow-dim"
+              markerUnits="userSpaceOnUse"
               viewBox="0 0 10 10"
-              refX="9"
+              refX={RADIUS + 10}
               refY="5"
-              markerWidth="4"
-              markerHeight="4"
-              orient="auto-start-reverse"
+              markerWidth="10"
+              markerHeight="10"
+              orient="auto"
             >
               <path d="M0,0 L10,5 L0,10 z" fill="rgba(255,255,255,0.08)" />
             </marker>
@@ -1070,21 +1392,8 @@ function ArchitectureGraph({ draw, graphData }: { draw: boolean; graphData?: { n
           {activeEdges.map(([a, b], i) => {
             const na = activeNodes.find((n) => n.id === a);
             const nb = activeNodes.find((n) => n.id === b);
-            // Guard: skip edges whose nodes aren't in the current graph
             if (!na || !nb) return null;
-            // shorten endpoint so arrow lands at circle edge, not center
-            const dx = nb.x - na.x;
-            const dy = nb.y - na.y;
-            const len = Math.hypot(dx, dy);
-            // Guard: skip degenerate edges where both nodes are at the same position
-            if (len === 0) return null;
-            const ux = dx / len;
-            const uy = dy / len;
-            const x1 = na.x + ux * NODE_HALF_VB;
-            const y1 = na.y + uy * NODE_HALF_VB;
-            const x2 = nb.x - ux * NODE_HALF_VB;
-            const y2 = nb.y - uy * NODE_HALF_VB;
-            const adj = Math.hypot(x2 - x1, y2 - y1);
+
             const isActive = selected && (a === selected || b === selected);
             const isDim = selected && !isActive;
             const stroke = isActive
@@ -1100,14 +1409,15 @@ function ArchitectureGraph({ draw, graphData }: { draw: boolean; graphData?: { n
             return (
               <line
                 key={`${a}-${b}`}
-                x1={x1}
-                y1={y1}
-                x2={x2}
-                y2={y2}
+                x1={`${na.x}%`}
+                y1={`${na.y}%`}
+                x2={`${nb.x}%`}
+                y2={`${nb.y}%`}
                 stroke={stroke}
-                strokeWidth={isActive ? 0.32 : 0.22}
-                strokeDasharray={adj}
-                strokeDashoffset={draw ? 0 : adj}
+                strokeWidth={isActive ? 1.5 : 1}
+                pathLength="100"
+                strokeDasharray="100"
+                strokeDashoffset={draw ? 0 : 100}
                 markerEnd={marker}
                 style={{
                   transition: `stroke-dashoffset 700ms ${ease} ${600 + i * 80}ms, stroke 200ms ease, stroke-width 200ms ease`,
@@ -1143,21 +1453,19 @@ function ArchitectureGraph({ draw, graphData }: { draw: boolean; graphData?: { n
               }}
             >
               <span
-                className={`grid place-items-center font-mono text-[10px] font-medium uppercase tracking-tight rounded-full ring-1 transition-all ${
-                  isSelected
+                className={`grid place-items-center font-mono text-[10px] font-medium uppercase tracking-tight rounded-full ring-1 transition-all ${isSelected
                     ? "bg-[#0e1f1a] text-[#00E5A0] ring-[#00E5A0] shadow-[0_0_24px_rgba(0,229,160,0.45)]"
                     : isHover
                       ? "bg-zinc-700 text-brand-heading ring-white/40 shadow-[0_0_18px_rgba(255,255,255,0.18)]"
                       : "bg-zinc-800 text-zinc-300 ring-white/15 group-hover:ring-white/30"
-                }`}
+                  }`}
                 style={{ width: NODE_PX, height: NODE_PX }}
               >
                 {n.label.slice(0, 2).toUpperCase()}
               </span>
               <span
-                className={`font-mono text-[10px] uppercase tracking-widest whitespace-nowrap ${
-                  isSelected ? "text-[#00E5A0]" : "text-zinc-400"
-                }`}
+                className={`font-mono text-[10px] uppercase tracking-widest whitespace-nowrap ${isSelected ? "text-[#00E5A0]" : "text-zinc-400"
+                  }`}
               >
                 {n.label}
               </span>
