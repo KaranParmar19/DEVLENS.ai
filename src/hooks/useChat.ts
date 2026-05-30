@@ -9,6 +9,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { wsUrls, api } from '@/lib/api';
+import { repoHistory } from '@/lib/repo-history';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -18,11 +19,38 @@ export interface ChatMessage {
 }
 
 export function useChat(sessionId: string | null) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    if (sessionId) {
+      const stored = repoHistory.getChatMessages(sessionId);
+      if (stored && stored.length > 0) {
+        return stored.map(m => ({
+          role: m.role,
+          content: m.content,
+          sources: m.sources,
+        }));
+      }
+    }
+    return [];
+  });
   const [isStreaming, setIsStreaming] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+
+  // Sync to history on change
+  useEffect(() => {
+    if (sessionId && messages.length > 0) {
+      repoHistory.saveChatMessages(
+        sessionId,
+        messages.map(m => ({
+          role: m.role,
+          content: m.content,
+          sources: m.sources,
+          timestamp: new Date().toISOString()
+        }))
+      );
+    }
+  }, [messages, sessionId]);
 
   // ── Connect WebSocket when sessionId is available ────────────────────
   useEffect(() => {
