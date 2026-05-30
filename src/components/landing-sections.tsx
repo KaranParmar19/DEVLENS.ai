@@ -1,19 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 
-/* ----------------------- helpers ----------------------- */
-
+/* ── useInView hook ──────────────────────────────────────────────────── */
 function useInView<T extends HTMLElement>(threshold = 0.2) {
   const ref = useRef<T | null>(null);
   const [inView, setInView] = useState(false);
   useEffect(() => {
     if (!ref.current || inView) return;
     const obs = new IntersectionObserver(
-      ([e]) => {
-        if (e.isIntersecting) {
-          setInView(true);
-          obs.disconnect();
-        }
-      },
+      ([e]) => { if (e.isIntersecting) { setInView(true); obs.disconnect(); } },
       { threshold }
     );
     obs.observe(ref.current);
@@ -22,76 +16,49 @@ function useInView<T extends HTMLElement>(threshold = 0.2) {
   return { ref, inView };
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-[#444]">
-      {children}
-    </div>
-  );
-}
-
-function TerminalHeader({
-  title,
-  right,
-}: {
-  title: string;
-  right?: React.ReactNode;
+/* ── Highlighted text ────────────────────────────────────────────────── */
+function Highlighted({ text, tokens, style, highlightColor = "var(--dl-signal)" }: {
+  text: string; tokens: string[]; style?: React.CSSProperties; highlightColor?: string;
 }) {
-  return (
-    <div className="flex items-center justify-between border-b border-[#1A1A1A] px-4 py-3">
-      <div className="flex items-center gap-2">
-        <span className="size-3 rounded-full bg-[#FF5F57]" />
-        <span className="size-3 rounded-full bg-[#FEBC2E]" />
-        <span className="size-3 rounded-full bg-[#28C840]" />
-        <span className="ml-4 font-mono text-[11px] text-[#666]">{title}</span>
-      </div>
-      <div className="font-mono text-[10px] text-[#444]">{right}</div>
-    </div>
-  );
-}
-
-/* highlight tokens inside a string */
-function Highlighted({
-  text,
-  tokens,
-  className,
-  highlightClassName,
-}: {
-  text: string;
-  tokens: string[];
-  className?: string;
-  highlightClassName: string;
-}) {
-  if (!tokens.length) return <span className={className}>{text}</span>;
-  // Build a regex that matches any token (escape regex chars)
-  const escaped = tokens.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  if (!tokens.length) return <span style={style}>{text}</span>;
+  const escaped = tokens.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
   const re = new RegExp(`(${escaped.join("|")})`, "g");
   const parts = text.split(re);
   return (
-    <span className={className}>
+    <span style={style}>
       {parts.map((p, i) =>
-        tokens.includes(p) ? (
-          <span key={i} className={highlightClassName}>
-            {p}
-          </span>
-        ) : (
-          <span key={i}>{p}</span>
-        )
+        tokens.includes(p)
+          ? <span key={i} style={{ color: highlightColor }}>{p}</span>
+          : <span key={i}>{p}</span>
       )}
     </span>
   );
 }
 
-/* ============================================================
-   SECTION 03 — THE INTERROGATION
-============================================================ */
+/* ── Section wrapper ─────────────────────────────────────────────────── */
+function Section({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+  return (
+    <section className="dl-section" style={{ borderTop: "1px solid var(--dl-line-0)", ...style }}>
+      <div className="dl-container">{children}</div>
+    </section>
+  );
+}
 
-type QA = {
-  q: string;
-  a: string;
-  highlights: string[];
-};
+/* ── Section header ──────────────────────────────────────────────────── */
+function SectionHeader({ index, title, sub }: { index: string; title: React.ReactNode; sub?: string }) {
+  return (
+    <div style={{ marginBottom: "clamp(3rem,5vw,4.5rem)" }}>
+      <div className="dl-section-label">{index}</div>
+      <h2 className="dl-h2" style={{ maxWidth: "20ch" }}>{title}</h2>
+      {sub && <p className="dl-body" style={{ maxWidth: "46ch", marginTop: "1rem" }}>{sub}</p>}
+    </div>
+  );
+}
 
+/* ═══════════════════════════════════════════════════════════════════════
+   INTERROGATION SECTION
+   ═══════════════════════════════════════════════════════════════════════ */
+type QA = { q: string; a: string; highlights: string[] };
 const INTERROGATION: QA[] = [
   {
     q: "What happens if I delete packages/next/src/server/router.ts?",
@@ -115,22 +82,13 @@ const INTERROGATION: QA[] = [
   },
 ];
 
-function TypewriterAnswer({
-  text,
-  tokens,
-  start,
-  speed = 18,
-}: {
-  text: string;
-  tokens: string[];
-  start: boolean;
-  speed?: number;
+function TypewriterAnswer({ text, tokens, start, speed = 16 }: {
+  text: string; tokens: string[]; start: boolean; speed?: number;
 }) {
   const [i, setI] = useState(0);
   useEffect(() => {
-    if (!start) return;
-    if (i >= text.length) return;
-    const t = setTimeout(() => setI((v) => v + 1), speed);
+    if (!start || i >= text.length) return;
+    const t = setTimeout(() => setI(v => v + 1), speed);
     return () => clearTimeout(t);
   }, [i, start, text.length, speed]);
   const shown = text.slice(0, i);
@@ -138,8 +96,7 @@ function TypewriterAnswer({
     <Highlighted
       text={shown}
       tokens={tokens}
-      className="font-mono text-[11px] leading-relaxed text-[#555]"
-      highlightClassName="text-[#00E5A0]"
+      style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", lineHeight: 1.7, color: "var(--dl-text-2)" }}
     />
   );
 }
@@ -147,85 +104,71 @@ function TypewriterAnswer({
 export function InterrogationSection() {
   const { ref, inView } = useInView<HTMLDivElement>(0.15);
   const [revealed, setRevealed] = useState(0);
-
   useEffect(() => {
-    if (!inView) return;
-    if (revealed >= INTERROGATION.length) return;
-    const t = setTimeout(() => setRevealed((v) => v + 1), 150);
+    if (!inView || revealed >= INTERROGATION.length) return;
+    const t = setTimeout(() => setRevealed(v => v + 1), 150);
     return () => clearTimeout(t);
   }, [inView, revealed]);
 
   return (
-    <section ref={ref} className="bg-[#0A0A0A] py-32">
-      <div className="mx-auto max-w-7xl px-6 lg:px-12">
-        <div className="mb-16 flex flex-col gap-10 md:flex-row md:items-end md:justify-between">
-          <div>
-            <SectionLabel>03 / INTELLIGENCE_PROOF</SectionLabel>
-            <h2 className="mt-6 max-w-[18ch] text-4xl font-semibold leading-[1.05] tracking-tight text-white md:text-5xl lg:text-[56px]">
-              Ask it anything.
-            </h2>
-          </div>
-          <p className="max-w-[42ch] text-base leading-relaxed text-[#888] md:text-right">
-            We ran DevLens on vercel/next.js. These are real answers.
-          </p>
+    <Section>
+      <SectionHeader
+        index="03 / INTELLIGENCE_PROOF"
+        title="Ask it anything."
+        sub="We ran DevLens on vercel/next.js. These are real answers."
+      />
+
+      <div className="dl-terminal">
+        {/* Terminal bar */}
+        <div className="dl-terminal-bar">
+          <span className="dl-terminal-dot" style={{ background: "#FF5F57" }} />
+          <span className="dl-terminal-dot" style={{ background: "#FEBC2E" }} />
+          <span className="dl-terminal-dot" style={{ background: "#28C840" }} />
+          <span className="dl-mono" style={{ fontSize: "0.6875rem", color: "var(--dl-text-2)", marginLeft: 8, flex: 1 }}>
+            LIVE_SESSION — vercel/next.js
+          </span>
+          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--dl-signal)", boxShadow: "0 0 8px var(--dl-signal)", animation: "dl-heartbeat 2s ease-in-out infinite" }} />
+            <span className="dl-mono" style={{ fontSize: "0.6rem", color: "var(--dl-signal)", letterSpacing: "0.08em" }}>● CONNECTED</span>
+          </span>
         </div>
 
-        <div className="overflow-hidden rounded-xl border border-[#1A1A1A] bg-[#0D0D0D]">
-          <TerminalHeader
-            title="LIVE_SESSION — vercel/next.js"
-            right={
-              <span className="flex items-center gap-2">
-                <span className="size-1.5 rounded-full bg-[#00E5A0] shadow-[0_0_6px_rgba(0,229,160,0.7)]" />
-                <span className="text-[#00E5A0]">● CONNECTED</span>
-              </span>
-            }
-          />
-
-          <div className="px-6 py-4 md:px-8 md:py-6">
-            {INTERROGATION.map((pair, idx) => {
-              const visible = idx < revealed;
-              return (
-                <div
-                  key={idx}
-                  className={`border-b border-[#1A1A1A] py-5 transition-opacity duration-500 last:border-b-0 ${
-                    visible ? "opacity-100" : "opacity-0"
-                  }`}
-                >
-                  <div className="flex gap-3">
-                    <span className="font-mono text-[12px] text-[#444]">Q</span>
-                    <p className="font-mono text-[12px] leading-relaxed text-[#888]">
-                      {pair.q}
-                    </p>
-                  </div>
-                  <div className="mt-3 flex gap-3 pl-6">
-                    <span className="font-mono text-[12px] text-[#333]">A</span>
-                    <div className="min-h-[1.2em] flex-1">
-                      <TypewriterAnswer
-                        text={pair.a}
-                        tokens={pair.highlights}
-                        start={visible}
-                      />
-                    </div>
-                  </div>
+        <div ref={ref} style={{ padding: "0 24px" }}>
+          {INTERROGATION.map((pair, idx) => (
+            <div key={idx} style={{
+              borderBottom: idx < INTERROGATION.length - 1 ? "1px solid var(--dl-line-0)" : "none",
+              padding: "20px 0",
+              opacity: idx < revealed ? 1 : 0,
+              transition: "opacity 0.5s ease",
+            }}>
+              <div style={{ display: "flex", gap: 12 }}>
+                <span className="dl-mono" style={{ fontSize: "0.6875rem", color: "var(--dl-text-3)", flexShrink: 0, paddingTop: 2 }}>Q</span>
+                <p className="dl-mono" style={{ fontSize: "0.75rem", color: "var(--dl-text-1)", lineHeight: 1.6, margin: 0 }}>{pair.q}</p>
+              </div>
+              <div style={{ display: "flex", gap: 12, paddingLeft: 24, marginTop: 10 }}>
+                <span className="dl-mono" style={{ fontSize: "0.6875rem", color: "var(--dl-text-3)", flexShrink: 0, paddingTop: 2 }}>A</span>
+                <div style={{ flex: 1 }}>
+                  <TypewriterAnswer text={pair.a} tokens={pair.highlights} start={idx < revealed} />
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            </div>
+          ))}
         </div>
 
-        <p className="mt-10 text-center font-mono text-[11px] text-[#2A2A2A]">
-          // questions get harder. answers stay exact.
-        </p>
+        <div style={{ padding: "12px 24px", borderTop: "1px solid var(--dl-line-0)" }}>
+          <span className="dl-mono" style={{ fontSize: "0.625rem", color: "var(--dl-text-3)", letterSpacing: "0.06em" }}>
+            // questions get harder. answers stay exact.
+          </span>
+        </div>
       </div>
-    </section>
+    </Section>
   );
 }
 
-/* ============================================================
-   SECTION 04 — BEFORE / AFTER
-============================================================ */
-
-const DELTA_ROWS: { task: string; without: string; with: string; danger?: boolean }[] = [
+/* ═══════════════════════════════════════════════════════════════════════
+   TIME DELTA SECTION
+   ═══════════════════════════════════════════════════════════════════════ */
+const DELTA_ROWS = [
   { task: "Understand an unfamiliar auth flow", without: "~3 days", with: "8 seconds" },
   { task: "Find what breaks if X changes", without: "~half a day", with: "instant" },
   { task: "Onboard a new engineer to the repo", without: "2–3 weeks", with: "1 day" },
@@ -234,229 +177,143 @@ const DELTA_ROWS: { task: string; without: string; with: string; danger?: boolea
 ];
 
 export function TimeDeltaSection() {
+  const { ref, inView } = useInView<HTMLDivElement>(0.15);
   return (
-    <section className="bg-[#0A0A0A] py-32">
-      <div className="mx-auto max-w-7xl px-6 lg:px-12">
-        <div className="mb-16">
-          <SectionLabel>04 / TIME_DELTA</SectionLabel>
-          <h2 className="mt-6 max-w-[18ch] text-4xl font-semibold leading-[1.05] tracking-tight text-white md:text-5xl lg:text-[56px]">
-            Time. Before and after.
-          </h2>
+    <Section>
+      <SectionHeader index="04 / TIME_DELTA" title="Time. Before and after." />
+      <div ref={ref}>
+        {/* Column headers */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 180px 180px", borderBottom: "1px solid var(--dl-line-1)", paddingBottom: 12, marginBottom: 0 }}>
+          <span className="dl-mono" style={{ fontSize: "0.625rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--dl-text-3)" }}>TASK</span>
+          <span className="dl-mono" style={{ fontSize: "0.625rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--dl-text-3)" }}>WITHOUT DEVLENS</span>
+          <span className="dl-mono" style={{ fontSize: "0.625rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--dl-signal)" }}>WITH DEVLENS</span>
         </div>
-
-        <div className="border-t border-[#111]">
-          <div className="grid grid-cols-12 border-b border-[#111] py-5">
-            <div className="col-span-6 font-mono text-[10px] uppercase tracking-[0.1em] text-[#333]">
-              TASK
-            </div>
-            <div className="col-span-3 font-mono text-[10px] uppercase tracking-[0.1em] text-[#333]">
-              WITHOUT DEVLENS
-            </div>
-            <div className="col-span-3 font-mono text-[10px] uppercase tracking-[0.1em] text-[#00E5A0]">
-              WITH DEVLENS
-            </div>
+        {DELTA_ROWS.map((row, i) => (
+          <div key={i} style={{
+            display: "grid", gridTemplateColumns: "1fr 180px 180px",
+            borderBottom: "1px solid var(--dl-line-0)",
+            padding: "18px 0",
+            opacity: inView ? 1 : 0,
+            transform: inView ? "translateY(0)" : "translateY(8px)",
+            transition: `opacity 0.5s ease ${i * 80}ms, transform 0.5s ease ${i * 80}ms`,
+          }}>
+            <span className="dl-mono" style={{ fontSize: "0.8125rem", color: "var(--dl-text-1)", paddingRight: 24 }}>{row.task}</span>
+            <span className="dl-mono" style={{ fontSize: "0.875rem", color: row.danger ? "var(--dl-danger)" : "var(--dl-text-3)" }}>{row.without}</span>
+            <span className="dl-mono" style={{ fontSize: "0.875rem", color: "var(--dl-signal)" }}>{row.with}</span>
           </div>
-
-          {DELTA_ROWS.map((row) => (
-            <div key={row.task} className="grid grid-cols-12 border-b border-[#111] py-[18px]">
-              <div className="col-span-6 pr-4 font-mono text-[13px] text-[#666]">{row.task}</div>
-              <div
-                className={`col-span-3 pr-4 font-mono text-[14px] ${
-                  row.danger ? "text-[#FF6B6B]" : "text-[#3A3A3A]"
-                }`}
-              >
-                {row.without}
-              </div>
-              <div className="col-span-3 font-mono text-[14px] text-[#00E5A0]">{row.with}</div>
-            </div>
-          ))}
+        ))}
+        <div style={{ paddingTop: 16, textAlign: "right" }}>
+          <span className="dl-mono" style={{ fontSize: "0.625rem", color: "var(--dl-text-3)", letterSpacing: "0.06em" }}>
+            // 10,247 engineers stopped guessing this week
+          </span>
         </div>
-
-        <p className="mt-10 text-right font-mono text-[11px] text-[#2A2A2A]">
-          // 10,247 engineers stopped guessing this week
-        </p>
       </div>
-    </section>
+    </Section>
   );
 }
 
-/* ============================================================
-   SECTION 05 — TERMINAL SOCIAL PROOF
-============================================================ */
-
-type Report = {
-  user: string;
-  text: string;
-  highlights: string[];
-  time: string;
-};
-
-const REPORTS: Report[] = [
-  {
-    user: "@t3dotgg",
-    text: "connected create-t3-app and immediately found a circular dep I'd been chasing for 6 months",
-    highlights: ["circular dep I'd been chasing for 6 months"],
-    time: "~2d ago",
-  },
-  {
-    user: "@wesbos",
-    text: "asked \"what's the most dangerous file in this repo\" — the answer was exactly right",
-    highlights: ["exactly right"],
-    time: "~5d ago",
-  },
-  {
-    user: "@leeerob",
-    text: "used it mid-refactor on next.js. the blast radius view stopped us from shipping a breaking change",
-    highlights: ["stopped us from shipping a breaking change"],
-    time: "~1w ago",
-  },
-  {
-    user: "@destroytoday",
-    text: "onboarded to a new client codebase in under an hour. usually takes a week of pain",
-    highlights: ["under an hour"],
-    time: "~3d ago",
-  },
-  {
-    user: "@mattpocock",
-    text: "the \"what breaks if I change X\" answer is genuinely better than asking the team lead",
-    highlights: ["better than asking the team lead"],
-    time: "~4d ago",
-  },
+/* ═══════════════════════════════════════════════════════════════════════
+   FIELD REPORTS SECTION
+   ═══════════════════════════════════════════════════════════════════════ */
+const REPORTS = [
+  { user: "@t3dotgg", text: "connected create-t3-app and immediately found a circular dep I'd been chasing for 6 months", highlights: ["circular dep I'd been chasing for 6 months"], time: "~2d ago" },
+  { user: "@wesbos", text: "asked \"what's the most dangerous file in this repo\" — the answer was exactly right", highlights: ["exactly right"], time: "~5d ago" },
+  { user: "@leeerob", text: "used it mid-refactor on next.js. the blast radius view stopped us from shipping a breaking change", highlights: ["stopped us from shipping a breaking change"], time: "~1w ago" },
+  { user: "@destroytoday", text: "onboarded to a new client codebase in under an hour. usually takes a week of pain", highlights: ["under an hour"], time: "~3d ago" },
+  { user: "@mattpocock", text: "the \"what breaks if I change X\" answer is genuinely better than asking the team lead", highlights: ["better than asking the team lead"], time: "~4d ago" },
 ];
 
 export function FieldReportsSection() {
   return (
-    <section className="bg-[#0A0A0A] py-32">
-      <div className="mx-auto max-w-7xl px-6 lg:px-12">
-        <div className="mb-16">
-          <SectionLabel>05 / FIELD_REPORTS</SectionLabel>
-          <h2 className="mt-6 max-w-[20ch] text-4xl font-semibold leading-[1.05] tracking-tight text-white md:text-5xl lg:text-[56px]">
-            From engineers who shipped with it.
-          </h2>
+    <Section>
+      <SectionHeader index="05 / FIELD_REPORTS" title="From engineers who shipped with it." />
+
+      <div className="dl-terminal">
+        <div className="dl-terminal-bar">
+          <span className="dl-terminal-dot" style={{ background: "#FF5F57" }} />
+          <span className="dl-terminal-dot" style={{ background: "#FEBC2E" }} />
+          <span className="dl-terminal-dot" style={{ background: "#28C840" }} />
+          <span className="dl-mono" style={{ fontSize: "0.6875rem", color: "var(--dl-text-2)", marginLeft: 8, flex: 1 }}>
+            DEVLENS_FEEDBACK — community.log
+          </span>
+          <span className="dl-mono" style={{ fontSize: "0.6rem", color: "var(--dl-text-3)" }}>↓ live feed</span>
         </div>
 
-        <div className="overflow-hidden rounded-xl border border-[#1A1A1A] bg-[#0D0D0D]">
-          <TerminalHeader
-            title="DEVLENS_FEEDBACK — community.log"
-            right={<span>↓ live feed</span>}
-          />
-
-          <div className="px-6 py-6 md:px-8">
-            {REPORTS.map((r) => (
-              <div
-                key={r.user}
-                className="flex flex-col gap-1 border-b border-[#1A1A1A] py-3 last:border-b-0 md:flex-row md:items-center md:gap-4"
-              >
-                <span className="font-mono text-[12px] text-[#4A8FFF] md:shrink-0">
-                  {r.user}
-                </span>
-                <span className="hidden font-mono text-[12px] text-[#222] md:inline">·</span>
-                <div className="flex-1">
-                  <Highlighted
-                    text={r.text}
-                    tokens={r.highlights}
-                    className="font-mono text-[12px] leading-relaxed text-[#555]"
-                    highlightClassName="text-[#AAAAAA]"
-                  />
-                </div>
-                <span className="font-mono text-[11px] text-[#2A2A2A] md:shrink-0">
-                  {r.time}
-                </span>
-              </div>
-            ))}
-
-            <div className="mt-6 flex items-center gap-2 font-mono text-[11px] text-[#333]">
-              <span className="text-[#1E1E1E]">▋</span>
-              <span>10,000+ engineers</span>
-              <span>·</span>
-              <span>847 repos connected this week</span>
-              <span>·</span>
-              <span>system nominal</span>
-              <span
-                className="ml-2 inline-block h-[14px] w-[7px] bg-[#00E5A0]"
-                style={{ animation: "devlens-blink 1s steps(2) infinite" }}
+        <div style={{ padding: "0 24px" }}>
+          {REPORTS.map((r, i) => (
+            <div key={i} style={{
+              display: "grid",
+              gridTemplateColumns: "120px 1fr auto",
+              alignItems: "center",
+              gap: 16,
+              borderBottom: i < REPORTS.length - 1 ? "1px solid var(--dl-line-0)" : "none",
+              padding: "14px 0",
+            }}>
+              <span className="dl-mono" style={{ fontSize: "0.75rem", color: "#4a8fff" }}>{r.user}</span>
+              <Highlighted
+                text={r.text}
+                tokens={r.highlights}
+                style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", color: "var(--dl-text-2)", lineHeight: 1.6 }}
+                highlightColor="var(--dl-text-0)"
               />
+              <span className="dl-mono" style={{ fontSize: "0.625rem", color: "var(--dl-text-3)", whiteSpace: "nowrap" }}>{r.time}</span>
             </div>
+          ))}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "14px 0", borderTop: "1px solid var(--dl-line-0)" }}>
+            <span className="dl-mono" style={{ fontSize: "0.625rem", color: "var(--dl-text-3)" }}>10,000+ engineers</span>
+            <span style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--dl-text-3)" }} />
+            <span className="dl-mono" style={{ fontSize: "0.625rem", color: "var(--dl-text-3)" }}>847 repos connected this week</span>
+            <span style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--dl-text-3)" }} />
+            <span className="dl-mono" style={{ fontSize: "0.625rem", color: "var(--dl-text-3)" }}>system nominal</span>
+            <span style={{
+              display: "inline-block", width: 6, height: 12,
+              background: "var(--dl-signal)", marginLeft: 6,
+              animation: "dl-blink 1s steps(2) infinite",
+            }} />
           </div>
         </div>
       </div>
-
-      <style>{`
-        @keyframes devlens-blink {
-          0%, 49% { opacity: 1; }
-          50%, 100% { opacity: 0; }
-        }
-      `}</style>
-    </section>
+    </Section>
   );
 }
 
-/* ============================================================
-   FINAL CTA — loops back to hero
-============================================================ */
-
-export function FinalCTASection({
-  repoUrl,
-  setRepoUrl,
-  analyzing,
-  onSubmit,
-}: {
-  repoUrl: string;
-  setRepoUrl: (v: string) => void;
-  analyzing: boolean;
-  onSubmit: () => void;
+/* ═══════════════════════════════════════════════════════════════════════
+   FINAL CTA SECTION
+   ═══════════════════════════════════════════════════════════════════════ */
+export function FinalCTASection({ repoUrl, setRepoUrl, analyzing, onSubmit }: {
+  repoUrl: string; setRepoUrl: (v: string) => void; analyzing: boolean; onSubmit: () => void;
 }) {
   return (
-    <section className="bg-[#0A0A0A] py-32">
-      <div className="mx-auto max-w-4xl px-6 text-center lg:px-12">
-        <h2 className="text-balance text-5xl font-semibold leading-none tracking-tight text-white md:text-7xl lg:text-8xl">
-          Your codebase. <span className="text-zinc-700 italic">8 seconds.</span>
-        </h2>
+    <section style={{ padding: "clamp(6rem,12vw,10rem) 0", borderTop: "1px solid var(--dl-line-0)" }}>
+      <div className="dl-container" style={{ maxWidth: 680, textAlign: "center" }}>
+        <div className="dl-section-label" style={{ justifyContent: "center" }}>06 / CONNECT_NOW</div>
+        <h2 className="dl-h2">Your codebase.{" "}<em style={{ color: "var(--dl-text-3)", fontStyle: "italic" }}>8 seconds.</em></h2>
 
         <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            onSubmit();
-          }}
-          className="group relative mx-auto mt-16 max-w-xl"
+          onSubmit={e => { e.preventDefault(); onSubmit(); }}
+          style={{ marginTop: "2.5rem", maxWidth: 520, marginInline: "auto" }}
         >
-          <div className="flex items-center gap-4 rounded-lg bg-brand-card p-2 pl-4 ring-1 ring-white/10 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.8)] transition-all hover:ring-white/20 focus-within:ring-white/30">
-            <span className="select-none font-mono text-zinc-600">/connect</span>
+          <div className="dl-input-wrap">
+            <span className="dl-mono" style={{ color: "var(--dl-text-3)", fontSize: "0.8125rem", flexShrink: 0 }}>/connect</span>
             <input
               type="text"
               value={repoUrl}
-              onChange={(e) => setRepoUrl(e.target.value)}
+              onChange={e => setRepoUrl(e.target.value)}
               disabled={analyzing}
               placeholder="github.com/org/repo"
-              aria-label="GitHub repository URL"
-              className="min-w-0 flex-1 bg-transparent text-left font-mono text-sm text-brand-heading outline-none placeholder:text-zinc-700 disabled:opacity-60"
+              className="dl-input"
             />
-            <button
-              type="submit"
-              disabled={analyzing}
-              className="flex items-center gap-2 rounded bg-zinc-100 py-2 pl-2 pr-3 text-xs font-medium text-zinc-950 shadow-[0_0_20px_rgba(255,255,255,0.1)] transition-colors hover:bg-white disabled:opacity-80"
-            >
-              <div
-                className={`size-3 rounded-full border-2 border-zinc-950/20 border-t-zinc-950 ${
-                  analyzing ? "animate-spin" : ""
-                }`}
-              />
-              {analyzing ? "Analyzing" : "Analyze"}
+            <button type="submit" disabled={analyzing} className="dl-btn dl-btn-primary dl-btn-sm">
+              {analyzing ? "Analyzing..." : "Analyze"}
             </button>
           </div>
 
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
-            <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
-              Public &amp; Private
-            </span>
-            <span className="h-px w-3 bg-white/10" />
-            <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
-              No Install
-            </span>
-            <span className="h-px w-3 bg-white/10" />
-            <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">
-              10,000+ Repos Analyzed
-            </span>
+          <div style={{ marginTop: "1.25rem", display: "flex", justifyContent: "center", flexWrap: "wrap", gap: "0 20px" }}>
+            {["Public & Private", "No Install", "10,000+ Repos Analyzed"].map((t, i) => (
+              <span key={i} className="dl-mono" style={{ fontSize: "0.625rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--dl-text-3)" }}>
+                {t}
+              </span>
+            ))}
           </div>
         </form>
       </div>
