@@ -1,30 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 
-// ── Real-ish repo names + star counts ──────────────────────────────────────────
 const REPOS = [
-  "vercel/next.js ★ 128k",
-  "facebook/react ★ 228k",
-  "microsoft/vscode ★ 163k",
-  "torvalds/linux ★ 183k",
-  "denoland/deno ★ 95k",
-  "rust-lang/rust ★ 98k",
-  "golang/go ★ 124k",
-  "sveltejs/svelte ★ 79k",
-  "nestjs/nest ★ 67k",
-  "remix-run/remix ★ 30k",
-  "vitejs/vite ★ 68k",
-  "astro-build/astro ★ 47k",
-  "shadcn-ui/ui ★ 72k",
-  "trpc/trpc ★ 35k",
-  "supabase/supabase ★ 73k",
-  "prisma/prisma ★ 39k",
-  "tailwindlabs/tailwindcss ★ 83k",
-  "tanstack/query ★ 42k",
-  "pmndrs/zustand ★ 48k",
-  "redwoodjs/redwood ★ 17k",
+  "vercel/next.js ★ 128k","facebook/react ★ 228k","microsoft/vscode ★ 163k",
+  "torvalds/linux ★ 183k","denoland/deno ★ 95k","rust-lang/rust ★ 98k",
+  "golang/go ★ 124k","sveltejs/svelte ★ 79k","nestjs/nest ★ 67k",
+  "remix-run/remix ★ 30k","vitejs/vite ★ 68k","astro-build/astro ★ 47k",
+  "shadcn-ui/ui ★ 72k","trpc/trpc ★ 35k","supabase/supabase ★ 73k",
+  "prisma/prisma ★ 39k","tailwindlabs/tailwindcss ★ 83k","tanstack/query ★ 42k",
 ];
 
-// ── Count-up hook ──────────────────────────────────────────────────────────────
 function useCountUp(target: number, duration = 1800, start = false) {
   const [val, setVal] = useState(0);
   useEffect(() => {
@@ -58,116 +42,78 @@ function useInView(threshold = 0.2) {
   return { ref, inView };
 }
 
-// ── Ticker row ────────────────────────────────────────────────────────────────
 function TickerRow({ reverse = false }: { reverse?: boolean }) {
-  // Duplicate for seamless loop
   const items = [...REPOS, ...REPOS];
   return (
-    <div className="overflow-hidden py-2 mask-gradient-x">
-      <div
-        className="flex gap-8 whitespace-nowrap"
-        style={{
-          animation: `ticker-${reverse ? "reverse" : "forward"} 40s linear infinite`,
-        }}
-      >
+    <div className="dl-mask-x" style={{ overflow: "hidden", padding: "4px 0" }}>
+      <div style={{ display: "flex", gap: 10, whiteSpace: "nowrap",
+        animation: `${reverse ? "dl-ticker-rev" : "dl-ticker-fwd"} 50s linear infinite` }}>
         {items.map((r, i) => (
-          <span
-            key={i}
-            className="font-mono text-[13px] text-zinc-600 shrink-0 px-3 py-1 rounded border border-zinc-800/60 bg-zinc-900/30"
-          >
-            {r}
-          </span>
+          <span key={i} className="dl-mono" style={{
+            fontSize: "0.6875rem", color: "var(--dl-text-2)", flexShrink: 0,
+            padding: "5px 12px", borderRadius: "var(--radius-sm)",
+            border: "1px solid var(--dl-line-1)", background: "var(--dl-raised)",
+            letterSpacing: "0.02em",
+          }}>{r}</span>
         ))}
       </div>
     </div>
   );
 }
 
-// ── Stats row ─────────────────────────────────────────────────────────────────
-function StatItem({ value, label, inView }: { value: number; label: string; inView: boolean }) {
-  const count = useCountUp(value, 1800, inView);
-  return (
-    <div className="flex flex-col items-center gap-1 text-center">
-      <div className="font-mono text-3xl font-semibold text-white tabular-nums">
-        {count.toLocaleString()}
-      </div>
-      <div className="font-mono text-[11px] uppercase tracking-widest text-zinc-600">
-        {label}
-      </div>
-    </div>
-  );
-}
-
-// ── Terminal confession ────────────────────────────────────────────────────────
 const CONFESSION_LINES = [
-  { text: "$ git clone https://github.com/acme/platform", color: "#555" },
-  { text: "# 4 days later...", color: "#333" },
-  { text: "$ grep -r 'authMiddleware' . | wc -l", color: "#555" },
-  { text: "312", color: "#444" },
-  { text: "# still no idea what actually breaks if we change it", color: "#333" },
-  { text: "$ git log --oneline src/auth/ | head -20", color: "#555" },
-  { text: "# 47 commits. no docs. no tests. 3 authors, all quit.", color: "#333" },
+  { text: "$ git clone https://github.com/acme/platform", color: "var(--dl-text-2)" },
+  { text: "# 4 days later...", color: "var(--dl-text-3)" },
+  { text: "$ grep -r 'authMiddleware' . | wc -l", color: "var(--dl-text-2)" },
+  { text: "312", color: "var(--dl-text-2)" },
+  { text: "# still no idea what actually breaks if we change it", color: "var(--dl-text-3)" },
+  { text: "$ git log --oneline src/auth/ | head -20", color: "var(--dl-text-2)" },
+  { text: "# 47 commits. no docs. no tests. 3 authors, all quit.", color: "var(--dl-text-3)" },
   { text: "", color: "" },
-  { text: "$ devlens connect github.com/acme/platform", color: "#888" },
-  { text: "▸ CLONING...", color: "#00E5A0" },
-  { text: "▸ PARSING 4,812 FILES...", color: "#00E5A0" },
-  { text: "▸ BUILDING DEPENDENCY GRAPH...", color: "#00E5A0" },
-  { text: "INDEXED IN 7.2s. ASK ANYTHING.", color: "#00E5A0" },
+  { text: "$ devlens connect github.com/acme/platform", color: "var(--dl-text-1)" },
+  { text: "▸ CLONING...", color: "var(--dl-signal)" },
+  { text: "▸ PARSING 4,812 FILES...", color: "var(--dl-signal)" },
+  { text: "▸ BUILDING DEPENDENCY GRAPH...", color: "var(--dl-signal)" },
+  { text: "INDEXED IN 7.2s. ASK ANYTHING.", color: "var(--dl-signal)" },
 ];
 
 function TerminalConfession() {
   const { ref, inView } = useInView(0.1);
   const [revealed, setRevealed] = useState(0);
-
   useEffect(() => {
-    if (!inView) return;
-    if (revealed >= CONFESSION_LINES.length) return;
+    if (!inView || revealed >= CONFESSION_LINES.length) return;
     const delay = revealed < 8 ? 120 : revealed < 12 ? 80 : 200;
-    const t = setTimeout(() => setRevealed((v) => v + 1), delay);
+    const t = setTimeout(() => setRevealed(v => v + 1), delay);
     return () => clearTimeout(t);
   }, [inView, revealed]);
 
   return (
-    <section className="py-24 bg-[#0A0A0A]">
-      <div className="mx-auto max-w-4xl px-6 lg:px-12">
-        <div className="font-mono text-[11px] uppercase tracking-widest text-zinc-700 mb-10">
-          02 / TERMINAL_CONFESSION
-        </div>
-        <div
-          ref={ref}
-          className="rounded-xl overflow-hidden border border-zinc-800/60 bg-[#0c0c0e]"
-        >
-          {/* Title bar */}
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800/60">
-            <span className="size-3 rounded-full bg-[#FF5F57]" />
-            <span className="size-3 rounded-full bg-[#FEBC2E]" />
-            <span className="size-3 rounded-full bg-[#28C840]" />
-            <span className="ml-4 font-mono text-[11px] text-zinc-600">
-              every_team_ever.sh
-            </span>
+    <section className="dl-section" style={{ borderTop: "1px solid var(--dl-line-0)" }}>
+      <div className="dl-container">
+        <div className="dl-section-label">02 / TERMINAL_CONFESSION</div>
+        <div ref={ref} className="dl-terminal">
+          <div className="dl-terminal-bar">
+            <span className="dl-terminal-dot" style={{ background: "#FF5F57" }} />
+            <span className="dl-terminal-dot" style={{ background: "#FEBC2E" }} />
+            <span className="dl-terminal-dot" style={{ background: "#28C840" }} />
+            <span className="dl-mono" style={{ fontSize: "0.6875rem", color: "var(--dl-text-2)", marginLeft: 8 }}>every_team_ever.sh</span>
           </div>
-          <div className="p-6 space-y-1 min-h-[280px]">
+          <div style={{ padding: "20px 24px", minHeight: 260 }}>
             {CONFESSION_LINES.slice(0, revealed).map((line, i) => (
-              <div
-                key={i}
-                className={`font-mono text-[12px] leading-relaxed ${
-                  i === revealed - 1 && i < CONFESSION_LINES.length - 1
-                    ? "after:content-['▌'] after:animate-pulse"
-                    : ""
-                }`}
-                style={{ color: line.color || "transparent" }}
-              >
+              <div key={i} className="dl-mono" style={{
+                fontSize: "0.75rem", lineHeight: 1.8,
+                color: line.color || "transparent",
+              }}>
                 {line.text || "\u00a0"}
+                {i === revealed - 1 && i < CONFESSION_LINES.length - 1 && (
+                  <span style={{ animation: "dl-blink 1s steps(2) infinite" }}>▌</span>
+                )}
                 {i === CONFESSION_LINES.length - 1 && (
-                  <span
-                    className="ml-1 inline-block bg-[#00E5A0]"
-                    style={{
-                      width: 7,
-                      height: 14,
-                      verticalAlign: "text-bottom",
-                      animation: "blink-cursor 1s steps(2) infinite",
-                    }}
-                  />
+                  <span style={{
+                    display: "inline-block", width: 6, height: 13, marginLeft: 3,
+                    background: "var(--dl-signal)", verticalAlign: "text-bottom",
+                    animation: "dl-blink 1s steps(2) infinite",
+                  }} />
                 )}
               </div>
             ))}
@@ -178,60 +124,62 @@ function TerminalConfession() {
   );
 }
 
-// ── Main export ───────────────────────────────────────────────────────────────
+function StatItem({ value, label, suffix, inView }: { value: number; label: string; suffix: string; inView: boolean }) {
+  const count = useCountUp(value, 1800, inView);
+  const display = value >= 1000000
+    ? `${(count / 1000000).toFixed(1)}M`
+    : value >= 1000
+    ? `${(count / 1000).toFixed(1)}k`
+    : `${count}`;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div className="dl-mono" style={{
+        fontSize: "clamp(1.75rem, 4vw, 2.75rem)", fontWeight: 700,
+        color: "var(--dl-text-0)", letterSpacing: "-0.03em", lineHeight: 1,
+        fontVariantNumeric: "tabular-nums",
+      }}>
+        {display}{suffix}
+      </div>
+      <div className="dl-label" style={{ marginBottom: 0 }}>{label}</div>
+    </div>
+  );
+}
+
 export function HeroExtras() {
   const { ref: statsRef, inView: statsInView } = useInView(0.3);
+  const stats = [
+    { value: 14203, label: "Repos Analyzed", suffix: "" },
+    { value: 8, label: "Avg Seconds", suffix: "s" },
+    { value: 2100000, label: "Files Parsed", suffix: "+" },
+    { value: 10000, label: "Engineers Using", suffix: "+" },
+  ];
 
   return (
     <>
-      <style>{`
-        @keyframes ticker-forward {
-          from { transform: translateX(0); }
-          to   { transform: translateX(-50%); }
-        }
-        @keyframes ticker-reverse {
-          from { transform: translateX(-50%); }
-          to   { transform: translateX(0); }
-        }
-        @keyframes blink-cursor {
-          0%, 49% { opacity: 1; }
-          50%, 100% { opacity: 0; }
-        }
-        .mask-gradient-x {
-          -webkit-mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
-          mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
-        }
-      `}</style>
-
-      {/* Terminal Confession */}
       <TerminalConfession />
 
-      {/* Repo Ticker */}
-      <section className="py-16 bg-[#0A0A0A] overflow-hidden border-y border-zinc-900">
-        <div className="font-mono text-[11px] uppercase tracking-widest text-zinc-700 mb-6 text-center">
-          Repos already analyzed
+      {/* Ticker */}
+      <section style={{ borderTop: "1px solid var(--dl-line-0)", borderBottom: "1px solid var(--dl-line-0)", padding: "2.5rem 0" }}>
+        <div className="dl-container">
+          <div className="dl-label" style={{ marginBottom: "1rem", marginLeft: 0 }}>Repos already analyzed</div>
         </div>
-        <div className="space-y-2">
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <TickerRow />
           <TickerRow reverse />
         </div>
       </section>
 
-      {/* Stats Row */}
-      <section className="py-20 bg-[#0A0A0A] border-b border-zinc-900">
-        <div
-          ref={statsRef}
-          className="mx-auto max-w-4xl px-6 grid grid-cols-2 md:grid-cols-4 gap-10"
-        >
-          <StatItem value={14203} label="Repos Analyzed" inView={statsInView} />
-          <StatItem value={8} label="Avg Seconds" inView={statsInView} />
-          <StatItem value={2100000} label="Files Parsed" inView={statsInView} />
-          <StatItem value={10000} label="Engineers Using" inView={statsInView} />
+      {/* Stats */}
+      <section className="dl-section" style={{ borderBottom: "1px solid var(--dl-line-0)" }}>
+        <div className="dl-container">
+          <div ref={statsRef} style={{
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px,1fr))", gap: "clamp(2rem,4vw,4rem)",
+          }}>
+            {stats.map(s => <StatItem key={s.label} {...s} inView={statsInView} />)}
+          </div>
         </div>
-        <p className="mt-10 text-center font-mono text-[11px] text-zinc-800">
-          // TypeScript #1 language · React #1 framework · Growing
-        </p>
       </section>
     </>
   );
 }
+
