@@ -5,19 +5,24 @@ export const Route = createFileRoute("/onboarding")({
   component: OnboardingFlow,
   head: () => ({
     meta: [{ title: "Get Started — DevLens AI" }],
+    links: [
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "" },
+      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" },
+    ],
   }),
 });
 
 type Step = 1 | 2 | 3;
 
-const STEPS_META = [
-  { label: "Welcome", num: 1 },
-  { label: "First Analysis", num: 2 },
-  { label: "Dashboard Tour", num: 3 },
+const STEPS = [
+  { num: 1, label: "Welcome" },
+  { num: 2, label: "Analysis" },
+  { num: 3, label: "Tour" },
 ];
 
 const ANALYSIS_STEPS = [
-  "Cloning repo",
+  "Cloning repository",
   "Parsing file tree",
   "Building dependency graph",
   "Generating architecture map",
@@ -25,102 +30,110 @@ const ANALYSIS_STEPS = [
 ];
 
 const TOUR_TIPS = [
-  {
-    target: "ARCHITECTURE GRAPH",
-    icon: "⬡",
-    text: "This is your architecture map. Click any node to explore connections and see blast radius.",
-    next: "Next →",
-    step: 1,
-  },
-  {
-    target: "ASK DEVLENS PANEL",
-    icon: "◈",
-    text: "Ask anything about this repo. DevLens has read every line, every dependency, every pattern.",
-    next: "Next →",
-    step: 2,
-  },
-  {
-    target: "ONBOARDING DOC TAB",
-    icon: "✦",
-    text: "Switch to Onboarding Doc to get a shareable, GPT-4 generated guide for your team.",
-    next: "Got it",
-    step: 3,
-  },
+  { target: "ARCHITECTURE GRAPH", icon: "⬡", text: "This is your architecture map. Click any node to explore connections and see the blast radius of any change.", next: "Next", step: 1 },
+  { target: "ASK DEVLENS PANEL", icon: "◈", text: "Ask anything about this repo. DevLens has read every line, every dependency, every pattern.", next: "Next", step: 2 },
+  { target: "ONBOARDING DOC TAB", icon: "✦", text: "Switch to Onboarding Doc to get a shareable, GPT-4 generated guide for your team.", next: "Go to Dashboard", step: 3 },
 ];
 
-function StepDots({ current }: { current: Step }) {
+/* ── Step Progress ───────────────────────────────────────────────────── */
+function StepProgress({ current }: { current: Step }) {
   return (
-    <div className="flex items-center gap-3">
-      {STEPS_META.map((s) => (
-        <div
-          key={s.num}
-          className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest"
-          style={{ color: s.num === current ? "#00E5A0" : s.num < current ? "#2a2a2a" : "#222" }}
-        >
-          <span
-            className="size-1.5 rounded-full"
-            style={{
-              background: s.num === current ? "#00E5A0" : s.num < current ? "#2a2a2a" : "#1a1a1a",
-              boxShadow: s.num === current ? "0 0 8px rgba(0,229,160,0.5)" : "none",
-            }}
-          />
-          {s.label}
+    <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
+      {STEPS.map((s, i) => (
+        <div key={s.num} style={{ display: "flex", alignItems: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+            <div style={{
+              width: 7, height: 7, borderRadius: "50%",
+              background: s.num === current ? "var(--dl-signal)" : s.num < current ? "var(--dl-text-3)" : "var(--dl-line-2)",
+              boxShadow: s.num === current ? "0 0 10px var(--dl-signal)" : "none",
+              transition: "all 0.3s ease",
+            }} />
+            <span className="dl-mono" style={{
+              fontSize: "0.625rem", letterSpacing: "0.12em", textTransform: "uppercase",
+              color: s.num === current ? "var(--dl-signal)" : "var(--dl-text-3)",
+              transition: "color 0.3s ease",
+            }}>
+              {s.label}
+            </span>
+          </div>
+          {i < STEPS.length - 1 && (
+            <div style={{
+              width: 28, height: 1, marginInline: 10,
+              background: s.num < current ? "rgba(0,214,143,0.25)" : "var(--dl-line-1)",
+              transition: "background 0.4s ease",
+            }} />
+          )}
         </div>
       ))}
     </div>
   );
 }
 
+/* ── Welcome Step ────────────────────────────────────────────────────── */
 function WelcomeStep({ onStart, onSkip }: { onStart: () => void; onSkip: () => void }) {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-[#09090b] px-6 text-center">
-      {/* Logo */}
-      <div className="font-mono text-[11px] uppercase tracking-widest text-zinc-600 mb-8">
-        DEVLENS_V2
-      </div>
-      <div className="mb-2">
-        <span className="size-3 rounded-full bg-[#00E5A0] inline-block shadow-[0_0_12px_rgba(0,229,160,0.6)]" />
+    <div style={{
+      minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center",
+      justifyContent: "center", padding: "clamp(5rem,10vw,8rem) 1.5rem 3rem",
+      textAlign: "center",
+    }}>
+      {/* Signal icon */}
+      <div style={{ marginBottom: "2rem", display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{
+          width: 8, height: 8, borderRadius: "50%",
+          background: "var(--dl-signal)",
+          boxShadow: "0 0 16px var(--dl-signal), 0 0 40px rgba(0,214,143,0.15)",
+          animation: "dl-heartbeat 2s ease-in-out infinite",
+        }} />
+        <span className="dl-mono" style={{ fontSize: "0.625rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--dl-text-2)" }}>
+          DevLens AI — Ready
+        </span>
       </div>
 
-      <h1 className="text-5xl font-semibold text-white tracking-tight mt-6">
+      <h1 className="dl-h1" style={{ maxWidth: "18ch" }}>
         Let's analyze your first repo.
       </h1>
-      <p className="mt-6 text-base text-zinc-500 max-w-xl">
-        Paste any GitHub URL to begin. Public repos work instantly. Private repos need a secure tunnel.
+      <p className="dl-body" style={{ maxWidth: "46ch", marginTop: "1rem" }}>
+        Paste any GitHub URL to begin. Public repos work instantly.
+        Private repos need a secure tunnel.
       </p>
 
-      {/* Input bar */}
+      {/* Input */}
       <form
-        onSubmit={(e) => { e.preventDefault(); onStart(); }}
-        className="mt-12 w-full max-w-lg"
+        onSubmit={e => { e.preventDefault(); onStart(); }}
+        style={{ marginTop: "2.5rem", width: "100%", maxWidth: 480 }}
       >
-        <div className="flex items-center gap-4 bg-[#111] p-2 pl-4 rounded-lg border border-zinc-800 focus-within:border-[#00E5A0] transition-colors shadow-[0_0_0_0_rgba(0,229,160,0)] focus-within:shadow-[0_0_16px_rgba(0,229,160,0.12)]">
-          <span className="font-mono text-zinc-600 text-sm select-none">/connect</span>
+        <div className="dl-input-wrap">
+          <span className="dl-mono" style={{ color: "var(--dl-text-3)", fontSize: "0.8125rem", flexShrink: 0 }}>/connect</span>
           <input
             type="text"
             placeholder="github.com/org/repo"
-            className="flex-1 bg-transparent font-mono text-sm text-white outline-none placeholder:text-zinc-700"
+            className="dl-input"
             autoFocus
           />
-          <button
-            type="submit"
-            className="bg-zinc-100 text-zinc-950 font-medium text-xs py-2 pl-2 pr-3 rounded flex items-center gap-2 hover:bg-white transition-colors"
-          >
-            Analyze
-          </button>
+          <button type="submit" className="dl-btn dl-btn-primary dl-btn-sm">Analyze</button>
         </div>
       </form>
 
-      <div className="mt-6 flex items-center gap-6">
-        <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-700">Public & Private</span>
-        <span className="h-px w-4 bg-zinc-800" />
-        <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-700">No Install</span>
+      <div style={{ marginTop: "1.25rem", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", justifyContent: "center" }}>
+        {["Public & Private", "No Install"].map((t, i) => (
+          <span key={i} className="dl-mono" style={{ fontSize: "0.625rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--dl-text-3)" }}>
+            {t}
+          </span>
+        ))}
       </div>
 
       <button
         type="button"
         onClick={onSkip}
-        className="absolute bottom-8 right-8 font-mono text-[11px] text-zinc-700 hover:text-zinc-500 transition-colors"
+        className="dl-mono"
+        style={{
+          position: "fixed", bottom: 24, right: 24,
+          fontSize: "0.6875rem", color: "var(--dl-text-3)",
+          background: "none", border: "none", cursor: "pointer",
+          letterSpacing: "0.06em", padding: "6px 10px",
+          borderRadius: "var(--radius-sm)", transition: "color 0.2s ease",
+        }}
       >
         Skip tour →
       </button>
@@ -128,16 +141,14 @@ function WelcomeStep({ onStart, onSkip }: { onStart: () => void; onSkip: () => v
   );
 }
 
+/* ── Analysis Step ───────────────────────────────────────────────────── */
 function AnalysisStep({ onDone }: { onDone: () => void }) {
   const [activeStep, setActiveStep] = useState(0);
-  const [progressPct, setProgressPct] = useState(0);
+  const progressPct = Math.round((activeStep / ANALYSIS_STEPS.length) * 100);
 
   useEffect(() => {
     if (activeStep >= ANALYSIS_STEPS.length) return;
-    const t = setTimeout(() => {
-      setActiveStep((s) => s + 1);
-      setProgressPct(Math.round(((activeStep + 1) / ANALYSIS_STEPS.length) * 100));
-    }, 900);
+    const t = setTimeout(() => setActiveStep(s => s + 1), 900);
     return () => clearTimeout(t);
   }, [activeStep]);
 
@@ -149,74 +160,84 @@ function AnalysisStep({ onDone }: { onDone: () => void }) {
   }, [activeStep, onDone]);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-[#09090b] px-6">
-      <div className="w-full max-w-lg">
-        <div className="mb-8 text-center">
-          <div className="font-mono text-[11px] uppercase tracking-widest text-[#00E5A0] mb-2">
+    <div style={{
+      minHeight: "100vh", display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "center",
+      padding: "clamp(5rem,10vw,8rem) 1.5rem",
+    }}>
+      <div style={{ width: "100%", maxWidth: 480 }}>
+        <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
+          <div className="dl-mono" style={{ fontSize: "0.625rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--dl-signal)", marginBottom: 12 }}>
             FIRST ANALYSIS RUNNING
           </div>
-          <h2 className="text-2xl font-semibold text-white">
-            Your first analysis is running.
-          </h2>
-          <p className="mt-2 text-sm text-zinc-500">
-            This will take about 8 seconds.
-          </p>
+          <h2 className="dl-h3">Your first analysis is running.</h2>
+          <p className="dl-body-sm" style={{ marginTop: 8 }}>This will take about 8 seconds.</p>
         </div>
 
-        <div className="rounded-xl bg-[#0c0c0e] border border-zinc-800/60 p-8">
-          <div className="mb-6 flex items-center justify-between">
-            <div className="font-mono text-sm text-white">vercel/next.js</div>
-            <div className="font-mono text-[10px] text-zinc-500">
+        <div className="dl-terminal">
+          <div className="dl-terminal-bar">
+            <span className="dl-terminal-dot" style={{ background: "#FF5F57" }} />
+            <span className="dl-terminal-dot" style={{ background: "#FEBC2E" }} />
+            <span className="dl-terminal-dot" style={{ background: "#28C840" }} />
+            <span className="dl-mono" style={{ fontSize: "0.6875rem", color: "var(--dl-text-2)", marginLeft: 8, flex: 1 }}>vercel/next.js</span>
+            <span className="dl-mono" style={{ fontSize: "0.625rem", color: "var(--dl-text-3)" }}>
               ~{Math.max(0, ANALYSIS_STEPS.length - activeStep)}s remaining
-            </div>
+            </span>
           </div>
 
-          <div className="space-y-3 mb-8">
-            {ANALYSIS_STEPS.map((label, i) => {
-              const status = i < activeStep ? "done" : i === activeStep ? "active" : "pending";
-              return (
-                <div key={label} className="flex items-center gap-3">
-                  <div className="size-5 grid place-items-center shrink-0">
-                    {status === "done" && (
-                      <svg viewBox="0 0 16 16" className="size-4">
-                        <path d="M3 8.5l3 3 7-7" fill="none" stroke="#00E5A0"
-                          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    )}
-                    {status === "active" && (
-                      <span className="size-3 rounded-full border-2 border-zinc-700 border-t-[#00E5A0] animate-spin" />
-                    )}
-                    {status === "pending" && (
-                      <span className="size-2 rounded-full border border-zinc-700" />
-                    )}
+          <div style={{ padding: "20px 20px 24px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
+              {ANALYSIS_STEPS.map((label, i) => {
+                const status = i < activeStep ? "done" : i === activeStep ? "active" : "pending";
+                return (
+                  <div key={label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ width: 18, height: 18, display: "grid", placeItems: "center", flexShrink: 0 }}>
+                      {status === "done" && (
+                        <svg viewBox="0 0 16 16" style={{ width: 14, height: 14 }}>
+                          <path d="M3 8.5l3 3 7-7" fill="none" stroke="var(--dl-signal)"
+                            strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                      {status === "active" && (
+                        <span style={{
+                          width: 12, height: 12, borderRadius: "50%",
+                          border: "2px solid var(--dl-line-2)",
+                          borderTopColor: "var(--dl-signal)",
+                          animation: "dl-spin 0.8s linear infinite",
+                          display: "inline-block",
+                        }} />
+                      )}
+                      {status === "pending" && (
+                        <span style={{ width: 6, height: 6, borderRadius: "50%", border: "1px solid var(--dl-line-2)", display: "inline-block" }} />
+                      )}
+                    </div>
+                    <span className="dl-mono" style={{
+                      fontSize: "0.75rem",
+                      color: status === "done" ? "var(--dl-text-3)"
+                        : status === "active" ? "var(--dl-text-0)"
+                          : "var(--dl-text-3)",
+                      textDecoration: status === "done" ? "line-through" : "none",
+                    }}>
+                      {label}{status === "active" && "..."}
+                    </span>
                   </div>
-                  <span className={`text-sm ${
-                    status === "done" ? "text-zinc-600 line-through decoration-zinc-800"
-                    : status === "active" ? "text-white" : "text-zinc-700"
-                  }`}>
-                    {label}{status === "active" && "..."}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Progress bar */}
-          <div>
-            <div className="h-1 w-full rounded-full bg-white/5 overflow-hidden">
-              <div
-                className="h-full rounded-full"
-                style={{
-                  width: `${progressPct}%`,
-                  background: "linear-gradient(to right, #00E5A0, #1cf1b1)",
-                  transition: "width 800ms cubic-bezier(0.22,1,0.36,1)",
-                  boxShadow: "0 0 12px rgba(0,229,160,0.4)",
-                }}
-              />
+                );
+              })}
             </div>
-            <div className="mt-2 flex justify-between font-mono text-[10px] text-zinc-600">
-              <span>Processing</span>
-              <span>{progressPct}%</span>
+
+            {/* Progress bar */}
+            <div style={{ height: 2, background: "var(--dl-line-1)", borderRadius: 2, overflow: "hidden" }}>
+              <div style={{
+                height: "100%", borderRadius: 2,
+                background: "linear-gradient(to right, var(--dl-signal), rgba(0,214,143,0.7))",
+                width: `${progressPct}%`,
+                transition: "width 800ms cubic-bezier(0.22,1,0.36,1)",
+                boxShadow: "0 0 10px rgba(0,214,143,0.4)",
+              }} />
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
+              <span className="dl-mono" style={{ fontSize: "0.6rem", color: "var(--dl-text-3)", letterSpacing: "0.08em" }}>Processing</span>
+              <span className="dl-mono" style={{ fontSize: "0.6rem", color: "var(--dl-text-2)" }}>{progressPct}%</span>
             </div>
           </div>
         </div>
@@ -225,64 +246,89 @@ function AnalysisStep({ onDone }: { onDone: () => void }) {
   );
 }
 
+/* ── Tour Step ───────────────────────────────────────────────────────── */
 function TourStep({ onComplete }: { onComplete: () => void }) {
   const [tipIndex, setTipIndex] = useState(0);
   const tip = TOUR_TIPS[tipIndex];
 
   const handleNext = () => {
-    if (tipIndex < TOUR_TIPS.length - 1) {
-      setTipIndex(tipIndex + 1);
-    } else {
-      onComplete();
-    }
+    if (tipIndex < TOUR_TIPS.length - 1) setTipIndex(tipIndex + 1);
+    else onComplete();
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-[#09090b] px-6 relative">
-      {/* Mock dashboard preview */}
-      <div className="w-full max-w-4xl h-[60vh] rounded-xl border border-zinc-800/60 bg-[#0c0c0e] overflow-hidden relative">
+    <div style={{
+      minHeight: "100vh", display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "center",
+      padding: "clamp(5rem,10vw,8rem) 1.5rem 2rem",
+    }}>
+      {/* Mock dashboard */}
+      <div style={{
+        width: "100%", maxWidth: 800,
+        height: "clamp(300px, 50vh, 420px)",
+        borderRadius: "var(--radius-lg)",
+        border: "1px solid var(--dl-line-1)",
+        background: "var(--dl-raised)",
+        overflow: "hidden", display: "flex", flexDirection: "column",
+      }}>
         {/* Top bar */}
-        <div className="h-12 border-b border-zinc-800/60 flex items-center px-4 gap-3">
-          <span className="size-1.5 rounded-full bg-[#00E5A0] shadow-[0_0_6px_rgba(0,229,160,0.5)]" />
-          <span className="font-mono text-[11px] text-white">DEVLENS_V2</span>
-          <span className="h-4 w-px bg-zinc-800" />
-          <span className="font-mono text-[11px] text-zinc-500">repo: vercel/next.js</span>
-          <span className="flex-1" />
-          <span className="font-mono text-[10px] text-zinc-600 border border-zinc-800 rounded px-2 py-0.5">ARCHITECTURE</span>
-          <span className="font-mono text-[10px] text-zinc-700 px-2 py-0.5">CODE FLOW</span>
-          <span className="font-mono text-[10px] text-zinc-700 px-2 py-0.5">ONBOARDING DOC</span>
+        <div style={{
+          height: 44, borderBottom: "1px solid var(--dl-line-1)",
+          display: "flex", alignItems: "center", padding: "0 14px", gap: 10, flexShrink: 0,
+        }}>
+          <div style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--dl-signal)", boxShadow: "0 0 8px var(--dl-signal)" }} />
+          <span className="dl-mono" style={{ fontSize: "0.6875rem", color: "var(--dl-text-0)" }}>DEVLENS</span>
+          <div style={{ width: 1, height: 14, background: "var(--dl-line-1)" }} />
+          <span className="dl-mono" style={{ fontSize: "0.6875rem", color: "var(--dl-text-2)" }}>vercel/next.js</span>
+          <div style={{ flex: 1 }} />
+          {["ARCHITECTURE", "CODE FLOW", "ONBOARDING DOC"].map((tab, i) => (
+            <span key={tab} className="dl-mono" style={{
+              fontSize: "0.5875rem", letterSpacing: "0.08em",
+              color: i === 0 ? "var(--dl-text-0)" : "var(--dl-text-3)",
+              padding: "4px 8px", borderRadius: "var(--radius-sm)",
+              background: i === 0 ? "var(--dl-edge)" : "transparent",
+            }}>{tab}</span>
+          ))}
         </div>
-        {/* Content */}
-        <div className="flex h-full">
-          {/* Left */}
-          <div className="w-[200px] border-r border-zinc-800/60 p-3">
-            <div className="space-y-1">
-              {["src/","  components/","  hooks/","  services/","  utils/","package.json"].map(f => (
-                <div key={f} className="font-mono text-[11px] text-zinc-700 py-0.5">{f}</div>
-              ))}
-            </div>
+
+        {/* Body */}
+        <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+          {/* Sidebar */}
+          <div style={{ width: 170, borderRight: "1px solid var(--dl-line-0)", padding: 12, flexShrink: 0 }}>
+            {["src/", "  components/", "  hooks/", "  services/", "  utils/", "package.json"].map(f => (
+              <div key={f} className="dl-mono" style={{ fontSize: "0.6875rem", color: "var(--dl-text-3)", padding: "3px 0", lineHeight: 1.5 }}>{f}</div>
+            ))}
           </div>
-          {/* Center — graph */}
-          <div className={`flex-1 grid place-items-center relative ${tipIndex === 0 ? "ring-1 ring-[#00E5A0]/30" : ""}`}>
-            <div className="text-zinc-800 font-mono text-[11px]">Architecture Graph</div>
-            {/* Simple node preview */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-30">
-              <svg viewBox="0 0 200 150" className="w-full h-full">
-                <circle cx="100" cy="30" r="15" fill="#1C1C1C" stroke="#2A2A2A" />
-                <circle cx="60" cy="90" r="15" fill="#1C1C1C" stroke="#2A2A2A" />
-                <circle cx="140" cy="90" r="15" fill="#1C1C1C" stroke="#00E5A0" strokeWidth="2" />
-                <circle cx="100" cy="140" r="15" fill="#1C1C1C" stroke="#2A2A2A" />
-                <line x1="100" y1="45" x2="60" y2="75" stroke="#333" />
-                <line x1="100" y1="45" x2="140" y2="75" stroke="#00E5A0" strokeWidth="1.5" />
-                <line x1="60" y1="105" x2="100" y2="125" stroke="#333" />
-              </svg>
-            </div>
+
+          {/* Graph area */}
+          <div style={{
+            flex: 1, display: "grid", placeItems: "center", position: "relative",
+            outline: tipIndex === 0 ? "1px solid rgba(0,214,143,0.2)" : "none",
+            transition: "outline-color 0.3s ease",
+          }}>
+            <svg viewBox="0 0 200 150" style={{ width: "70%", opacity: 0.3 }}>
+              <circle cx="100" cy="30" r="14" fill="var(--dl-raised)" stroke="var(--dl-line-2)" strokeWidth="1" />
+              <circle cx="60" cy="90" r="14" fill="var(--dl-raised)" stroke="var(--dl-line-2)" strokeWidth="1" />
+              <circle cx="140" cy="90" r="14" fill="var(--dl-raised)" stroke="var(--dl-signal)" strokeWidth="1.5" />
+              <circle cx="100" cy="140" r="14" fill="var(--dl-raised)" stroke="var(--dl-line-2)" strokeWidth="1" />
+              <line x1="100" y1="44" x2="60" y2="76" stroke="var(--dl-line-2)" strokeWidth="0.8" />
+              <line x1="100" y1="44" x2="140" y2="76" stroke="var(--dl-signal)" strokeWidth="1" />
+              <line x1="60" y1="104" x2="100" y2="126" stroke="var(--dl-line-2)" strokeWidth="0.8" />
+            </svg>
           </div>
-          {/* Right */}
-          <div className={`w-[280px] border-l border-zinc-800/60 flex flex-col ${tipIndex === 1 ? "ring-1 ring-[#00E5A0]/30" : ""}`}>
-            <div className="p-3 border-b border-zinc-800/60 font-mono text-[10px] text-zinc-600">● ASK DEVLENS</div>
-            <div className="flex-1 grid place-items-center text-zinc-800 font-mono text-[11px]">
-              Ask anything...
+
+          {/* Q&A panel */}
+          <div style={{
+            width: 240, borderLeft: "1px solid var(--dl-line-0)",
+            display: "flex", flexDirection: "column",
+            outline: tipIndex === 1 ? "1px solid rgba(0,214,143,0.2)" : "none",
+            transition: "outline-color 0.3s ease",
+          }}>
+            <div style={{ padding: "10px 12px", borderBottom: "1px solid var(--dl-line-0)" }}>
+              <span className="dl-mono" style={{ fontSize: "0.625rem", color: "var(--dl-text-2)", letterSpacing: "0.08em" }}>● ASK DEVLENS</span>
+            </div>
+            <div style={{ flex: 1, display: "grid", placeItems: "center" }}>
+              <span className="dl-mono" style={{ fontSize: "0.6875rem", color: "var(--dl-text-3)" }}>Ask anything...</span>
             </div>
           </div>
         </div>
@@ -291,32 +337,39 @@ function TourStep({ onComplete }: { onComplete: () => void }) {
       {/* Tooltip */}
       <div
         key={tipIndex}
-        className="mt-6 max-w-md w-full rounded-lg p-5 border border-[#00E5A0]/40 bg-[#0c1a14] shadow-[0_0_30px_rgba(0,229,160,0.08)]"
-        style={{ animation: "dl-fade-up 300ms cubic-bezier(0.22,1,0.36,1) both" }}
+        className="dl-animate-fade-up"
+        style={{
+          marginTop: 20, width: "100%", maxWidth: 440,
+          background: "rgba(0,214,143,0.03)",
+          border: "1px solid rgba(0,214,143,0.2)",
+          borderRadius: "var(--radius-lg)", padding: 20,
+          boxShadow: "0 0 40px rgba(0,214,143,0.06)",
+        }}
       >
-        <div className="flex items-center gap-2 mb-3">
-          <span className="font-mono text-[#00E5A0] text-lg">{tip.icon}</span>
-          <span className="font-mono text-[10px] uppercase tracking-widest text-[#00E5A0]">
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+          <span className="dl-mono" style={{ color: "var(--dl-signal)", fontSize: "1rem" }}>{tip.icon}</span>
+          <span className="dl-mono" style={{ fontSize: "0.5875rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--dl-signal)" }}>
             [{tip.step}/3] {tip.target}
           </span>
         </div>
-        <p className="text-sm text-zinc-400 leading-relaxed mb-4">{tip.text}</p>
-        <div className="flex items-center justify-between">
-          <div className="flex gap-1.5">
+        <p className="dl-body-sm" style={{ marginBottom: 16 }}>{tip.text}</p>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", gap: 5 }}>
             {TOUR_TIPS.map((_, i) => (
-              <span
-                key={i}
-                className="size-1.5 rounded-full transition-colors"
-                style={{ background: i === tipIndex ? "#00E5A0" : "#2A2A2A" }}
-              />
+              <span key={i} style={{
+                width: 5, height: 5, borderRadius: "50%",
+                background: i === tipIndex ? "var(--dl-signal)" : "var(--dl-line-2)",
+                transition: "background 0.3s ease",
+              }} />
             ))}
           </div>
           <button
             type="button"
             onClick={handleNext}
-            className="font-mono text-[11px] text-[#00E5A0] hover:text-white transition-colors border border-[#00E5A0]/30 px-3 py-1.5 rounded"
+            className="dl-btn dl-btn-sm"
+            style={{ border: "1px solid rgba(0,214,143,0.3)", color: "var(--dl-signal)", background: "transparent" }}
           >
-            {tip.next}
+            {tip.next} →
           </button>
         </div>
       </div>
@@ -324,32 +377,36 @@ function TourStep({ onComplete }: { onComplete: () => void }) {
   );
 }
 
-// ── Main Onboarding Flow ──────────────────────────────────────────────────────
+/* ── Main flow ───────────────────────────────────────────────────────── */
 function OnboardingFlow() {
   const [step, setStep] = useState<Step>(1);
 
   return (
-    <div className="relative min-h-screen bg-[#09090b] font-sans">
-      <style>{`
-        @keyframes dl-fade-up {
-          from { opacity: 0; transform: translateY(10px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
+    <div style={{ minHeight: "100vh", background: "var(--dl-base)", fontFamily: "var(--font-sans)", position: "relative" }}>
+      {/* Nav */}
+      <nav className="dl-nav">
+        <div className="dl-nav-inner">
+          <Link to="/" className="dl-nav-logo">
+            <span className="dl-nav-logo-dot" />
+            DEVLENS
+            <span style={{ color: "var(--dl-text-3)", fontWeight: 400, fontSize: "0.6rem", letterSpacing: "0.2em" }}>AI</span>
+          </Link>
+          <div className="dl-nav-links">
+            <StepProgress current={step} />
+          </div>
+        </div>
+      </nav>
 
-      {/* Step indicator */}
-      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50">
-        <StepDots current={step} />
+      <div style={{ paddingTop: 56 }}>
+        {step === 1 && (
+          <WelcomeStep
+            onStart={() => setStep(2)}
+            onSkip={() => { window.location.href = "/dashboard"; }}
+          />
+        )}
+        {step === 2 && <AnalysisStep onDone={() => setStep(3)} />}
+        {step === 3 && <TourStep onComplete={() => { window.location.href = "/dashboard"; }} />}
       </div>
-
-      {step === 1 && (
-        <WelcomeStep
-          onStart={() => setStep(2)}
-          onSkip={() => window.location.href = "/dashboard"}
-        />
-      )}
-      {step === 2 && <AnalysisStep onDone={() => setStep(3)} />}
-      {step === 3 && <TourStep onComplete={() => { window.location.href = "/dashboard"; }} />}
     </div>
   );
 }
