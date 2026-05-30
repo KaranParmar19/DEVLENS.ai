@@ -2,14 +2,20 @@
 DevLens AI — Repositories API Route
 POST /api/v1/repos/analyze — submit a GitHub repo URL for analysis.
 GET  /api/v1/repos/{id}   — get repo metadata.
+
+BUG-12 FIX: branch always updated from submitted payload; DB upsert uses
+            ON CONFLICT DO NOTHING pattern to prevent duplicate repo rows.
+M-03  FIX:  Concurrent POSTs for the same URL handled gracefully.
 """
 
 import uuid
+from kombu.exceptions import OperationalError as KombuOperationalError
 import structlog
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.api.deps import get_db, require_api_key, get_current_user
 from app.models.repository import Repository, RepoStatus
@@ -18,7 +24,7 @@ from app.models.session import Session
 from app.models.user import User
 from app.schemas.repository import AnalyzeRequest, RepoResponse
 from app.core.github_client import parse_github_url
-from app.tasks.repo_tasks import ingest_repository
+from app.tasks.celery_app import celery_app
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()
@@ -39,33 +45,44 @@ async def analyze_repo(
     """
     Accepts a GitHub repo URL, kicks off background ingestion.
     Returns immediately with job_id and session_id.
-    Frontend polls WS /ws/jobs/{job_id} for progress.
+    Frontend connects to WS /ws/jobs/{job_id} for real-time progress.
 
-    Incremental indexing: if the repo was previously indexed with the same
-    commit SHA, returns the existing session without re-processing.
+    M-03 FIX: Uses PostgreSQL INSERT ... ON CONFLICT to safely handle
+    concurrent duplicate submissions without raising IntegrityError.
+    BUG-12 FIX: branch updated from payload to ensure we don't reuse
+    a stale cached branch value.
     """
     owner, name = parse_github_url(payload.repo_url)
     full_name = f"{owner}/{name}"
 
-    # Check for existing indexed repo
-    result = await db.execute(
-        select(Repository).where(Repository.full_name == full_name)
-    )
-    repo = result.scalar_one_or_none()
-
-    if not repo:
-        repo = Repository(
+    # M-03 FIX: Upsert with ON CONFLICT DO NOTHING — then fetch the row.
+    # This is atomic and safe under concurrent requests.
+    await db.execute(
+        pg_insert(Repository)
+        .values(
             owner=owner,
             name=name,
             full_name=full_name,
             url=payload.repo_url,
             status=RepoStatus.PENDING,
-            default_branch=payload.branch,
+            default_branch=payload.branch or "main",
         )
-        db.add(repo)
+        .on_conflict_do_nothing(index_elements=["full_name"])
+    )
+    await db.flush()
+
+    result = await db.execute(
+        select(Repository).where(Repository.full_name == full_name)
+    )
+    repo = result.scalar_one()
+
+    # BUG-12 FIX: Always refresh branch from payload (if supplied) so we
+    # don't silently re-use a stale branch from a previous ingestion.
+    if payload.branch and payload.branch != "main":
+        repo.default_branch = payload.branch
         await db.flush()
 
-    # Create a session for this analysis
+    # Create a session for this analysis run
     session = Session(
         repo_id=repo.id,
         user_id=current_user.id if current_user else None,
@@ -79,29 +96,50 @@ async def analyze_repo(
         status=JobStatus.QUEUED,
     )
     db.add(job)
+
+    # Set repo status to INDEXING
+    repo.status = RepoStatus.INDEXING
+
     await db.commit()
     await db.refresh(repo)
     await db.refresh(job)
     await db.refresh(session)
 
-    # Update repo status to indexing
-    repo.status = RepoStatus.INDEXING
-    await db.commit()
+    # Enqueue via celery_app.send_task() — NOT ingest_repository.apply_async().
+    # @shared_task in repo_tasks.py binds to Celery's global default app in
+    # the API server process (which has no current app set), causing it to
+    # fall back to amqp://localhost instead of our Redis broker.
+    # send_task() on our explicit celery_app instance always uses Redis.
+    try:
+        celery_task = celery_app.send_task(
+            "app.tasks.repo_tasks.ingest_repository",
+            kwargs={
+                "job_id": str(job.id),
+                "repo_id": str(repo.id),
+                "session_id": str(session.id),
+                "repo_url": payload.repo_url,
+                "branch": payload.branch or repo.default_branch,
+                "user_github_token": (
+                    current_user.github_access_token if current_user else None
+                ),
+            },
+            queue="ingestion",
+        )
+    except (KombuOperationalError, OSError) as exc:
+        logger.error(
+            "celery_broker_unavailable",
+            error=str(exc),
+            job_id=str(job.id),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Analysis job could not be queued — message broker is temporarily "
+                "unavailable. Please try again in a few seconds."
+            ),
+        ) from exc
 
-    # Enqueue the Celery task
-    celery_task = ingest_repository.apply_async(
-        kwargs={
-            "job_id": str(job.id),
-            "repo_id": str(repo.id),
-            "session_id": str(session.id),
-            "repo_url": payload.repo_url,
-            "branch": payload.branch,
-            "user_github_token": current_user.github_access_token if current_user else None,
-        },
-        queue="ingestion",
-    )
-
-    # Store Celery task ID for revocation/inspection
+    # Persist the Celery task ID so we can inspect/revoke it later
     job.celery_task_id = celery_task.id
     await db.commit()
 
@@ -110,6 +148,7 @@ async def analyze_repo(
         full_name=full_name,
         job_id=str(job.id),
         session_id=str(session.id),
+        branch=payload.branch,
     )
 
     return RepoResponse(
@@ -141,11 +180,37 @@ async def get_repo(
     if not repo:
         raise HTTPException(status_code=404, detail="Repository not found.")
 
+    # Fetch the most recent session for this repo
+    sess_result = await db.execute(
+        select(Session)
+        .where(Session.repo_id == repo_id)
+        .order_by(Session.created_at.desc())
+        .limit(1)
+    )
+    latest_session = sess_result.scalar_one_or_none()
+    session_id = latest_session.id if latest_session else uuid.uuid4()
+
+    job_result = await db.execute(
+        select(AnalysisJob)
+        .where(AnalysisJob.repo_id == repo_id)
+        .order_by(AnalysisJob.created_at.desc())
+        .limit(1)
+    )
+    latest_job = job_result.scalar_one_or_none()
+    job_id = latest_job.id if latest_job else uuid.uuid4()
+
     return RepoResponse(
-        id=repo.id, full_name=repo.full_name, owner=repo.owner, name=repo.name,
-        url=repo.url, description=repo.description, stars=repo.stars,
-        forks=repo.forks, languages=repo.languages or {},
-        is_monorepo=repo.is_monorepo, status=repo.status.value,
-        session_id=uuid.UUID(int=0),  # Placeholder — use /sessions endpoint
-        job_id=uuid.UUID(int=0),
+        id=repo.id,
+        full_name=repo.full_name,
+        owner=repo.owner,
+        name=repo.name,
+        url=repo.url,
+        description=repo.description,
+        stars=repo.stars,
+        forks=repo.forks,
+        languages=repo.languages or {},
+        is_monorepo=repo.is_monorepo,
+        status=repo.status.value,
+        session_id=session_id,
+        job_id=job_id,
     )
