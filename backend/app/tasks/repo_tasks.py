@@ -194,6 +194,9 @@ async def _ingest_pipeline(
         async with GitHubClient(user_token=user_github_token) as gh:
             meta = await gh.get_repo_meta(owner, name)
 
+            if meta.is_private and not user_github_token:
+                raise ValueError("This repository is private. Please connect your GitHub account to analyze it.")
+
             # BUG-02 FIX: always use the branch from GitHub metadata,
             # not the user-supplied default "main".
             effective_branch = meta.default_branch
