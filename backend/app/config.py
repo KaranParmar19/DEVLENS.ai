@@ -59,7 +59,7 @@ class Settings(BaseSettings):
     ingestion_timeout_seconds: int = 300
 
     # ── CORS ───────────────────────────────────────────────────────────────
-    frontend_url: str = "http://localhost:8081"
+    frontend_url: str = "http://localhost:8080"
     cors_origins: List[str] | str = [
         "http://localhost:3000",
         "http://localhost:5173",
