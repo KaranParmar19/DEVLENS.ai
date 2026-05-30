@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useAnalysis } from "@/hooks/useAnalysis";
 import { useChat } from "@/hooks/useChat";
 import type { FileNode } from "@/lib/api";
+import { repoHistory } from "@/lib/repo-history";
+import { CommandPalette, useCommandPalette } from "@/components/command-palette";
 
 type StepStatus = "pending" | "active" | "done";
 
@@ -22,10 +24,12 @@ export function PortalTransform({
   open,
   repoUrl,
   onClose,
+  onOpenPalette,
 }: {
   open: boolean;
   repoUrl: string;
   onClose: () => void;
+  onOpenPalette?: () => void;
 }) {
   const { state: analysisState, startAnalysis, reset: _resetAnalysis } = useAnalysis();
   const chat = useChat(analysisState.sessionId ?? null);
@@ -37,6 +41,7 @@ export function PortalTransform({
   const [processingDone, setProcessingDone] = useState(false);
   const [showFlash, setShowFlash] = useState(false);
   const [drawNodes, setDrawNodes] = useState(false);
+  const [overlayUnmounted, setOverlayUnmounted] = useState(false);
   const rafRef = useRef<number | null>(null);
 
   // Mount / unmount lifecycle + trigger real analysis
@@ -48,8 +53,20 @@ export function PortalTransform({
       setProcessingDone(false);
       setShowFlash(false);
       setDrawNodes(false);
+      setOverlayUnmounted(false);
       // Kick off real backend analysis
-      if (repoUrl) startAnalysis(repoUrl);
+      if (repoUrl) {
+        startAnalysis(repoUrl);
+        // Persist to repo history immediately so hub shows it
+        const label = repoUrl.replace(/^https?:\/\/(www\.)?github\.com\//, '').replace('.git', '');
+        repoHistory.upsert({
+          id: `pending-${Date.now()}`,
+          repoUrl,
+          repoLabel: label,
+          analyzedAt: new Date().toISOString(),
+          status: 'indexing',
+        });
+      }
       rafRef.current = requestAnimationFrame(() => {
         rafRef.current = requestAnimationFrame(() => setShown(true));
       });
@@ -72,28 +89,59 @@ export function PortalTransform({
     if (currentStepIndex >= 0) {
       setActiveStep(currentStepIndex);
     }
-    if (analysisState.isComplete) {
+    if (analysisState.isComplete && analysisState.sessionId) {
       setActiveStep(STEPS.length);
       const t = setTimeout(() => setProcessingDone(true), 400);
+      // Persist completed analysis to history
+      const label = repoUrl.replace(/^https?:\/\/(www\.)?github\.com\//, '').replace('.git', '');
+      repoHistory.upsert({
+        id: analysisState.sessionId,
+        repoUrl,
+        repoLabel: label,
+        analyzedAt: new Date().toISOString(),
+        status: 'complete',
+        meta: analysisState.repoMeta ? {
+          stars: analysisState.repoMeta.stars,
+          files: analysisState.repoMeta.files,
+          sizeKb: analysisState.repoMeta.sizeKb,
+          languages: analysisState.repoMeta.languages,
+        } : undefined,
+      });
       return () => clearTimeout(t);
     }
-  }, [currentStepIndex, analysisState.isComplete, isRunning, shown, activeStep, processingDone]);
+    if (analysisState.error) {
+      if (analysisState.sessionId) {
+        repoHistory.markFailed(analysisState.sessionId);
+      }
+      // Dissolve the processing overlay on error
+      setProcessingDone(true);
+    }
+  }, [currentStepIndex, analysisState.isComplete, analysisState.error, analysisState.sessionId, repoUrl, isRunning, shown, activeStep, processingDone]);
 
   // After overlay dissolves → flash + draw nodes
   useEffect(() => {
     if (!processingDone) return;
+    
+    // If there's an error, just unmount the overlay without the success flash
+    if (analysisState.error) {
+      const tUnmount = setTimeout(() => setOverlayUnmounted(true), OVERLAY_FADE_OUT);
+      return () => clearTimeout(tUnmount);
+    }
+
     const tFlash = setTimeout(() => setShowFlash(true), OVERLAY_FADE_OUT);
     const tFlashOff = setTimeout(
       () => setShowFlash(false),
       OVERLAY_FADE_OUT + FLASH_DURATION,
     );
     const tDraw = setTimeout(() => setDrawNodes(true), OVERLAY_FADE_OUT + 100);
+    const tUnmount = setTimeout(() => setOverlayUnmounted(true), OVERLAY_FADE_OUT);
     return () => {
       clearTimeout(tFlash);
       clearTimeout(tFlashOff);
       clearTimeout(tDraw);
+      clearTimeout(tUnmount);
     };
-  }, [processingDone]);
+  }, [processingDone, analysisState.error]);
 
   // Use real backend progress percentage
   const progressPct = analysisState.progressPct;
@@ -125,23 +173,25 @@ export function PortalTransform({
         <DashboardShell
           repoUrl={repoUrl}
           onClose={onClose}
-          drawNodes={true}
-          showFlash={false}
+          onOpenPalette={onOpenPalette}
+          drawNodes={drawNodes}
+          showFlash={showFlash}
           sessionId={analysisState.sessionId ?? undefined}
           graphData={analysisState.graphData ?? undefined}
           fileTree={analysisState.filesData?.tree}
           entryPoints={analysisState.filesData?.entry_points}
+          modules={analysisState.filesData?.modules}
           chat={chat}
+          analysisError={analysisState.error ?? undefined}
         />
       </div>
 
       {/* ===== Phase 3 — Processing overlay ===== */}
-      {!processingDone && (
+      {!overlayUnmounted && (
         <div
           className="absolute inset-0 grid place-items-center z-50"
           style={{
-            backgroundColor: "rgba(0,0,0,0.85)",
-            backdropFilter: "blur(2px)",
+            backgroundColor: "#000000",
             opacity: processingDone ? 0 : 1,
             transition: `opacity ${OVERLAY_FADE_OUT}ms ${ease}`,
             pointerEvents: processingDone ? "none" : "auto",
@@ -187,307 +237,352 @@ function ProcessingModal({
   const [logs, setLogs] = useState<{ time: string; msg: React.ReactNode }[]>([]);
   const logContainerRef = useRef<HTMLDivElement>(null);
   const loggedSteps = useRef(new Set<string>());
-  const repoLabel = repoUrl?.replace(/^https?:\/\/(www\.)?github\.com\//, "") || "facebook/react";
+  const [latency, setLatency] = useState(12);
+  const [videoScene, setVideoScene] = useState<1 | 2>(1);
+  const video1Ref = useRef<HTMLVideoElement>(null);
+  const video2Ref = useRef<HTMLVideoElement>(null);
+  const particleCanvasRef = useRef<HTMLCanvasElement>(null);
+  const [displayFiles, setDisplayFiles] = useState(0);
+  const [displaySize, setDisplaySize] = useState(0);
+  const [techStackIndex, setTechStackIndex] = useState(0);
+  const [scrollingStack, setScrollingStack] = useState<{id: number, lang: string}[]>([]);
+  const stackCounter = useRef(0);
+  const [readmeLangs, setReadmeLangs] = useState<string[]>([]);
 
-  // Fix log duplication using a ref to track what has been pushed
+  // Attempt to fetch README to parse real tech stack dependencies dynamically
+  useEffect(() => {
+    if (!repoUrl) return;
+    const match = repoUrl.match(/github\.com\/([^\/]+\/[^\/]+)/);
+    if (!match) return;
+    const ownerRepo = match[1].replace('.git', '');
+    
+    const fetchReadme = async () => {
+      try {
+        let res = await fetch(`https://raw.githubusercontent.com/${ownerRepo}/main/README.md`);
+        if (!res.ok) res = await fetch(`https://raw.githubusercontent.com/${ownerRepo}/master/README.md`);
+        if (!res.ok) return;
+        
+        const text = await res.text();
+        const keywords = [
+          "React", "Vue", "Angular", "Next.js", "Nuxt", "Node.js", "Express", "MongoDB", 
+          "PostgreSQL", "MySQL", "Redis", "Docker", "AWS", "Firebase", "Supabase", 
+          "TailwindCSS", "Prisma", "GraphQL", "FastAPI", "Django", "Flask", 
+          "Spring Boot", "Laravel", "Kubernetes", "TensorFlow", "PyTorch", "Celery",
+          "RabbitMQ", "Kafka", "Elasticsearch", "Vite", "Webpack", "Redux", "Zustand", "Axios"
+        ];
+        
+        const found = keywords.filter(kw => {
+          const regex = new RegExp(`\\b${kw.replace('.', '\\.')}\\b`, 'i');
+          return regex.test(text);
+        });
+        
+        if (found.length > 0) {
+          setReadmeLangs(found);
+        }
+      } catch (err) {
+        console.error("Failed to parse README for tech stack", err);
+      }
+    };
+    fetchReadme();
+  }, [repoUrl]);
+
+  useEffect(() => {
+    if (!repoMeta) return;
+    const maxFiles = repoMeta.files || 0;
+    const maxSize = repoMeta.sizeKb || Math.floor(maxFiles * 18.5) || 12400; // fallback if sizeKb is 0
+    setDisplayFiles(Math.floor(maxFiles * (progressPct / 100)));
+    setDisplaySize(Math.floor(maxSize * (progressPct / 100)));
+  }, [progressPct, repoMeta]);
+
+  useEffect(() => {
+    if (!repoMeta?.languages) return;
+    const baseLangs = Object.keys(repoMeta.languages);
+    const langs = [...new Set([...baseLangs, ...readmeLangs])];
+    if (langs.length === 0) return;
+    
+    // Initialize scrolling stack immediately if empty
+    if (stackCounter.current === 0) {
+      setScrollingStack([{ id: Date.now(), lang: langs[0] }]);
+      stackCounter.current = 1;
+    }
+
+    const int = setInterval(() => {
+      setTechStackIndex(prev => (prev + 1) % langs.length);
+      setScrollingStack(prev => {
+        const nextLang = langs[stackCounter.current % langs.length];
+        stackCounter.current++;
+        return [{ id: Date.now(), lang: nextLang }, ...prev].slice(0, 10);
+      });
+    }, 900);
+    return () => clearInterval(int);
+  }, [repoMeta, readmeLangs]);
+
+  useEffect(() => {
+    const canvas = particleCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let particles: any[] = [];
+    let animationFrameId: number;
+
+    function resize() {
+      if (!canvas) return;
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+
+    class Particle {
+      x!: number; y!: number; vx!: number; vy!: number; size!: number; alpha!: number;
+      constructor() { this.reset(); }
+      reset() {
+        if (!canvas) return;
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.vx = (Math.random() - 0.5) * 0.5;
+        this.vy = (Math.random() - 0.5) * 0.5;
+        this.size = Math.random() * 2;
+        this.alpha = Math.random() * 0.5;
+      }
+      update() {
+        if (!canvas) return;
+        this.x += this.vx;
+        this.y += this.vy;
+        if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+          this.reset();
+        }
+      }
+      draw() {
+        if (!ctx) return;
+        ctx.fillStyle = `rgba(255, 255, 255, ${this.alpha})`;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+
+    for (let i = 0; i < 40; i++) {
+      particles.push(new Particle());
+    }
+
+    function animate() {
+      if (!canvas || !ctx) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach(p => {
+        p.update();
+        p.draw();
+      });
+      animationFrameId = requestAnimationFrame(animate);
+    }
+    animate();
+
+    return () => {
+      window.removeEventListener('resize', resize);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (videoScene === 2 && video2Ref.current) {
+      video2Ref.current.currentTime = 0;
+      video2Ref.current.play().catch(() => {});
+    } else if (videoScene === 1 && video1Ref.current) {
+      video1Ref.current.currentTime = 0;
+      video1Ref.current.play().catch(() => {});
+    }
+  }, [videoScene]);
+
+  // Dynamic latency for effect
+  useEffect(() => {
+    const int = setInterval(() => {
+      if (Math.random() > 0.6) {
+        setLatency(Math.floor(Math.random() * 5 + 8));
+      }
+    }, 400);
+    return () => clearInterval(int);
+  }, []);
+
+  // Logs logic
   useEffect(() => {
     const pushLog = (key: string, msg: string) => {
       if (loggedSteps.current.has(key)) return;
       loggedSteps.current.add(key);
       setLogs(prev => [...prev, {
-        time: new Date().toLocaleTimeString([], { hour12: false }),
+        time: new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }),
         msg
-      }].slice(-30));
+      }].slice(-12));
     };
 
-    pushLog(`phase-${activeStep}`, `[Phase ${activeStep + 1}] ${STEPS[Math.min(activeStep, STEPS.length - 1)]}...`);
+    const STEPS = ["Cloning repository", "Parsing file tree", "Building dependency graph", "Generating architecture map", "Indexing for Q&A"];
+    
+    if (activeStep < STEPS.length) {
+      pushLog(`phase-${activeStep}`, `[${progressPct}%] ${STEPS[activeStep]}...`);
+    }
 
     if (activeStep === 0 && jobId) {
-      pushLog('connected', `Successfully connected to worker node ${jobId.substring(0, 8)}.`);
+      pushLog('connected', `Authenticating kernel signatures... node ${jobId.substring(0, 8)}`);
     }
-
     if (activeStep >= 1 && repoMeta) {
-      pushLog('files', `Detected ${repoMeta.files.toLocaleString()} files. Total size: ${(repoMeta.sizeKb / 1024).toFixed(2)} MB.`);
+      pushLog('files', `Indexing function signatures... ${repoMeta.files.toLocaleString()} files found.`);
     }
-
     if (activeStep >= 2 && repoMeta?.languages) {
       const langs = Object.keys(repoMeta.languages).slice(0, 3).join(", ");
       if (langs) {
-        pushLog('langs', `Identified primary languages: ${langs}.`);
+        pushLog('langs', `Resolving dependency subgraph nodes... [${langs}]`);
       }
     }
-
     if (progressPct === 100) {
-       pushLog('complete', `Analysis complete. Rendering visualization...`);
+      pushLog('complete', `Synchronizing local state with cloud...`);
     }
-  }, [activeStep, repoLabel, jobId, repoMeta, progressPct]);
+  }, [activeStep, jobId, repoMeta, progressPct]);
 
-  // Smooth real-time size counter
-  const [displaySizeMb, setDisplaySizeMb] = useState(0);
-  useEffect(() => {
-    if (!repoMeta?.sizeKb) return;
-    const targetMb = (repoMeta.sizeKb / 1024) * (Math.max(2, progressPct) / 100);
-    
-    let active = true;
-    const animate = () => {
-      setDisplaySizeMb(prev => {
-        const diff = targetMb - prev;
-        if (Math.abs(diff) < 0.01) return targetMb;
-        return prev + diff * 0.1;
-      });
-      if (active) requestAnimationFrame(animate);
-    };
-    requestAnimationFrame(animate);
-    return () => { active = false; };
-  }, [progressPct, repoMeta]);
-
-  // Tech stack cycling
-  const langsList = useMemo(() => {
-    if (!repoMeta?.languages) return ["Detecting..."];
-    const keys = Object.keys(repoMeta.languages);
-    return keys.length > 0 ? keys : ["Unknown"];
-  }, [repoMeta]);
-
-  const [activeLangIdx, setActiveLangIdx] = useState(0);
-  useEffect(() => {
-    if (langsList.length <= 1) return;
-    const int = setInterval(() => {
-      setActiveLangIdx(prev => (prev + 1) % langsList.length);
-    }, 1800);
-    return () => clearInterval(int);
-  }, [langsList]);
-
+  // Ensure scroll is at bottom
   useEffect(() => {
     if (logContainerRef.current) {
       logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
     }
   }, [logs]);
 
-  const SHORT_STEPS = [
-    "Discovery",
-    "AST Parsing",
-    "Graph Build",
-    "Architecture",
-    "Semantic Map",
-  ];
+  const displayNodes = repoMeta?.files ? repoMeta.files.toLocaleString() : "...";
+  const displayLatency = `${latency}ms`; 
+  const displayIntegrity = "99.98%";
 
   return (
     <>
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
       <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
       <style>{`
-        .glass-panel {
-          background: rgba(26, 26, 26, 0.8);
-          backdrop-filter: blur(20px);
-          border: 1px solid #333333;
+        .bg-video {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 0;
+            pointer-events: none;
+            transition: opacity 1.5s ease-in-out;
         }
-        .progress-segment {
-          height: 4px;
-          background: #1a1a1a;
-          position: relative;
-          overflow: hidden;
+        .data-stream::after {
+            content: "";
+            animation: cursor 0.8s infinite;
         }
-        .scanning-line {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 2px;
-          background: linear-gradient(90deg, transparent, #ffffff, transparent);
-          animation: dl-scan-line-2 3s linear infinite;
-          opacity: 0.2;
-          pointer-events: none;
-          z-index: 50;
-        }
-        @keyframes dl-scan-line-2 {
-          0% { transform: translateY(0); }
-          100% { transform: translateY(100vh); }
-        }
-        .status-pulse {
-          animation: dl-status-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-        @keyframes dl-status-pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: .4; }
-        }
-        .log-scroll::-webkit-scrollbar {
-          width: 4px;
-        }
-        .log-scroll::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .log-scroll::-webkit-scrollbar-thumb {
-          background: #333333;
-          border-radius: 2px;
+        @keyframes cursor {
+            50% { border-right: 2px solid white; }
         }
       `}</style>
-
-      <div className="scanning-line"></div>
       
+      <video 
+        ref={video1Ref}
+        className="bg-video" 
+        style={{ opacity: videoScene === 1 ? 0.5 : 0 }} 
+        src="/video/scene1.mp4" 
+        autoPlay 
+        muted 
+        playsInline 
+        onEnded={() => setVideoScene(2)}
+      />
+      <video 
+        ref={video2Ref}
+        className="bg-video" 
+        style={{ opacity: videoScene === 2 ? 0.5 : 0 }} 
+        src="/video/scene2.mp4" 
+        muted 
+        playsInline 
+        onEnded={() => setVideoScene(1)}
+      />
+
+      <canvas ref={particleCanvasRef} className="fixed inset-0 pointer-events-none z-10" />
+      
+      {/* Top and Bottom shadow vignettes to blend edges and hide watermark */}
+      <div className="fixed top-0 left-0 right-0 h-48 bg-gradient-to-b from-black/90 via-black/40 to-transparent z-10 pointer-events-none"></div>
+      <div className="fixed bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-10 pointer-events-none"></div>
+
       <main 
-        className="w-full max-w-[900px] flex flex-col gap-6"
+        className="relative w-full h-screen flex flex-col items-center justify-center z-20"
         style={{
-          transform: appear ? "translateY(0) scale(1)" : "translateY(12px) scale(0.98)",
           opacity: appear ? 1 : 0,
-          transition: "opacity 500ms ease, transform 500ms ease",
-          willChange: "opacity, transform",
+          transition: "opacity 500ms ease",
         }}
       >
-        {/* Header Branding */}
-        <div className="flex justify-between items-end px-1">
-          <div className="flex flex-col">
-            <span className="font-mono text-xs font-medium tracking-widest text-zinc-400 uppercase">System Status</span>
-            <h1 className="font-sans text-3xl font-semibold text-white tracking-tighter">DEVLENS AI</h1>
-          </div>
-          <div className="font-mono text-sm font-medium text-zinc-400 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-white status-pulse"></span>
-            ACTIVE SESSION
-          </div>
-        </div>
-
-        {/* Central Analysis Card */}
-        <div className="glass-panel rounded-xl overflow-hidden shadow-2xl relative">
-          <div className="p-6 md:p-10 flex flex-col gap-10">
-            {/* Progress Header */}
-            <div className="flex flex-col gap-1">
-              <div className="flex justify-between items-baseline">
-                <h2 className="font-sans text-2xl font-semibold text-white">Analyzing Repository</h2>
-                <div className="font-mono text-sm font-medium text-white tracking-wide">{progressPct}% COMPLETE</div>
+        <div className="absolute inset-0 p-4 flex flex-col justify-between pointer-events-none">
+          {/* Top Bar */}
+          <div className="flex justify-between items-start">
+            <div className="flex flex-col gap-1 p-2 drop-shadow-md">
+              <h1 className="font-['Inter'] text-[32px] leading-[40px] tracking-[-0.01em] font-semibold text-white uppercase">DEVLENS AI</h1>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 bg-white rounded-full animate-pulse shadow-[0_0_8px_white]"></span>
+                <p className="font-['JetBrains_Mono'] text-[12px] leading-[14px] tracking-[0.05em] font-medium text-[#8e9192] uppercase">INITIALIZING ARCHITECTURAL ENGINE</p>
               </div>
-              <p className="font-sans text-base text-zinc-400">
-                Deconstructing <span className="text-white font-medium">{repoLabel}</span> architecture...
+            </div>
+            <div className="text-right flex flex-col gap-1 p-2 drop-shadow-md min-w-[200px]">
+              <p className="font-['JetBrains_Mono'] text-[12px] leading-[14px] tracking-[0.05em] font-medium text-white">BUILD_VER: 2.4.0-STABLE</p>
+              <p className="font-['JetBrains_Mono'] text-[12px] leading-[14px] tracking-[0.05em] font-medium text-[#8e9192]">LOC: 0.0.0.0 // ROOT_ACCESS</p>
+              <div className="flex justify-between items-center w-full gap-4 mt-1 border-b border-white/10 pb-2">
+                <span className="font-['Inter'] text-[12px] font-medium text-[#8e9192]">Memory Usage</span>
+                <span className="font-['JetBrains_Mono'] text-[14px] font-bold text-white">{(4.26 * (progressPct / 100)).toFixed(2)}GB</span>
+              </div>
+              <p className="font-['JetBrains_Mono'] text-[12px] leading-[14px] tracking-[0.05em] font-medium text-[#8e9192] mt-4 border-b border-white/5 pb-2">
+                VOL: <span className="text-white font-bold">{displaySize.toLocaleString()} KB</span> // NODES: <span className="text-white font-bold">{displayFiles.toLocaleString()}</span>
               </p>
-            </div>
-
-            {/* Progress Visual */}
-            <div className="flex flex-col gap-2">
-              <div className="flex justify-between font-mono text-xs font-medium text-zinc-400 uppercase tracking-widest">
-                <span>Phase {Math.min(activeStep + 1, STEPS.length)}: {STEPS[Math.min(activeStep, STEPS.length - 1)]}</span>
-                <span className="font-medium text-white">Mapping Object Relations</span>
-              </div>
-              <div className="progress-segment rounded-full">
-                <div 
-                  className="h-full bg-white rounded-full transition-all duration-500 ease-out shadow-[0_0_15px_rgba(255,255,255,0.3)]"
-                  style={{ width: `${progressPct}%` }}
-                ></div>
-              </div>
-            </div>
-
-            {/* Phase Indicators */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              {STEPS.map((label, i) => {
-                const isDone = i < activeStep;
-                const isActive = i === activeStep;
-                const isPending = i > activeStep;
-                
-                return (
-                  <div key={label} className={`flex items-center gap-2 p-3 border rounded relative overflow-hidden ${
-                    isActive ? "border-white/50 bg-white/5" :
-                    isDone ? "border-white/10 bg-[#0e0e0e]" :
-                    "border-white/5 bg-[#0e0e0e]/50 opacity-40"
-                  }`}>
-                    {isActive && <div className="absolute inset-0 bg-white/5 status-pulse" />}
-                    
-                    <span className={`material-symbols-outlined text-[20px] relative z-10 ${
-                      isPending ? "text-zinc-500" : "text-white"
-                    }`} style={{ fontVariationSettings: isDone ? "'FILL' 1" : undefined }}>
-                      {isDone ? "check_circle" : isActive ? "sync" : "pending"}
-                    </span>
-                    
-                    <div className="flex flex-col relative z-10">
-                      <span className={`font-mono text-[10px] font-medium tracking-widest ${isActive ? 'text-white' : 'text-zinc-500'}`}>
-                        STEP {i + 1}
-                      </span>
-                      <span className={`font-sans text-sm ${isActive ? 'text-white font-bold' : isPending ? 'text-zinc-500' : 'text-white'}`}>
-                        {SHORT_STEPS[i]}
-                      </span>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-
-            {/* System Log & Technical Metrics Split */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 border-t border-white/10 pt-6">
-              {/* Log */}
-              <div className="md:col-span-2 flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-xs font-medium tracking-widest text-zinc-400 uppercase">System Log</span>
-                  <span className="font-mono text-xs font-medium tracking-widest text-zinc-500">Streaming...</span>
-                </div>
-                <div ref={logContainerRef} className="log-scroll h-40 overflow-y-auto font-mono text-xs flex flex-col gap-1 pr-2">
-                  {logs.map((log, i) => (
-                    <div key={i} className="flex gap-4 animate-in fade-in duration-500">
-                      <span className="text-zinc-600 shrink-0">{log.time}</span>
-                      <span className="text-zinc-200">{log.msg}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Metrics */}
-              <div className="flex flex-col gap-4 bg-[#1c1b1b] p-4 rounded border border-white/10">
-                <span className="font-mono text-xs font-medium tracking-widest text-zinc-400 uppercase">Technical Metrics</span>
-                <div className="flex flex-col gap-2">
-                  <div className="flex justify-between items-center">
-                    <span className="font-sans text-sm text-zinc-400">Files Processed</span>
-                    <span className="font-mono text-xs font-medium text-white">
-                      {repoMeta ? Math.floor((progressPct / 100) * repoMeta.files).toLocaleString() : "..."} / {repoMeta ? repoMeta.files.toLocaleString() : "..."}
-                    </span>
-                  </div>
-                  <div className="w-full bg-white/5 h-1 rounded-full">
-                    <div className="bg-zinc-400 h-full rounded-full transition-all" style={{ width: `${Math.max(10, progressPct)}%` }}></div>
-                  </div>
-                </div>
-                
-                <div className="flex justify-between items-center">
-                  <span className="font-sans text-sm text-zinc-400">Repository Size</span>
-                  <span className="font-mono text-xs font-medium text-white">
-                    {repoMeta ? `${displaySizeMb.toFixed(2)} MB` : "..."}
-                  </span>
-                </div>
-                
-                <div className="flex justify-between items-center">
-                  <span className="font-sans text-sm text-zinc-400">Tech Stack</span>
-                  <div className="relative h-4 overflow-hidden w-32">
-                    {langsList.map((lang, idx) => (
-                      <span 
-                        key={lang}
-                        className={`absolute right-0 font-mono text-xs font-medium transition-all duration-500 ${
-                          idx === activeLangIdx 
-                            ? "opacity-100 translate-y-0 text-emerald-400" 
-                            : "opacity-0 translate-y-4 text-zinc-500"
-                        }`}
-                      >
-                        {lang}
-                      </span>
+              {repoMeta?.languages && Object.keys(repoMeta.languages).length > 0 && (
+                <div className="flex flex-col items-end mt-4">
+                  <span className="font-['JetBrains_Mono'] text-[14px] font-bold tracking-[0.08em] text-white mb-2 drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]">DETECTED_STACK</span>
+                  <div 
+                    className="flex flex-col items-end gap-1.5 h-[150px] overflow-hidden w-full relative" 
+                    style={{ maskImage: 'linear-gradient(to bottom, black 20%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 20%, transparent 100%)' }}
+                  >
+                    {scrollingStack.map((item) => (
+                      <div key={item.id} className="animate-in slide-in-from-top-2 fade-in duration-500 font-['JetBrains_Mono'] text-[13px] font-semibold text-white whitespace-nowrap drop-shadow-md">
+                        {item.lang}
+                      </div>
                     ))}
                   </div>
                 </div>
-                
-                <div className="flex justify-between items-center">
-                  <span className="font-sans text-sm text-zinc-400">Complexity Index</span>
-                  <span className="font-mono text-[10px] tracking-widest px-1.5 py-0.5 bg-white text-black rounded-sm font-bold">
-                    {repoMeta ? (repoMeta.files > 50 ? "HIGH" : repoMeta.files > 15 ? "MEDIUM" : "LOW") : "..."}
-                  </span>
-                </div>
-                
-                <div className="mt-auto pt-4 border-t border-white/10">
-                  <div className="flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-white text-[16px]">terminal</span>
-                    <span className="font-mono text-xs font-medium text-zinc-400">Worker node: {jobId ? jobId.substring(0, 8) : "Pending..."}</span>
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
           </div>
-        </div>
 
-        {/* Footer Visual Hint */}
-        <div className="flex justify-center mt-4">
-          <div className="flex items-center gap-10 opacity-30">
-            <div className="w-24 h-px bg-gradient-to-r from-transparent to-white"></div>
-            <span className="font-mono text-xs font-medium text-zinc-200 tracking-[0.3em] uppercase">Processing Core v4.1.0</span>
-            <div className="w-24 h-px bg-gradient-to-l from-transparent to-white"></div>
+          {/* Bottom Data Readout */}
+          <div className="flex justify-between items-end">
+            <div className="max-w-md w-full flex flex-col p-2 drop-shadow-md">
+              <p className="font-['JetBrains_Mono'] text-[12px] leading-[14px] tracking-[0.05em] font-medium text-[#8e9192] mb-1">SYSTEM_TELEMETRY</p>
+              <div className="font-['JetBrains_Mono'] text-[12px] leading-[14px] tracking-[0.05em] font-medium text-white opacity-80 flex flex-col justify-end gap-1 h-[200px] overflow-hidden" ref={logContainerRef}>
+                {logs.map((log, i) => (
+                  <div key={i} className="animate-in fade-in slide-in-from-bottom-2 duration-300 whitespace-nowrap overflow-hidden text-ellipsis">
+                    <span className="text-white/40 mr-2">{log.time}</span> {log.msg}
+                  </div>
+                ))}
+                {logs.length > 0 && <div className="data-stream mt-1 text-[#8e9192] opacity-50">&gt; SYNCING_AST_MODELS_04</div>}
+              </div>
+            </div>
+            <div className="flex flex-col items-end p-2 drop-shadow-md">
+              <div className="flex gap-2 mb-6">
+                {["Discovery", "AST Parsing", "Semantic Map", "Graph Logic"].map((step, idx) => {
+                  const isComplete = activeStep > idx;
+                  const isActive = activeStep === idx;
+                  return (
+                    <div key={idx} className={`flex flex-col p-2 bg-transparent border ${isActive ? 'border-white/40' : 'border-white/5'} rounded min-w-[120px] transition-colors duration-300`}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`material-symbols-outlined text-[14px] ${isComplete ? 'text-white' : isActive ? 'text-white animate-spin' : 'text-[#444]'} `}>
+                          {isComplete ? 'check_circle' : isActive ? 'sync' : 'pending'}
+                        </span>
+                        <span className={`font-['JetBrains_Mono'] text-[10px] ${isActive || isComplete ? 'text-white' : 'text-[#666]'}`}>STEP {idx + 1}</span>
+                      </div>
+                      <span className={`font-['Inter'] text-[12px] font-medium ${isActive || isComplete ? 'text-white' : 'text-[#666]'}`}>{step}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <span className="font-['JetBrains_Mono'] text-[14px] leading-[16px] tracking-[0.05em] font-medium text-white mb-2">{progressPct.toFixed(2)}% COMPLETE</span>
+              <div className="w-48 h-1 bg-[#2a2a2a] relative overflow-hidden rounded-full">
+                <div className="absolute inset-y-0 left-0 bg-white transition-all duration-300 ease-out rounded-full" style={{ width: `${progressPct}%` }}></div>
+                <div className="absolute inset-y-0 bg-white blur-[2px] w-8 transition-all duration-300 ease-out animate-[pulse_2s_infinite]" style={{ left: `calc(${progressPct}% - 32px)` }}></div>
+              </div>
+            </div>
           </div>
         </div>
       </main>
@@ -500,9 +595,38 @@ function ProcessingModal({
 type LeftTab = "FILES" | "MODULES" | "ENTRY POINTS";
 type CenterTab = "ARCHITECTURE" | "CODE FLOW" | "ONBOARDING DOC";
 
+const BRANCHES = ["main", "dev", "staging", "feature/auth", "hotfix/patch"];
+
+function exportGraphAsJSON(graphData?: { nodes: any[]; edges: [string, string][] }) {
+  const data = graphData ?? { nodes: [], edges: [] };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'devlens-graph.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function exportGraphAsMermaid(graphData?: { nodes: any[]; edges: [string, string][] }, sessionId?: string) {
+  if (!graphData) return;
+  const lines = ['graph TD'];
+  graphData.edges.forEach(([a, b]) => {
+    const na = graphData.nodes.find((n: any) => n.id === a);
+    const nb = graphData.nodes.find((n: any) => n.id === b);
+    if (na && nb) lines.push(`  ${a}["${na.label}"] --> ${b}["${nb.label}"]`);
+  });
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'devlens-graph.mmd';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 function DashboardShell({
   repoUrl,
   onClose,
+  onOpenPalette,
   drawNodes,
   showFlash,
   sessionId,
@@ -511,9 +635,11 @@ function DashboardShell({
   modules,
   entryPoints,
   chat,
+  analysisError,
 }: {
   repoUrl: string;
   onClose: () => void;
+  onOpenPalette?: () => void;
   drawNodes: boolean;
   showFlash: boolean;
   sessionId?: string;
@@ -522,25 +648,145 @@ function DashboardShell({
   modules?: Array<{ name: string; file_count: number; files: string[] }>;
   entryPoints?: string[];
   chat: ReturnType<typeof useChat>;
+  analysisError?: string;
 }) {
   const repoLabel = repoUrl?.replace(/^https?:\/\/(www\.)?github\.com\//, "") || "facebook/react";
   const [leftTab, setLeftTab] = useState<LeftTab>("FILES");
   const [centerTab, setCenterTab] = useState<CenterTab>("ARCHITECTURE");
   const [activeFile, setActiveFile] = useState("src/components/Button.tsx");
   const [fileFilter, setFileFilter] = useState("");
+  const [branch, setBranch] = useState("main");
+  const [branchOpen, setBranchOpen] = useState(false);
+  const [showExport, setShowExport] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+  const [langFilter, setLangFilter] = useState<string | null>(null);
+
+  // Derive languages from graph meta or graphData nodes
+  const availableLangs = useMemo(() => {
+    if (graphData?.meta && typeof graphData.meta.languages === 'object') {
+      return Object.keys(graphData.meta.languages as Record<string, number>);
+    }
+    const langs = new Set<string>();
+    graphData?.nodes?.forEach((n: any) => { if (n.language) langs.add(n.language); });
+    return Array.from(langs);
+  }, [graphData]);
 
   // Auto-select first real file when tree is loaded
   useEffect(() => {
     if (fileTree && fileTree.length > 0) {
       const firstRealFile = fileTree.find(f => !f.is_dir);
-      if (firstRealFile) {
-        setActiveFile(firstRealFile.path);
-      }
+      if (firstRealFile) setActiveFile(firstRealFile.path);
     }
   }, [fileTree]);
 
+  const handleShare = useCallback(() => {
+    const url = `${window.location.origin}/dashboard?repo=${encodeURIComponent(repoUrl)}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    }).catch(() => {
+      prompt('Copy this link:', url);
+    });
+  }, [repoUrl]);
+
+  // File paths for command palette
+  const filePaths = useMemo(() => {
+    return (fileTree ?? []).filter(f => !f.is_dir).map(f => f.path);
+  }, [fileTree]);
+
+  const palette = useCommandPalette();
+  const paletteActions = useMemo(() => [
+    { id: 'arch', label: 'Architecture Graph', icon: '🔷', group: 'Views', shortcut: '1', onSelect: () => setCenterTab('ARCHITECTURE') },
+    { id: 'flow', label: 'Code Flow', icon: '🌊', group: 'Views', shortcut: '2', onSelect: () => setCenterTab('CODE FLOW') },
+    { id: 'doc', label: 'Onboarding Doc', icon: '📋', group: 'Views', shortcut: '3', onSelect: () => setCenterTab('ONBOARDING DOC') },
+    { id: 'files', label: 'Files Panel', icon: '📁', group: 'Panel', onSelect: () => setLeftTab('FILES') },
+    { id: 'modules', label: 'Modules Panel', icon: '📦', group: 'Panel', onSelect: () => setLeftTab('MODULES') },
+    { id: 'export-json', label: 'Export as JSON', icon: '⬇', group: 'Export', onSelect: () => exportGraphAsJSON(graphData) },
+    { id: 'export-mermaid', label: 'Export as Mermaid', icon: '⬇', group: 'Export', onSelect: () => exportGraphAsMermaid(graphData, sessionId) },
+    { id: 'share', label: 'Copy Share Link', icon: '🔗', group: 'Share', onSelect: handleShare },
+    { id: 'close', label: 'Close Repository', icon: '✕', group: 'Navigation', shortcut: 'Esc', onSelect: onClose },
+  ], [graphData, sessionId, handleShare, onClose]);
+
   return (
     <>
+      {/* Global Command Palette */}
+      <CommandPalette
+        open={palette.open}
+        onClose={() => palette.setOpen(false)}
+        actions={paletteActions}
+        files={filePaths}
+        onFileSelect={(path) => { setActiveFile(path); setLeftTab('FILES'); }}
+      />
+
+      {/* Error banner */}
+      {analysisError && (
+        <div style={{
+          position: 'absolute', top: 52, left: 0, right: 0, zIndex: 30,
+          background: 'rgba(239,68,68,0.12)', borderBottom: '1px solid rgba(239,68,68,0.3)',
+          padding: '8px 16px',
+          display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          <span style={{ color: '#ef4444', fontFamily: 'monospace', fontSize: 10, letterSpacing: '0.08em' }}>
+            ⚠ INGESTION_ERROR
+          </span>
+          <span style={{ color: '#fca5a5', fontFamily: 'monospace', fontSize: 10, flex: 1 }}>
+            {analysisError}
+          </span>
+          <span style={{ color: '#666', fontFamily: 'monospace', fontSize: 9 }}>
+            Dashboard shows cached / partial data.
+          </span>
+        </div>
+      )}
+
+      {/* Export Modal */}
+      {showExport && (
+        <div
+          style={{
+            position: 'absolute', inset: 0, zIndex: 40,
+            background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+          onClick={() => setShowExport(false)}
+        >
+          <div
+            style={{
+              background: '#0d0d10', border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 12, padding: '24px 28px', minWidth: 320,
+              boxShadow: '0 24px 64px rgba(0,0,0,0.8)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontFamily: 'monospace', fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#00E5A0', marginBottom: 4 }}>Export_Pipeline</div>
+            <div style={{ fontSize: 16, fontWeight: 600, color: '#fff', marginBottom: 20 }}>Choose format</div>
+            {[
+              { label: 'JSON', desc: 'Raw graph data — nodes, edges, metadata', icon: '{ }', action: () => { exportGraphAsJSON(graphData); setShowExport(false); } },
+              { label: 'Mermaid', desc: 'Mermaid diagram — paste into docs or GitHub', icon: '⟁', action: () => { exportGraphAsMermaid(graphData, sessionId); setShowExport(false); } },
+              { label: 'Share URL', desc: 'Copy a direct link to this analysis', icon: '🔗', action: () => { handleShare(); setShowExport(false); } },
+            ].map(({ label, desc, icon, action }) => (
+              <button
+                key={label}
+                type="button"
+                onClick={action}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 14,
+                  background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
+                  borderRadius: 8, padding: '10px 14px', marginBottom: 8,
+                  cursor: 'pointer', textAlign: 'left', transition: 'all 150ms',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(0,229,160,0.06)')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
+              >
+                <span style={{ fontSize: 18, width: 28, textAlign: 'center' }}>{icon}</span>
+                <span>
+                  <span style={{ display: 'block', color: '#fff', fontWeight: 600, fontSize: 13 }}>{label}</span>
+                  <span style={{ display: 'block', color: '#555', fontFamily: 'monospace', fontSize: 10, marginTop: 2 }}>{desc}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ============================== Top Bar ============================== */}
       <header className="absolute top-0 left-0 right-0 h-[52px] border-b border-white/5 bg-brand-bg/95 backdrop-blur flex items-center px-4 gap-4 z-20">
         <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-brand-heading">
@@ -551,19 +797,103 @@ function DashboardShell({
         <div className="flex items-center gap-2 font-mono text-xs text-brand-heading">
           <span className="text-zinc-500">repo:</span>
           <span>{repoLabel}</span>
-          <span className="ml-1 px-1.5 py-0.5 rounded bg-white/5 ring-1 ring-white/10 text-[10px] uppercase tracking-widest text-zinc-400">
-            main
-          </span>
+          {/* Branch selector */}
+          <div style={{ position: 'relative' }}>
+            <button
+              type="button"
+              onClick={() => setBranchOpen((v) => !v)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                marginLeft: 4, padding: '2px 8px 2px 6px',
+                background: branchOpen ? 'rgba(0,229,160,0.08)' : 'rgba(255,255,255,0.05)',
+                border: `1px solid ${branchOpen ? 'rgba(0,229,160,0.3)' : 'rgba(255,255,255,0.1)'}`,
+                borderRadius: 5, cursor: 'pointer', transition: 'all 150ms',
+              }}
+            >
+              <span style={{ fontSize: 9, color: '#555' }}>⎇</span>
+              <span style={{ fontFamily: 'monospace', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', color: branchOpen ? '#00E5A0' : '#aaa' }}>
+                {branch}
+              </span>
+              <span style={{ fontSize: 8, color: '#555', marginLeft: 2 }}>▾</span>
+            </button>
+            {branchOpen && (
+              <div
+                style={{
+                  position: 'absolute', top: '100%', left: 0, marginTop: 4,
+                  background: '#0d0d10', border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 7, overflow: 'hidden', zIndex: 50, minWidth: 160,
+                  boxShadow: '0 12px 32px rgba(0,0,0,0.6)',
+                }}
+              >
+                {BRANCHES.map((b) => (
+                  <button
+                    key={b}
+                    type="button"
+                    onClick={() => { setBranch(b); setBranchOpen(false); }}
+                    style={{
+                      display: 'block', width: '100%', textAlign: 'left',
+                      padding: '7px 12px',
+                      fontFamily: 'monospace', fontSize: 11,
+                      color: b === branch ? '#00E5A0' : '#888',
+                      background: b === branch ? 'rgba(0,229,160,0.06)' : 'transparent',
+                      border: 'none', cursor: 'pointer',
+                      borderBottom: '1px solid rgba(255,255,255,0.04)',
+                      transition: 'all 100ms',
+                    }}
+                    onMouseEnter={(e) => { if (b !== branch) e.currentTarget.style.color = '#ccc'; }}
+                    onMouseLeave={(e) => { if (b !== branch) e.currentTarget.style.color = '#888'; }}
+                  >
+                    {b === branch ? '✓ ' : '  '}{b}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Center: languages */}
+        {/* Center: languages + filter */}
         <div className="flex-1 flex items-center justify-center gap-2">
-          <LangBadge color="#3b82f6" name="TypeScript" />
-          <LangBadge color="#facc15" name="JavaScript" />
-          <LangBadge color="#a855f7" name="CSS" />
+          {availableLangs.slice(0, 4).map((lang) => (
+            <button
+              key={lang}
+              type="button"
+              onClick={() => setLangFilter(langFilter === lang ? null : lang)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                padding: '2px 8px', borderRadius: 100,
+                background: langFilter === lang ? 'rgba(0,229,160,0.12)' : 'rgba(255,255,255,0.05)',
+                border: `1px solid ${langFilter === lang ? 'rgba(0,229,160,0.4)' : 'rgba(255,255,255,0.1)'}`,
+                cursor: 'pointer', transition: 'all 150ms',
+              }}
+            >
+              <span style={{
+                width: 6, height: 6, borderRadius: '50%',
+                background: langFilter === lang ? '#00E5A0' : '#555',
+                flexShrink: 0,
+              }} />
+              <span style={{
+                fontFamily: 'monospace', fontSize: 10, color: langFilter === lang ? '#00E5A0' : '#666',
+              }}>
+                {lang}
+              </span>
+            </button>
+          ))}
+          {langFilter && (
+            <button
+              type="button"
+              onClick={() => setLangFilter(null)}
+              style={{
+                fontFamily: 'monospace', fontSize: 9, color: '#555', background: 'transparent',
+                border: '1px solid rgba(255,255,255,0.06)', borderRadius: 100,
+                padding: '2px 8px', cursor: 'pointer',
+              }}
+            >
+              clear filter ✕
+            </button>
+          )}
         </div>
 
-        {/* Right: actions + flash + status */}
+        {/* Right: actions */}
         <div
           className="font-mono text-[10px] uppercase tracking-widest mr-2"
           style={{
@@ -575,10 +905,51 @@ function DashboardShell({
         >
           ◆ Analysis Complete
         </div>
-        <TopBarButton label="Share" />
-        <TopBarButton label="Export" />
-        <TopBarButton label="Docs" />
-        <TopBarButton label="Invite" primary />
+
+        {/* ⌘K */}
+        <button
+          type="button"
+          onClick={() => { palette.toggle(); onOpenPalette?.(); }}
+          style={{
+            fontFamily: 'monospace', fontSize: 9, letterSpacing: '0.1em',
+            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 5, color: '#555', padding: '3px 8px', cursor: 'pointer',
+            transition: 'all 150ms',
+          }}
+          title="Command Palette (⌘K)"
+        >⌘K</button>
+
+        <button
+          type="button"
+          onClick={handleShare}
+          style={{
+            fontFamily: 'monospace', fontSize: '0.625rem', letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            background: shareCopied ? 'rgba(0,229,160,0.1)' : 'transparent',
+            border: `1px solid ${shareCopied ? 'rgba(0,229,160,0.3)' : 'rgba(255,255,255,0.1)'}`,
+            borderRadius: 5, color: shareCopied ? '#00E5A0' : '#777',
+            padding: '3px 10px', cursor: 'pointer', transition: 'all 200ms',
+          }}
+        >
+          {shareCopied ? '✓ Copied!' : 'Share'}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowExport(true)}
+          style={{
+            fontFamily: 'monospace', fontSize: '0.625rem', letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            background: 'transparent', border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: 5, color: '#777', padding: '3px 10px', cursor: 'pointer',
+            transition: 'all 150ms',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = '#ccc'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = '#777'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+        >
+          Export
+        </button>
+
         <div className="h-4 w-px bg-white/10" />
         <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-zinc-400">
           <span className="size-1.5 rounded-full bg-[#00E5A0] shadow-[0_0_10px_rgba(0,229,160,0.7)]" />
@@ -667,7 +1038,7 @@ function DashboardShell({
 
         <div className="flex-1 relative overflow-hidden">
           {centerTab === "ARCHITECTURE" && <ArchitectureGraph draw={drawNodes} graphData={graphData} />}
-          {centerTab === "CODE FLOW" && <CodeFlowPlaceholder />}
+          {centerTab === "CODE FLOW" && <InteractiveCodeFlow graphData={graphData} />}
           {centerTab === "ONBOARDING DOC" && (
             sessionId ? (
               <OnboardingDoc sessionId={sessionId} repo={repoLabel} />
@@ -680,12 +1051,23 @@ function DashboardShell({
 
       {/* ============================ Right Panel =========================== */}
       <aside className="absolute top-[52px] bottom-0 right-0 w-[320px] border-l border-white/5 bg-[#0b0b0d] flex flex-col">
-        <div className="p-4 border-b border-white/5">
+        <div className="p-4 border-b border-white/5 flex justify-between items-center">
           <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-zinc-500">
             <span className="size-1.5 rounded-full bg-zinc-100 shadow-[0_0_8px_rgba(255,255,255,0.3)]" />
             Ask DevLens
             {chat.isStreaming && <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />}
           </div>
+          {sessionId && chat.messages.length > 0 && (
+            <button
+              onClick={chat.clearMessages}
+              style={{
+                fontFamily: 'monospace', fontSize: 9, textTransform: 'uppercase', color: '#666',
+                background: 'transparent', border: 'none', cursor: 'pointer',
+              }}
+            >
+              Clear
+            </button>
+          )}
         </div>
 
         <div className="p-4 border-b border-white/5">
@@ -710,25 +1092,49 @@ function DashboardShell({
                 <div className="text-xs text-zinc-500 leading-relaxed">
                   Ask anything about{" "}
                   <span className="text-brand-heading font-mono">{repoLabel}</span> — architecture, flows, edge cases, refactor risk.
+                  <br /><br />
+                  <span className="text-[10px] text-zinc-600 bg-white/5 px-2 py-1 rounded">@mention files to force context</span>
                 </div>
               </div>
             </div>
           ) : (
             chat.messages.map((msg, i) => (
-              <div key={i} className={`text-xs leading-relaxed ${msg.role === "user" ? "text-brand-heading text-right" : "text-zinc-400"
+              <div key={i} className={`text-xs leading-relaxed ${msg.role === "user" ? "text-brand-heading text-right flex justify-end" : "text-zinc-400"
                 }`}>
-                {msg.role === "assistant" && (
-                  <span className="font-mono text-[9px] uppercase text-zinc-600 block mb-1">DevLens</span>
-                )}
-                <span className={`inline-block px-3 py-2 rounded-lg ${msg.role === "user" ? "bg-white/10" : "bg-zinc-900 ring-1 ring-white/5"
-                  }`}>{msg.content}</span>
-                {msg.sources && msg.sources.length > 0 && (
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {msg.sources.map((s) => (
-                      <span key={s} className="font-mono text-[9px] text-zinc-600 bg-white/5 px-1.5 py-0.5 rounded">{s.split("/").pop()}</span>
-                    ))}
-                  </div>
-                )}
+                <div style={{ maxWidth: '85%' }}>
+                  {msg.role === "assistant" && (
+                    <span className="font-mono text-[9px] uppercase text-zinc-600 block mb-1">DevLens</span>
+                  )}
+                  <span className={`inline-block px-3 py-2 rounded-lg ${msg.role === "user" ? "bg-white/10" : "bg-zinc-900 ring-1 ring-white/5"
+                    }`}>{msg.content}</span>
+                  
+                  {/* Assistant Message Controls */}
+                  {msg.role === "assistant" && !msg.isStreaming && (
+                    <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      {/* Sources */}
+                      <div className="flex flex-wrap gap-1">
+                        {msg.sources?.map((s) => (
+                          <span key={s} className="font-mono text-[9px] text-zinc-600 bg-white/5 px-1.5 py-0.5 rounded cursor-pointer hover:text-white"
+                                onClick={() => { setActiveFile(s); setLeftTab('FILES'); }}>
+                            {s.split("/").pop()}
+                          </span>
+                        ))}
+                      </div>
+
+                      {/* RLHF / Actions */}
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <button type="button" title="Helpful" onClick={() => sessionId && repoHistory.updateMessageFeedback(sessionId, i, 'up')}
+                                style={{ background: 'transparent', border: 'none', color: '#555', cursor: 'pointer', fontSize: 10, padding: 2 }}>👍</button>
+                        <button type="button" title="Not helpful" onClick={() => sessionId && repoHistory.updateMessageFeedback(sessionId, i, 'down')}
+                                style={{ background: 'transparent', border: 'none', color: '#555', cursor: 'pointer', fontSize: 10, padding: 2 }}>👎</button>
+                        <button type="button" title="Create Jira Ticket / GitHub Issue" 
+                                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 3, color: '#aaa', cursor: 'pointer', fontSize: 9, padding: '2px 6px', fontFamily: 'monospace' }}>
+                          Draft Issue
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             ))
           )}
@@ -910,97 +1316,309 @@ function ChatInput({ onSend, repoLabel, disabled }: { onSend: (msg: string) => v
 
 /* --------------------------- Center placeholders -------------------------- */
 
-function CodeFlowPlaceholder() {
-  const LANES = [
-    { id: "client", label: "Client", color: "#4A8FFF" },
-    { id: "gateway", label: "APIGateway", color: "#00E5A0" },
-    { id: "auth", label: "AuthService", color: "#FF6B6B" },
-    { id: "db", label: "Database", color: "#A78BFA" },
-  ];
+function InteractiveCodeFlow({ graphData }: { graphData?: { nodes: Node[]; edges: [string, string][] } }) {
+  const [expanded, setExpanded] = useState<Set<string>>(new Set(["root", "src", "backend", "app"]));
+  const [hoveredNode, setHoveredNode] = useState<string | null>(null);
 
-  const STEPS = [
-    { from: 0, to: 1, label: "POST /api/analyze", y: 80 },
-    { from: 1, to: 2, label: "validateJWT(token)", y: 130 },
-    { from: 2, to: 1, label: "✓ user: { id, plan }", y: 160, dashed: true },
-    { from: 1, to: 3, label: "repos.findOrCreate(url)", y: 210 },
-    { from: 3, to: 1, label: "✓ repo_id: 4821", y: 240, dashed: true },
-    { from: 1, to: 0, label: "202 Accepted · job_id", y: 290, dashed: true },
-    { from: 0, to: 1, label: "WS /analysis/{id}/status", y: 350 },
-    { from: 1, to: 0, label: "{ step: 'cloning', pct: 12 }", y: 400, dashed: true },
-    { from: 1, to: 0, label: "{ step: 'done', pct: 100 }", y: 450, dashed: true },
-  ];
+  const treeData = useMemo(() => {
+    const nodes = graphData?.nodes?.length ? graphData.nodes : NODES;
+    
+    const root: any = { id: "root", name: "Project Codebase", children: [], isFile: false, depth: 0, path: "" };
+    const map = new Map<string, any>();
+    map.set("root", root);
+    
+    nodes.forEach(n => {
+      const parts = n.path.split('/');
+      let parentPath = "root";
+      parts.forEach((part, i) => {
+        const isFile = i === parts.length - 1;
+        const currentPath = parentPath === "root" ? part : `${parentPath}/${part}`;
+        
+        if (!map.has(currentPath)) {
+          const node = {
+            id: currentPath,
+            name: part,
+            path: currentPath,
+            children: [],
+            isFile,
+            depth: i + 1,
+            desc: isFile ? n.desc : undefined
+          };
+          map.set(currentPath, node);
+          map.get(parentPath).children.push(node);
+        }
+        parentPath = currentPath;
+      });
+    });
+    
+    const sortTree = (node: any) => {
+      node.children.sort((a: any, b: any) => {
+        if (a.isFile && !b.isFile) return 1;
+        if (!a.isFile && b.isFile) return -1;
+        return a.name.localeCompare(b.name);
+      });
+      node.children.forEach(sortTree);
+    };
+    sortTree(root);
+    
+    // Auto-expand top level on first render
+    root.children.forEach((c: any) => expanded.add(c.id));
+    
+    return root;
+  }, [graphData]);
 
-  const W = 600;
-  const H = 520;
-  const LANE_W = W / LANES.length;
-  const CENTER = (i: number) => LANE_W * i + LANE_W / 2;
+  const toggleExpand = (id: string) => {
+    setExpanded(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  // Umbrella / Hanging Chimes Layout Algorithm
+  const { layoutNodes, canopyLines, columnLines, totalW, totalH } = useMemo(() => {
+    if (!treeData) return { layoutNodes: [], canopyLines: [], columnLines: [], totalW: 800, totalH: 600 };
+
+    const folders = treeData.children.filter((c: any) => !c.isFile);
+    const files = treeData.children.filter((c: any) => c.isFile);
+
+    const columns: any[] = [];
+    const mid = Math.floor(folders.length / 2);
+    
+    // Balance the umbrella: Folders -> Root Files (Center) -> Folders
+    for(let i = 0; i < mid; i++) columns.push({ type: 'folder', node: folders[i] });
+    if (files.length > 0) columns.push({ type: 'root_files', nodes: files });
+    for(let i = mid; i < folders.length; i++) columns.push({ type: 'folder', node: folders[i] });
+
+    const numCols = columns.length || 1;
+    const TOTAL_W = Math.max(900, numCols * 180);
+    const CENTER_X = TOTAL_W / 2;
+    const ROOT_Y = 40;
+
+    const result: any[] = [];
+    const canopyLines: any[] = [];
+    const columnLines: any[] = [];
+    let maxH = ROOT_Y + 100;
+
+    // Root Node
+    result.push({ 
+       ...treeData, 
+       cx: CENTER_X, y: ROOT_Y, w: 240, h: 48, 
+       isRoot: true 
+    });
+
+    columns.forEach((col, i) => {
+      const cx = (i + 0.5) * (TOTAL_W / numCols);
+      
+      if (col.type === 'folder') {
+         const spoke = col.node;
+         const SPOKE_Y = 160;
+         
+         result.push({ ...spoke, cx, y: SPOKE_Y, w: 160, h: 36, isSpoke: true });
+         canopyLines.push({ startX: CENTER_X, startY: ROOT_Y + 48, endX: cx, endY: SPOKE_Y });
+         
+         let currentY = SPOKE_Y + 36 + 24;
+         const traverse = (n: any, depth: number) => {
+            result.push({ ...n, cx, y: currentY, w: 150, h: 32, depth });
+            currentY += 32 + 10;
+            if (expanded.has(n.id) && n.children) {
+               n.children.forEach((c: any) => traverse(c, depth + 1));
+            }
+         };
+         
+         if (expanded.has(spoke.id) && spoke.children) {
+            spoke.children.forEach((c: any) => traverse(c, 1));
+         }
+         
+         const lowestY = currentY - 42;
+         if (lowestY > SPOKE_Y + 36) {
+           columnLines.push({ x: cx, startY: SPOKE_Y + 36, endY: lowestY + 16 });
+         }
+         maxH = Math.max(maxH, currentY);
+         
+      } else {
+         // Root Files (Center Column)
+         let currentY = 160;
+         col.nodes.forEach((n: any) => {
+            result.push({ ...n, cx, y: currentY, w: 150, h: 32, depth: 1, isRootFile: true });
+            currentY += 32 + 10;
+         });
+         
+         const lowestY = currentY - 42;
+         if (lowestY > ROOT_Y + 48) {
+           columnLines.push({ x: cx, startY: ROOT_Y + 48, endY: lowestY + 16 });
+         }
+         canopyLines.push({ startX: CENTER_X, startY: ROOT_Y + 48, endX: cx, endY: 160, isStraight: true });
+         maxH = Math.max(maxH, currentY);
+      }
+    });
+
+    return { layoutNodes: result, canopyLines, columnLines, totalW: TOTAL_W, totalH: maxH + 100 };
+  }, [treeData, expanded]);
+
+  const findNode = (id: string) => layoutNodes.find(n => n.id === id);
+
+  // Draw dependency edges (from graphData.edges) when hovering a file
+  const edgesToDraw = useMemo(() => {
+     if (!hoveredNode) return [];
+     const edges = graphData?.edges?.length ? graphData.edges : EDGES;
+     const hoveredPos = findNode(hoveredNode);
+     if (!hoveredPos) return [];
+     
+     const lines: Array<{ source: any, target: any }> = [];
+     edges.forEach(([source, target]) => {
+         if (source === hoveredNode || target === hoveredNode) {
+             const sPos = findNode(source);
+             const tPos = findNode(target);
+             if (sPos && tPos) {
+                 lines.push({ source: sPos, target: tPos });
+             }
+         }
+     });
+     return lines;
+  }, [hoveredNode, graphData, layoutNodes]);
 
   return (
-    <div className="absolute inset-0 overflow-auto bg-brand-bg">
-      <div className="p-4">
-        <div className="font-mono text-[10px] uppercase tracking-widest text-zinc-600 mb-4">
-          Code_Flow · POST /api/repos/analyze · Execution Trace
-        </div>
-        <svg
-          viewBox={`0 0 ${W} ${H}`}
-          className="w-full max-w-3xl mx-auto"
-          style={{ fontFamily: "'Geist Mono', monospace" }}
-        >
-          {/* Lane headers */}
-          {LANES.map((lane, i) => (
-            <g key={lane.id}>
-              <rect x={CENTER(i) - 44} y={4} width={88} height={28} rx={4}
-                fill="#111" stroke={lane.color} strokeWidth="0.8" />
-              <text x={CENTER(i)} y={23} textAnchor="middle" fill={lane.color}
-                fontSize={9} fontWeight={600}>
-                {lane.label}
-              </text>
-              {/* Lifeline */}
-              <line x1={CENTER(i)} y1={36} x2={CENTER(i)} y2={H - 20}
-                stroke="#2A2A2A" strokeWidth={0.8} strokeDasharray="4 4" />
-            </g>
-          ))}
+    <div className="absolute inset-0 overflow-x-hidden overflow-y-auto bg-brand-bg select-none scroll-smooth">
+      <div 
+        className="p-4 relative w-full flex justify-center" 
+        style={{ minHeight: totalH }}
+      >
+        {/* We use an inner wrapper to center the absolute visualization perfectly */}
+        <div className="relative" style={{ width: totalW, height: totalH }}>
+          
+          <div className="font-mono text-[10px] uppercase tracking-widest text-zinc-500 absolute -left-4 -top-4 z-20 bg-brand-bg/90 backdrop-blur inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-white/5 shadow-sm">
+            <span className="size-1.5 rounded-full bg-[#00E5A0] shadow-[0_0_8px_rgba(0,229,160,0.6)]"></span>
+            <span className="text-[#00E5A0]">Architecture Map</span>
+            <span className="text-zinc-600">·</span>
+            <span>Radial Umbrella Flow</span>
+          </div>
 
-          {/* Arrows */}
-          {STEPS.map((step, idx) => {
-            const x1 = CENTER(step.from);
-            const x2 = CENTER(step.to);
-            const dir = x2 > x1 ? 1 : -1;
-            const arrX = x2 - dir * 8;
-            const midX = (x1 + x2) / 2;
-            const color = step.dashed ? "#3A3A3A" : "#555";
+          {/* Edges Layer */}
+          <svg className="absolute top-0 left-0 w-full h-full pointer-events-none z-0">
+            <defs>
+              <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="3" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
+            </defs>
+
+            {/* Canopy Lines (Umbrella Ribs) */}
+            {canopyLines.map((line, i) => {
+              if (line.isStraight) {
+                return (
+                  <path key={`canopy-${i}`} d={`M ${line.startX} ${line.startY} L ${line.endX} ${line.endY}`} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="1.5" />
+                );
+              }
+              // Beautiful swooping bezier for umbrella ribs
+              return (
+                <path
+                  key={`canopy-${i}`}
+                  d={`M ${line.startX} ${line.startY} C ${line.startX} ${line.startY + 60}, ${line.endX} ${line.endY - 60}, ${line.endX} ${line.endY}`}
+                  fill="none"
+                  stroke="rgba(255,255,255,0.08)"
+                  strokeWidth="1.5"
+                />
+              );
+            })}
+
+            {/* Column Strings (Hanging Chimes) */}
+            {columnLines.map((line, i) => (
+              <line
+                key={`col-${i}`}
+                x1={line.x} y1={line.startY} x2={line.x} y2={line.endY}
+                stroke="rgba(255,255,255,0.04)"
+                strokeWidth="2"
+                strokeDasharray="4 4"
+              />
+            ))}
+            
+            {/* Dependency Edges (Cross-column Synapses active on hover) */}
+            {edgesToDraw.map((edge, i) => {
+               const startX = edge.source.cx;
+               const startY = edge.source.y + edge.source.h / 2;
+               const endX = edge.target.cx;
+               const endY = edge.target.y + edge.target.h / 2;
+               
+               // Calculate a sweeping "vine" curve that drops down and sweeps across
+               const midY = Math.max(startY, endY) + 60;
+               
+               return (
+                 <path
+                   key={`dep-${i}`}
+                   d={`M ${startX} ${startY} C ${startX} ${midY}, ${endX} ${midY}, ${endX} ${endY}`}
+                   fill="none"
+                   stroke="#00E5A0"
+                   strokeWidth="1.5"
+                   className="opacity-90"
+                   strokeDasharray="6 4"
+                   filter="url(#glow)"
+                 />
+               );
+            })}
+          </svg>
+
+          {/* Nodes Layer */}
+          {layoutNodes.map(node => {
+            const isExpanded = expanded.has(node.id);
+            const isHovered = hoveredNode === node.id;
+            const isDepHovered = edgesToDraw.some(e => e.source.id === node.id || e.target.id === node.id);
+            
             return (
-              <g key={idx}>
-                <line
-                  x1={x1} y1={step.y} x2={arrX} y2={step.y}
-                  stroke={color} strokeWidth={0.9}
-                  strokeDasharray={step.dashed ? "4 3" : undefined}
-                />
-                <polygon
-                  points={`${x2},${step.y} ${arrX - dir * 4},${step.y - 4} ${arrX - dir * 4},${step.y + 4}`}
-                  fill={color}
-                />
-                {/* Label */}
-                <text
-                  x={midX} y={step.y - 5}
-                  textAnchor="middle" fill={step.dashed ? "#3A3A3A" : "#555"}
-                  fontSize={8}
-                >
-                  {step.label}
-                </text>
-                {/* Activation box */}
-                <rect
-                  x={x1 - 4} y={step.y - 2} width={8} height={16}
-                  fill="#1C1C1C" stroke={LANES[step.from].color} strokeWidth={0.6}
-                  opacity={0.7}
-                />
-              </g>
+              <div
+                key={node.id}
+                onMouseEnter={() => setHoveredNode(node.id)}
+                onMouseLeave={() => setHoveredNode(null)}
+                onClick={() => toggleExpand(node.id)}
+                className={`absolute flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg border backdrop-blur-md transition-all cursor-pointer z-10 overflow-hidden
+                  ${node.isRoot 
+                    ? "bg-zinc-950 border-[#00E5A0]/40 shadow-[0_0_24px_rgba(0,229,160,0.15)] ring-1 ring-[#00E5A0]/20"
+                    : node.isSpoke
+                      ? "bg-[#111] border-b-2 border-b-[#00E5A0]/60 border-t-white/5 border-x-white/5 shadow-lg"
+                      : node.isFile 
+                        ? "bg-[#0b0b0c]/80 border-white/5 hover:border-white/20" 
+                        : "bg-[#141416]/90 border-white/10 hover:border-white/30 shadow-md"
+                  } 
+                  ${isHovered && !node.isRoot ? "ring-1 ring-[#00E5A0]/50 bg-[#00E5A0]/5 transform scale-105" : ""} 
+                  ${isDepHovered && !isHovered ? "ring-1 ring-[#00E5A0]/30 bg-zinc-900" : ""}`
+                }
+                style={{
+                   left: node.cx - node.w / 2,
+                   top: node.y,
+                   width: node.w,
+                   height: node.h,
+                   boxShadow: isHovered && !node.isFile && !node.isRoot ? "0 4px 16px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,229,160,0.2)" : undefined
+                }}
+              >
+                {node.isRoot ? (
+                  <div className="flex flex-col items-center">
+                    <span className="font-mono text-[8px] uppercase tracking-widest text-[#00E5A0] mb-0.5">Root Architecture</span>
+                    <span className="font-sans text-sm font-semibold tracking-tight text-white">{node.name}</span>
+                  </div>
+                ) : node.isSpoke ? (
+                  <div className="flex items-center gap-2 w-full px-1">
+                    <span className={`text-[9px] font-mono transition-transform duration-300 ${isExpanded ? "rotate-0 text-[#00E5A0]" : "-rotate-90 text-zinc-500"}`}>▼</span>
+                    <span className="font-sans text-xs font-semibold text-zinc-100 truncate flex-1">{node.name}</span>
+                    <span className="font-mono text-[9px] text-zinc-500 bg-white/5 px-1.5 rounded-full">{node.children?.length || 0}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 w-full px-1" style={{ paddingLeft: `${Math.min(node.depth - 1, 3) * 8}px` }}>
+                    {!node.isFile && (
+                      <span className={`text-[8px] font-mono transition-transform duration-300 ${isExpanded ? "rotate-0 text-[#00E5A0]" : "-rotate-90 text-zinc-600"}`}>▼</span>
+                    )}
+                    {node.isFile && (
+                      <span className="text-zinc-600 font-mono text-[10px]">📄</span>
+                    )}
+                    <span className={`font-sans text-[11px] truncate flex-1 ${node.isFile ? 'text-zinc-400' : 'text-zinc-200 font-medium'}`}>
+                      {node.name}
+                    </span>
+                  </div>
+                )}
+              </div>
             );
           })}
-        </svg>
-        <p className="text-center font-mono text-[10px] text-zinc-700 mt-4">
-          // Select a function in the graph to trace its execution path
-        </p>
+        </div>
       </div>
     </div>
   );
