@@ -24,7 +24,7 @@ interface Tier {
 const TIERS: Tier[] = [
   {
     id: "free", label: "FREE_TIER", name: "Free",
-    monthly: 0, annual: 0, featured: false, cta: "Start Free", ctaHref: "/onboarding",
+    monthly: 0, annual: 0, featured: false, cta: "Start Free", ctaHref: "/",
     features: [
       { text: "Public repos only", included: true },
       { text: "5 analyses / day", included: true },
@@ -40,7 +40,7 @@ const TIERS: Tier[] = [
   },
   {
     id: "pro", label: "PRO_TIER", name: "Pro",
-    monthly: 19, annual: 15, featured: true, badge: "MOST POPULAR", cta: "Get Pro", ctaHref: "/onboarding",
+    monthly: 19, annual: 15, featured: true, badge: "MOST POPULAR", cta: "Get Pro", ctaHref: "/",
     features: [
       { text: "Public + Private repos", included: true },
       { text: "Unlimited analyses", included: true },
@@ -167,19 +167,19 @@ function PricingPage() {
   const [annual, setAnnual] = useState(false);
 
   return (
-    <div className="dl-page" style={{ fontFamily: "var(--font-sans)" }}>
+    <div className="dl-page" style={{ fontFamily: "var(--font-sans)", paddingLeft: 240 }}>
       {/* Nav */}
       <nav className="dl-nav">
         <div className="dl-nav-inner">
           <Link to="/" className="dl-nav-logo">
             <span className="dl-nav-logo-dot" />
             DEVLENS
-            <span style={{ color: "var(--dl-text-3)", fontWeight: 400, fontSize: "0.6rem", letterSpacing: "0.2em" }}>AI</span>
+            <span style={{ color: "var(--dl-text-0)", fontWeight: 400, fontSize: "0.6rem", letterSpacing: "0.2em" }}>AI</span>
           </Link>
           <div className="dl-nav-links">
             <Link to="/" className="dl-nav-link">Home</Link>
             <Link to="/pricing" className="dl-nav-link" data-active="">Pricing</Link>
-            <Link to="/onboarding" className="dl-nav-link">Get Started</Link>
+            <Link to="/dashboard" className="dl-nav-link">Dashboard</Link>
           </div>
         </div>
       </nav>
