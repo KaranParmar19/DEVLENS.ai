@@ -1,16 +1,7 @@
 import { useState, useEffect } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { LoadingShowcase } from "@/components/loading-showcase";
-import {
-  InterrogationSection,
-  TimeDeltaSection,
-  FieldReportsSection,
-  FinalCTASection,
-} from "@/components/landing-sections";
 import { PortalTransform } from "@/components/portal-transform";
 import { NeuralMesh } from "@/components/neural-mesh";
-import { ScrollNarrative } from "@/components/scroll-narrative";
-import { HeroExtras } from "@/components/hero-extras";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -122,7 +113,7 @@ function Index() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--dl-base)", fontFamily: "var(--font-sans)" }}>
+    <div style={{ minHeight: "100vh", background: "var(--dl-base)", fontFamily: "var(--font-sans)", paddingLeft: 240 }}>
       {/* Fixed bg mesh */}
       <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }}>
         <NeuralMesh opacity={0.05} />
@@ -137,14 +128,14 @@ function Index() {
           <Link to="/" className="dl-nav-logo">
             <span className="dl-nav-logo-dot" />
             DEVLENS
-            <span style={{ color: "var(--dl-text-3)", fontWeight: 400, fontSize: "0.6rem", letterSpacing: "0.2em" }}>AI</span>
+            <span style={{ color: "var(--dl-text-0)", fontWeight: 400, fontSize: "0.6rem", letterSpacing: "0.2em" }}>AI</span>
           </Link>
 
           <div className="dl-nav-links">
             <Link to="/" className="dl-nav-link" data-active="">Home</Link>
             <Link to="/pricing" className="dl-nav-link">Pricing</Link>
-            <Link to="/onboarding" className="dl-nav-link">Get Started</Link>
-            <div style={{ width: 1, height: 14, background: "var(--dl-line-1)", margin: "0 4px" }} />
+            <Link to="/dashboard" className="dl-nav-link">Dashboard</Link>
+            <div style={{ width: "100%", height: 1, background: "var(--dl-line-1)", margin: "16px 0" }} />
 
             {/* Status badge */}
             <div className="dl-pill" style={{ gap: 6 }}>
@@ -200,8 +191,8 @@ function Index() {
           pointerEvents: "none", zIndex: 0,
         }} />
 
-        <div className="dl-container" style={{ position: "relative", zIndex: 1 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "clamp(2rem,4vw,5rem)", alignItems: "start" }}>
+        <div className="dl-container" style={{ position: "relative", zIndex: 1, marginInline: 0, paddingLeft: 0, maxWidth: "none" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "clamp(2rem,4vw,5rem)", alignItems: "start", width: "100%", paddingLeft: "1rem", paddingRight: "12vw" }}>
 
             {/* Left — primary */}
             <div>
@@ -255,9 +246,6 @@ function Index() {
                     {analyzing ? "Analyzing..." : "Analyze"}
                   </button>
                 </div>
-
-                {/* Tunnel card */}
-                <TunnelCard tunnelState={tunnelState} onLogin={handleLogin} onLogout={handleLogout} />
               </form>
 
               {/* Trust signals */}
@@ -289,19 +277,7 @@ function Index() {
         </div>
       </section>
 
-      {/* ── CONTENT SECTIONS ──────────────────────── */}
-      <ScrollNarrative />
-      <LoadingShowcase />
-      <HeroExtras />
-      <InterrogationSection />
-      <TimeDeltaSection />
-      <FieldReportsSection />
-      <FinalCTASection
-        repoUrl={repoUrl}
-        setRepoUrl={setRepoUrl}
-        analyzing={analyzing}
-        onSubmit={() => handleAnalyze(repoUrl)}
-      />
+      {/* ── CONTENT SECTIONS REMOVED ──────────────────────── */}
 
       {/* ── FOOTER ───────────────────────────────── */}
       <footer style={{
