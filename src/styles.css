@@ -258,31 +258,32 @@
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
+  bottom: 0;
+  width: 240px;
   z-index: 100;
-  height: 56px;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   background: rgba(8, 8, 9, 0.85);
   backdrop-filter: blur(20px) saturate(1.4);
   -webkit-backdrop-filter: blur(20px) saturate(1.4);
-  border-bottom: 1px solid var(--dl-line-1);
+  border-right: 1px solid var(--dl-line-1);
+  border-bottom: none;
   transition: border-color 0.3s ease;
 }
 
 .dl-nav-inner {
   display: flex;
-  align-items: center;
-  gap: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2rem;
   width: 100%;
-  max-width: 1240px;
-  margin-inline: auto;
-  padding-inline: clamp(1.25rem, 4vw, 3rem);
+  height: 100%;
+  padding: 2rem 1.5rem;
 }
 
 .dl-nav-logo {
   font-family: var(--font-mono);
-  font-size: 0.8125rem;
+  font-size: 1.25rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--dl-text-0);
@@ -293,8 +294,8 @@
 }
 
 .dl-nav-logo-dot {
-  width: 6px;
-  height: 6px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background: var(--dl-signal);
   box-shadow: 0 0 8px var(--dl-signal);
@@ -303,9 +304,11 @@
 
 .dl-nav-links {
   display: flex;
-  align-items: center;
-  gap: 2px;
-  margin-left: auto;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  width: 100%;
+  margin-top: auto;
 }
 
 .dl-nav-link {
