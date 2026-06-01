@@ -6,11 +6,17 @@ import { RepoHub } from "@/components/repo-hub";
 import { CommandPalette, useCommandPalette } from "@/components/command-palette";
 import { repoHistory } from "@/lib/repo-history";
 
-type DashboardSearch = { repo?: string };
+type DashboardSearch = {
+  repo?: string;
+  jobId?: string;
+  sessionId?: string;
+};
 
 export const Route = createFileRoute("/dashboard")({
   validateSearch: (search: Record<string, unknown>): DashboardSearch => ({
     repo: search.repo as string | undefined,
+    jobId: search.jobId as string | undefined,
+    sessionId: search.sessionId as string | undefined,
   }),
   component: DashboardPage,
   head: () => ({
@@ -27,7 +33,7 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 function DashboardPage() {
-  const { repo } = Route.useSearch();
+  const { repo, jobId, sessionId } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const [inputRepo, setInputRepo] = useState("");
   const palette = useCommandPalette();
@@ -81,6 +87,8 @@ function DashboardPage() {
         <PortalTransform
           open={true}
           repoUrl={repo}
+          jobId={jobId}
+          sessionId={sessionId}
           onClose={() => navigate({ search: { repo: undefined } })}
           onOpenPalette={palette.toggle}
         />

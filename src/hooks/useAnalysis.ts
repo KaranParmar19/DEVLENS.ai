@@ -64,13 +64,19 @@ export function useAnalysis() {
     setState(INITIAL_STATE);
   }, []);
 
-  const startAnalysis = useCallback(async (repoUrl: string) => {
+  const startAnalysis = useCallback(async (repoUrl: string, existingJob?: { jobId: string; sessionId: string }) => {
     setState({ ...INITIAL_STATE, steps: INITIAL_STEPS.map(s => ({ ...s })) });
 
     try {
-      // Step 1: Submit repo
-      const result = await api.analyze(repoUrl);
-      const { job_id, session_id } = result;
+      let job_id = existingJob?.jobId;
+      let session_id = existingJob?.sessionId;
+
+      if (!job_id || !session_id) {
+        // Step 1: Submit repo
+        const result = await api.analyze(repoUrl);
+        job_id = result.job_id;
+        session_id = result.session_id;
+      }
 
       setState(prev => ({ ...prev, jobId: job_id, sessionId: session_id }));
 
