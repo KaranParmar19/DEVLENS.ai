@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { PortalTransform } from "@/components/portal-transform";
+import { api } from "@/lib/api";
 import { NeuralMesh } from "@/components/neural-mesh";
+import { PaperCrumple } from "@/components/paper-crumple";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -28,10 +29,22 @@ const getRandomChar = () => CORRUPT_CHARS[Math.floor(Math.random() * CORRUPT_CHA
 function Index() {
   const navigate = useNavigate({ from: "/" });
   const [repoUrl, setRepoUrl] = useState("");
-  const [analyzing, setAnalyzing] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
+  const [showCrumple, setShowCrumple] = useState(false);
+  const pageRef = useRef<HTMLDivElement>(null);
+  const transitionTimerRef = useRef<any>(null);
+  const jobInfoRef = useRef<{ jobId: string; sessionId: string } | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [tunnelState, setTunnelState] = useState<TunnelState>("disconnected");
+
+  useEffect(() => {
+    return () => {
+      if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -85,8 +98,32 @@ function Index() {
     }, 300);
   };
 
-  const handleAnalyze = (url: string) => {
-    if (url.trim()) navigate({ to: "/dashboard", search: { repo: url.trim() } });
+  const handleAnalyze = async (url: string) => {
+    if (!url.trim()) return;
+    setErrorMsg(null);
+    setIsValidating(true);
+    setIsVerified(false);
+    setShowCrumple(false);
+    try {
+      const result = await api.analyze(url.trim());
+      jobInfoRef.current = { jobId: result.job_id, sessionId: result.session_id };
+      setIsVerified(true);
+
+      // Show verified state briefly, then trigger the crumple animation
+      setTimeout(() => {
+        setShowCrumple(true);
+      }, 10);
+
+      // Safety fallback: navigate after 5s in case animation doesn't fire
+      if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
+      transitionTimerRef.current = setTimeout(() => {
+        navigate({ to: "/dashboard", search: { repo: url.trim(), jobId: result.job_id, sessionId: result.session_id } });
+      }, 8000);
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "Failed to analyze repository");
+      setIsValidating(false);
+      setIsVerified(false);
+    }
   };
 
   const isConnectFlow = ["establishing", "established", "severing"].includes(tunnelState);
@@ -113,14 +150,30 @@ function Index() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--dl-base)", fontFamily: "var(--font-sans)", paddingLeft: 240 }}>
+    <div ref={pageRef} style={{ minHeight: "100vh", background: "var(--dl-base)", fontFamily: "var(--font-sans)", paddingLeft: 240 }}>
       {/* Fixed bg mesh */}
       <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }}>
         <NeuralMesh opacity={0.05} />
       </div>
 
-      {/* Portal */}
-      <PortalTransform open={analyzing} repoUrl={repoUrl} onClose={() => setAnalyzing(false)} />
+      {/* Paper crumple cinematic transition on verification */}
+      <PaperCrumple
+        active={showCrumple}
+        captureTarget={pageRef.current}
+        onComplete={() => {
+          if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
+          navigate({
+            to: "/dashboard",
+            search: {
+              repo: repoUrl.trim(),
+              jobId: jobInfoRef.current?.jobId,
+              sessionId: jobInfoRef.current?.sessionId,
+            },
+          });
+        }}
+      />
+
+      {/* Removed PortalTransform from Landing page to avoid loading flash before navigation */}
 
       {/* ── UNIFIED TOP NAV ───────────────────────── */}
       <nav className="dl-nav">
@@ -236,17 +289,59 @@ function Index() {
                       type="text"
                       value={repoUrl}
                       onChange={e => setRepoUrl(e.target.value)}
-                      disabled={analyzing}
+                      disabled={isValidating}
                       className="dl-input"
                       style={{ position: "absolute", inset: 0 }}
                       placeholder={tunnelState === "established" ? "private repo now accessible..." : "github.com/org/repo"}
                     />
                   </div>
-                  <button type="submit" disabled={analyzing} className="dl-btn dl-btn-primary dl-btn-sm">
-                    {analyzing ? "Analyzing..." : "Analyze"}
+                  <button 
+                    type="submit" 
+                    disabled={isValidating || isVerified} 
+                    className="dl-btn dl-btn-primary dl-btn-sm"
+                    style={{ 
+                      transition: "all 0.3s ease",
+                      background: isVerified ? "var(--dl-text-0)" : undefined,
+                      color: isVerified ? "var(--dl-base)" : undefined,
+                      borderColor: isVerified ? "var(--dl-text-0)" : undefined,
+                    }}
+                  >
+                    {isVerified ? (
+                      <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        Verified
+                      </span>
+                    ) : isValidating ? "Verifying..." : "Analyze"}
                   </button>
                 </div>
               </form>
+
+              {errorMsg && (
+                <div className="dl-animate-fade-up dl-delay-300" style={{ 
+                  marginTop: "1rem", maxWidth: "520px", padding: "0.875rem 1rem", 
+                  background: "var(--dl-raised)", border: "1px solid var(--dl-line-2)", 
+                  borderRadius: "var(--radius-md)", display: "flex", alignItems: "center", gap: 10 
+                }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--dl-text-0)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                  </svg>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: "var(--dl-text-0)", fontWeight: 600, fontSize: "0.8125rem", marginBottom: 2 }}>Access Denied</div>
+                    <div style={{ color: "var(--dl-text-2)", fontSize: "0.8125rem", lineHeight: 1.5 }}>{errorMsg}</div>
+                  </div>
+                  {errorMsg.toLowerCase().includes("private") && (
+                    <button type="button" onClick={handleLogin} className="dl-btn dl-btn-ghost dl-btn-sm"
+                      style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0, border: "1px solid var(--dl-line-2)" }}>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
+                      </svg>
+                      Connect
+                    </button>
+                  )}
+                </div>
+              )}
 
               {/* Trust signals */}
               <div className="dl-animate-fade-up dl-delay-500" style={{
