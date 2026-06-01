@@ -812,3 +812,31 @@
   padding-top: 56px;
   /* nav height */
 }
+
+/* Video Transition Animations */
+@keyframes dl-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes dl-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes dl-text-glow {
+  0%, 100% { opacity: 0.5; text-shadow: 0 0 4px rgba(255,255,255,0); }
+  50% { opacity: 1; text-shadow: 0 0 10px rgba(255,255,255,0.3); }
+}
+
+.dl-video-transition-fade-in {
+  animation: dl-fade-in 0.5s ease-in-out forwards;
+}
+
+.dl-video-transition-fade-out {
+  animation: dl-fade-out 0.5s ease-in-out forwards;
+}
+
+.dl-glow-text {
+  animation: dl-text-glow 2s infinite ease-in-out;
+}
