@@ -23,11 +23,15 @@ const FLASH_DURATION = 2000;
 export function PortalTransform({
   open,
   repoUrl,
+  jobId,
+  sessionId,
   onClose,
   onOpenPalette,
 }: {
   open: boolean;
   repoUrl: string;
+  jobId?: string;
+  sessionId?: string;
   onClose: () => void;
   onOpenPalette?: () => void;
 }) {
@@ -36,7 +40,8 @@ export function PortalTransform({
   // mounted: controls presence in the tree (kept for fade-out)
   const [mounted, setMounted] = useState(false);
   // shown: drives opacity/transform of the whole layer (false right after mount → triggers fade-in)
-  const [shown, setShown] = useState(false);
+  // shown: drives opacity/transform of the whole layer
+  const [shown, setShown] = useState(!!(jobId && sessionId));
   const [activeStep, setActiveStep] = useState(0);
   const [processingDone, setProcessingDone] = useState(false);
   const [showFlash, setShowFlash] = useState(false);
@@ -48,7 +53,7 @@ export function PortalTransform({
   useEffect(() => {
     if (open) {
       setMounted(true);
-      setShown(false);
+      setShown(!!(jobId && sessionId));
       setActiveStep(0);
       setProcessingDone(false);
       setShowFlash(false);
@@ -56,11 +61,19 @@ export function PortalTransform({
       setOverlayUnmounted(false);
       // Kick off real backend analysis
       if (repoUrl) {
-        startAnalysis(repoUrl);
+        if (jobId && sessionId) {
+          startAnalysis(repoUrl, { jobId, sessionId });
+          setShown(true);
+        } else {
+          startAnalysis(repoUrl);
+          rafRef.current = requestAnimationFrame(() => {
+            rafRef.current = requestAnimationFrame(() => setShown(true));
+          });
+        }
         // Persist to repo history immediately so hub shows it
         const label = repoUrl.replace(/^https?:\/\/(www\.)?github\.com\//, '').replace('.git', '');
         repoHistory.upsert({
-          id: `pending-${Date.now()}`,
+          id: sessionId || `pending-${Date.now()}`,
           repoUrl,
           repoLabel: label,
           analyzedAt: new Date().toISOString(),
@@ -722,19 +735,31 @@ function DashboardShell({
       {analysisError && (
         <div style={{
           position: 'absolute', top: 52, left: 0, right: 0, zIndex: 30,
-          background: 'rgba(239,68,68,0.12)', borderBottom: '1px solid rgba(239,68,68,0.3)',
+          background: 'var(--dl-raised)', borderBottom: '1px solid var(--dl-line-2)',
           padding: '8px 16px',
-          display: 'flex', alignItems: 'center', gap: 8,
+          display: 'flex', alignItems: 'center', gap: 12,
         }}>
-          <span style={{ color: '#ef4444', fontFamily: 'monospace', fontSize: 10, letterSpacing: '0.08em' }}>
+          <span style={{ color: 'var(--dl-text-0)', fontFamily: 'monospace', fontSize: 10, letterSpacing: '0.08em' }}>
             ⚠ INGESTION_ERROR
           </span>
-          <span style={{ color: '#fca5a5', fontFamily: 'monospace', fontSize: 10, flex: 1 }}>
+          <span style={{ color: 'var(--dl-text-2)', fontFamily: 'monospace', fontSize: 10, flex: 1 }}>
             {analysisError}
           </span>
-          <span style={{ color: '#666', fontFamily: 'monospace', fontSize: 9 }}>
-            Dashboard shows cached / partial data.
-          </span>
+          {analysisError.toLowerCase().includes("private") && (
+            <button
+              onClick={() => {
+                sessionStorage.setItem("tunnel_handshake_pending", "true");
+                window.location.href = `${import.meta.env.VITE_API_URL ?? "http://localhost:8000"}/api/v1/auth/github/login`;
+              }}
+              className="dl-btn dl-btn-ghost dl-btn-sm"
+              style={{ display: "flex", alignItems: "center", gap: 6, border: "1px solid var(--dl-line-2)", height: 28 }}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
+              </svg>
+              Connect GitHub
+            </button>
+          )}
         </div>
       )}
 
