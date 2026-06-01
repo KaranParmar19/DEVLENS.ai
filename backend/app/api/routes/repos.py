@@ -23,7 +23,8 @@ from app.models.analysis_job import AnalysisJob, JobStatus
 from app.models.session import Session
 from app.models.user import User
 from app.schemas.repository import AnalyzeRequest, RepoResponse
-from app.core.github_client import parse_github_url
+from app.core.github_client import parse_github_url, GitHubClient
+from httpx import HTTPStatusError
 from app.tasks.celery_app import celery_app
 
 logger = structlog.get_logger(__name__)
@@ -55,14 +56,45 @@ async def analyze_repo(
     owner, name = parse_github_url(payload.repo_url)
     full_name = f"{owner}/{name}"
 
+    # PRE-FLIGHT CHECK: verify repo is valid and user has access before creating DB records
+    user_token = current_user.github_access_token if current_user else None
+    try:
+        async with GitHubClient(user_token=user_token) as gh:
+            meta = await gh.get_repo_meta(owner, name)
+            if meta.is_private and not user_token:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="This repository is private. Please connect your GitHub account to analyze it."
+                )
+    except HTTPStatusError as exc:
+        if exc.response.status_code == 404:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Repository not found or you do not have access to it."
+            )
+        if exc.response.status_code == 403:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="GitHub API rate limit exceeded. Please connect your GitHub account to continue."
+            )
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Failed to fetch repository metadata from GitHub."
+        )
+
     # M-03 FIX: Upsert with ON CONFLICT DO NOTHING — then fetch the row.
     # This is atomic and safe under concurrent requests.
+    # BUG FIX: Use the canonical name from GitHub to prevent duplicate rows for the same repo
+    canonical_owner = meta.owner
+    canonical_name = meta.name
+    canonical_full_name = meta.full_name
+
     await db.execute(
         pg_insert(Repository)
         .values(
-            owner=owner,
-            name=name,
-            full_name=full_name,
+            owner=canonical_owner,
+            name=canonical_name,
+            full_name=canonical_full_name,
             url=payload.repo_url,
             status=RepoStatus.PENDING,
             default_branch=payload.branch or "main",
@@ -72,7 +104,7 @@ async def analyze_repo(
     await db.flush()
 
     result = await db.execute(
-        select(Repository).where(Repository.full_name == full_name)
+        select(Repository).where(Repository.full_name == canonical_full_name)
     )
     repo = result.scalar_one()
 
