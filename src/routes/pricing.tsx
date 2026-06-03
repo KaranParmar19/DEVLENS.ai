@@ -199,7 +199,7 @@ function PricingPage() {
 
       <main style={{ position: 'relative', zIndex: 10 }}>
         {/* Hero */}
-        <div className="dl-section" style={{ textAlign: "center", paddingBottom: "4rem" }}>
+        <div className="dl-section" style={{ textAlign: "center", paddingBottom: "2.5rem", paddingTop: "0rem" }}>
           <div className="dl-container" style={{ maxWidth: 800 }}>
             <div className="dl-section-label dl-animate-fade-up" style={{ justifyContent: "center" }}>LICENSING_MODELS</div>
             <h1 className="dl-display dl-animate-fade-up dl-delay-100" style={{ marginBottom: "1.5rem" }}>
