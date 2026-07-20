@@ -36,13 +36,6 @@ export function Nav({ username, avatarUrl, onLogin, onLogout, tunnelState }: Nav
             Home
           </Link>
           <Link
-            to="/pricing"
-            className="dl-nav-link"
-            data-active={path === "/pricing" ? "" : undefined}
-          >
-            Pricing
-          </Link>
-          <Link
             to="/dashboard"
             className="dl-nav-link"
             data-active={path === "/dashboard" ? "" : undefined}

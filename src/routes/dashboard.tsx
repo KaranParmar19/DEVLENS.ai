@@ -51,7 +51,6 @@ function DashboardPage() {
 
   const paletteActions = [
     { id: "home", label: "Go to Home", icon: "🏠", group: "Navigation", shortcut: "G H", onSelect: () => navigate({ to: "/" }) },
-    { id: "pricing", label: "View Pricing", icon: "💳", group: "Navigation", onSelect: () => navigate({ to: "/pricing" }) },
     ...historyRepos.map((r) => ({
       id: `recent:${r.id}`, label: r.repoLabel,
       description: `Last analyzed: ${new Date(r.analyzedAt).toLocaleDateString()}`,
@@ -110,7 +109,6 @@ function DashboardPage() {
           </Link>
           <div className="dl-nav-links">
             <Link to="/" className="dl-nav-link">Home</Link>
-            <Link to="/pricing" className="dl-nav-link">Pricing</Link>
             <Link to="/dashboard" className="dl-nav-link" data-active="">Dashboard</Link>
           </div>
         </div>

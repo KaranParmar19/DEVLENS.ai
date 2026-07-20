@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { api } from "@/lib/api";
-import { NeuralMesh } from "@/components/neural-mesh";
+import { BreathingUI } from "@/components/atmospheric/breathing-ui";
 import { PaperCrumple } from "@/components/paper-crumple";
 
 export const Route = createFileRoute("/")({
@@ -150,12 +150,7 @@ function Index() {
   };
 
   return (
-    <div ref={pageRef} style={{ minHeight: "100vh", background: "var(--dl-base)", fontFamily: "var(--font-sans)", paddingLeft: 240 }}>
-      {/* Fixed bg mesh */}
-      <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }}>
-        <NeuralMesh opacity={0.05} />
-      </div>
-
+    <div ref={pageRef} style={{ minHeight: "100vh", background: "#000", fontFamily: "var(--font-sans)", paddingLeft: 240 }}>
       {/* Paper crumple cinematic transition on verification */}
       <PaperCrumple
         active={showCrumple}
@@ -186,7 +181,6 @@ function Index() {
 
           <div className="dl-nav-links">
             <Link to="/" className="dl-nav-link" data-active="">Home</Link>
-            <Link to="/pricing" className="dl-nav-link">Pricing</Link>
             <Link to="/dashboard" className="dl-nav-link">Dashboard</Link>
             <div style={{ width: "100%", height: 1, background: "var(--dl-line-1)", margin: "16px 0" }} />
 
@@ -232,18 +226,9 @@ function Index() {
         </div>
       </nav>
 
-      {/* ── HERO ──────────────────────────────────── */}
+      {/* ── HERO (wrapped in Layer 3: Breathing UI) ──────────── */}
+      <BreathingUI parallax={0.02}>
       <section style={{ position: "relative", paddingTop: "clamp(6rem,14vw,10rem)", paddingBottom: "clamp(5rem,10vw,8rem)", overflow: "hidden" }}>
-        {/* Grid overlay */}
-        <div className="dl-grid-overlay" style={{ position: "absolute", inset: 0, opacity: 0.4, pointerEvents: "none", zIndex: 0 }} />
-        {/* Glow orb */}
-        <div style={{
-          position: "absolute", top: "10%", left: "50%", transform: "translateX(-50%)",
-          width: "600px", height: "400px",
-          background: "radial-gradient(ellipse, rgba(0,214,143,0.04) 0%, transparent 70%)",
-          pointerEvents: "none", zIndex: 0,
-        }} />
-
         <div className="dl-container" style={{ position: "relative", zIndex: 1, marginInline: 0, paddingLeft: 0, maxWidth: "none" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "clamp(2rem,4vw,5rem)", alignItems: "start", width: "100%", paddingLeft: "1rem", paddingRight: "12vw" }}>
 
@@ -371,6 +356,7 @@ function Index() {
           </div>
         </div>
       </section>
+      </BreathingUI>
 
       {/* ── CONTENT SECTIONS REMOVED ──────────────────────── */}
 

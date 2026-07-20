@@ -251,9 +251,6 @@ function ProcessingModal({
   const logContainerRef = useRef<HTMLDivElement>(null);
   const loggedSteps = useRef(new Set<string>());
   const [latency, setLatency] = useState(12);
-  const [videoScene, setVideoScene] = useState<1 | 2>(1);
-  const video1Ref = useRef<HTMLVideoElement>(null);
-  const video2Ref = useRef<HTMLVideoElement>(null);
   const particleCanvasRef = useRef<HTMLCanvasElement>(null);
   const [displayFiles, setDisplayFiles] = useState(0);
   const [displaySize, setDisplaySize] = useState(0);
@@ -398,16 +395,6 @@ function ProcessingModal({
     };
   }, []);
 
-  useEffect(() => {
-    if (videoScene === 2 && video2Ref.current) {
-      video2Ref.current.currentTime = 0;
-      video2Ref.current.play().catch(() => {});
-    } else if (videoScene === 1 && video1Ref.current) {
-      video1Ref.current.currentTime = 0;
-      video1Ref.current.play().catch(() => {});
-    }
-  }, [videoScene]);
-
   // Dynamic latency for effect
   useEffect(() => {
     const int = setInterval(() => {
@@ -468,17 +455,6 @@ function ProcessingModal({
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
       <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
       <style>{`
-        .bg-video {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            z-index: 0;
-            pointer-events: none;
-            transition: opacity 1.5s ease-in-out;
-        }
         .data-stream::after {
             content: "";
             animation: cursor 0.8s infinite;
@@ -488,26 +464,6 @@ function ProcessingModal({
         }
       `}</style>
       
-      <video 
-        ref={video1Ref}
-        className="bg-video" 
-        style={{ opacity: videoScene === 1 ? 0.5 : 0 }} 
-        src="/video/scene1.mp4" 
-        autoPlay 
-        muted 
-        playsInline 
-        onEnded={() => setVideoScene(2)}
-      />
-      <video 
-        ref={video2Ref}
-        className="bg-video" 
-        style={{ opacity: videoScene === 2 ? 0.5 : 0 }} 
-        src="/video/scene2.mp4" 
-        muted 
-        playsInline 
-        onEnded={() => setVideoScene(1)}
-      />
-
       <canvas ref={particleCanvasRef} className="fixed inset-0 pointer-events-none z-10" />
       
       {/* Top and Bottom shadow vignettes to blend edges and hide watermark */}
