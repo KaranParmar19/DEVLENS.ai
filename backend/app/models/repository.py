@@ -59,7 +59,14 @@ class Repository(Base):
 
     # ── Indexing Status ────────────────────────────────────────────────────
     status: Mapped[RepoStatus] = mapped_column(
-        Enum(RepoStatus), default=RepoStatus.PENDING, index=True
+        Enum(
+            RepoStatus,
+            values_callable=lambda x: [e.value for e in x],
+            native_enum=False,
+            length=20,
+        ),
+        default=RepoStatus.PENDING,
+        index=True,
     )
     indexed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

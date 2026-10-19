@@ -159,6 +159,37 @@ async def get_onboarding_doc(
     return {"markdown": doc, "repo": repo.full_name}
 
 
+# ── Commits Timeline & Architectural Drift ─────────────────────────────────
+
+@router.get("/{session_id}/commits")
+async def get_session_commits(
+    session_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(require_api_key),
+):
+    """Fetch recent commit history and architectural timeline for the session's repo."""
+    result = await db.execute(select(Session).where(Session.id == session_id))
+    session = result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found.")
+
+    result = await db.execute(select(Repository).where(Repository.id == session.repo_id))
+    repo = result.scalar_one_or_none()
+    if not repo:
+        raise HTTPException(status_code=404, detail="Repository not found.")
+
+    from app.core.github_client import GitHubClient
+    async with GitHubClient() as gh:
+        commits = await gh.get_recent_commits(repo.owner, repo.name, repo.default_branch or "main")
+
+    return {
+        "repo": repo.full_name,
+        "branch": repo.default_branch or "main",
+        "commits": commits,
+    }
+
+
+
 # ── Mermaid Export ─────────────────────────────────────────────────────────
 
 @router.get("/{session_id}/export", response_class=PlainTextResponse)

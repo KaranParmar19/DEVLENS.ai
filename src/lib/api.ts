@@ -154,6 +154,22 @@ export const api = {
       `/api/v1/sessions/${sessionId}/onboarding`
     ),
 
+  // Commits & Architectural Drift
+  getCommits: (sessionId: string) =>
+    apiFetch<{
+      repo: string;
+      branch: string;
+      commits: {
+        sha: string;
+        short_sha: string;
+        message: string;
+        full_message: string;
+        author: string;
+        author_avatar?: string | null;
+        date: string;
+      }[];
+    }>(`/api/v1/sessions/${sessionId}/commits`),
+
   // Chat (REST — non-streaming fallback)
   chat: (sessionId: string, message: string) =>
     apiFetch<ChatResponse>('/api/v1/chat', {
@@ -169,6 +185,18 @@ export const api = {
 
   // Auth
   getGitHubLoginUrl: () => `${API_BASE}/api/v1/auth/github/login`,
+  loginWithToken: (token: string) =>
+    apiFetch<{
+      id: string;
+      github_id: number;
+      github_username: string;
+      github_name: string | null;
+      github_avatar_url: string | null;
+      api_key: string;
+    }>('/api/v1/auth/token', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    }),
 };
 
 // ── WebSocket URL Builder ────────────────────────────────────────────────

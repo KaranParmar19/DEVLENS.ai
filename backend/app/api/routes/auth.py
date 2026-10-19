@@ -121,7 +121,7 @@ async def github_callback(
     logger.info("user_authenticated", github_username=user.github_username)
 
     # Pass the session details back to the frontend via URL parameters
-    # The frontend will read these, save them to its own localStorage, and clear the URL.
+    # Redirect directly to /dashboard so the user lands on their active workspace
     params = {
         "token": user.api_key,
         "username": user.github_username,
@@ -129,9 +129,74 @@ async def github_callback(
         "name": user.github_name or "",
     }
     query = urllib.parse.urlencode(params)
-    redirect_url = f"{settings.frontend_url}?{query}"
+    redirect_url = f"{settings.frontend_url}/dashboard?{query}"
     
     return RedirectResponse(url=redirect_url)
+
+
+# ── Step 3: Direct Personal Access Token (PAT) connection ──────────────────
+
+from pydantic import BaseModel
+
+class PatLoginRequest(BaseModel):
+    token: str
+
+
+@router.post("/token", response_model=UserResponse)
+async def github_pat_login(
+    payload: PatLoginRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Authenticate using a GitHub Personal Access Token (PAT).
+    Direct fallback for users who don't want OAuth redirect flows.
+    """
+    clean_token = payload.token.strip()
+    if not clean_token:
+        raise HTTPException(status_code=400, detail="Token cannot be empty.")
+
+    async with httpx.AsyncClient() as client:
+        user_resp = await client.get(
+            GITHUB_USER_URL,
+            headers={
+                "Authorization": f"Bearer {clean_token}",
+                "Accept": "application/vnd.github.v3+json",
+            },
+            timeout=10,
+        )
+        if user_resp.status_code != 200:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid GitHub token or insufficient permissions. Please check your token.",
+            )
+        gh_user = user_resp.json()
+
+    # Upsert user in database
+    result = await db.execute(
+        select(User).where(User.github_id == gh_user["id"])
+    )
+    user = result.scalar_one_or_none()
+
+    if user:
+        user.github_access_token = clean_token
+        user.github_username = gh_user["login"]
+        user.github_name = gh_user.get("name")
+        user.github_avatar_url = gh_user.get("avatar_url")
+    else:
+        user = User(
+            github_id=gh_user["id"],
+            github_username=gh_user["login"],
+            github_name=gh_user.get("name"),
+            github_avatar_url=gh_user.get("avatar_url"),
+            github_access_token=clean_token,
+        )
+        db.add(user)
+
+    await db.commit()
+    await db.refresh(user)
+
+    logger.info("user_authenticated_via_pat", github_username=user.github_username)
+    return user
 
 
 # ── Get current user ───────────────────────────────────────────────────────
@@ -145,3 +210,4 @@ async def get_me(current_user: User | None = Depends(get_current_user)):
             detail="Not authenticated. Send X-Session-Token header.",
         )
     return current_user
+

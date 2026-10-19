@@ -43,7 +43,15 @@ class AnalysisJob(Base):
 
     # ── Progress Tracking ──────────────────────────────────────────────────
     status: Mapped[JobStatus] = mapped_column(
-        Enum(JobStatus), default=JobStatus.QUEUED, nullable=False, index=True
+        Enum(
+            JobStatus,
+            values_callable=lambda x: [e.value for e in x],
+            native_enum=False,
+            length=20,
+        ),
+        default=JobStatus.QUEUED,
+        nullable=False,
+        index=True,
     )
     current_step: Mapped[str | None] = mapped_column(String(255), nullable=True)
     current_step_index: Mapped[int] = mapped_column(Integer, default=-1)

@@ -93,40 +93,6 @@ def upgrade() -> None:
     op.create_index("ix_repositories_status", "repositories", ["status"])
     op.create_index("ix_repositories_github_id", "repositories", ["github_id"])
 
-    # ── analysis_jobs ─────────────────────────────────────────────────────────
-    op.create_table(
-        "analysis_jobs",
-        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, primary_key=True),
-        sa.Column(
-            "repo_id",
-            postgresql.UUID(as_uuid=True),
-            sa.ForeignKey("repositories.id", ondelete="CASCADE"),
-            nullable=False,
-        ),
-        sa.Column(
-            "session_id",
-            postgresql.UUID(as_uuid=True),
-            sa.ForeignKey("sessions.id", ondelete="SET NULL"),
-            nullable=True,
-        ),
-        sa.Column("celery_task_id", sa.String(255), nullable=True),
-        sa.Column("status", sa.String(20), nullable=False, server_default="queued"),
-        sa.Column("current_step", sa.String(100), nullable=True),
-        sa.Column("current_step_index", sa.Integer(), nullable=False, server_default="-1"),
-        sa.Column("progress_pct", sa.Integer(), nullable=False, server_default="0"),
-        sa.Column("error_message", sa.Text(), nullable=True),
-        sa.Column(
-            "created_at",
-            sa.DateTime(timezone=True),
-            nullable=False,
-            server_default=sa.text("now()"),
-        ),
-        sa.Column("started_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
-    )
-    op.create_index("ix_analysis_jobs_repo_id", "analysis_jobs", ["repo_id"])
-    op.create_index("ix_analysis_jobs_status", "analysis_jobs", ["status"])
-
     # ── sessions ──────────────────────────────────────────────────────────────
     op.create_table(
         "sessions",
@@ -164,6 +130,40 @@ def upgrade() -> None:
     )
     op.create_index("ix_sessions_repo_id", "sessions", ["repo_id"])
     op.create_index("ix_sessions_user_id", "sessions", ["user_id"])
+
+    # ── analysis_jobs ─────────────────────────────────────────────────────────
+    op.create_table(
+        "analysis_jobs",
+        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, primary_key=True),
+        sa.Column(
+            "repo_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("repositories.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column(
+            "session_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("sessions.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
+        sa.Column("celery_task_id", sa.String(255), nullable=True),
+        sa.Column("status", sa.String(20), nullable=False, server_default="queued"),
+        sa.Column("current_step", sa.String(100), nullable=True),
+        sa.Column("current_step_index", sa.Integer(), nullable=False, server_default="-1"),
+        sa.Column("progress_pct", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("error_message", sa.Text(), nullable=True),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
+        sa.Column("started_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
+    )
+    op.create_index("ix_analysis_jobs_repo_id", "analysis_jobs", ["repo_id"])
+    op.create_index("ix_analysis_jobs_status", "analysis_jobs", ["status"])
 
     # ── code_chunks ───────────────────────────────────────────────────────────
     op.create_table(
@@ -207,8 +207,8 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_table("code_chunks")
-    op.drop_table("sessions")
     op.drop_table("analysis_jobs")
+    op.drop_table("sessions")
     op.drop_table("repositories")
     op.drop_table("users")
     op.execute("DROP EXTENSION IF EXISTS vector")

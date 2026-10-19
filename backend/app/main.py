@@ -108,29 +108,13 @@ app.add_middleware(
     expose_headers=["X-Request-ID"],
 )
 
-# 3. BUG-09 FIX: Rate limiting (Redis sliding window)
-#    We can't pass the async Redis client directly at module level because
-#    the event loop isn't running yet, so we use a deferred factory approach.
-#    The middleware is created after app creation but before first request.
-@app.on_event("startup")
-async def _register_rate_limit_middleware():
-    """
-    FastAPI doesn't support async middleware factories directly.
-    Register rate limiter after the event loop is running so _redis_client exists.
-    """
-    # NOTE: add_middleware after startup doesn't affect already-registered
-    # middleware chains. The recommended pattern is to add it here as a
-    # Starlette BaseHTTPMiddleware directly.
-    from starlette.middleware.base import BaseHTTPMiddleware
-    from app.middleware.rate_limit import RateLimitMiddleware
-
-    app.add_middleware(
-        RateLimitMiddleware,
-        redis_client=app.state.redis,
-        ip_limit=settings.rate_limit_per_minute,
-        key_limit=settings.rate_limit_per_minute * 5,
-        window_seconds=60,
-    )
+# 3. Rate limiting (Redis sliding window)
+app.add_middleware(
+    RateLimitMiddleware,
+    ip_limit=settings.rate_limit_per_minute,
+    key_limit=settings.rate_limit_per_minute * 5,
+    window_seconds=60,
+)
 
 
 # ── REST API Routers ───────────────────────────────────────────────────────

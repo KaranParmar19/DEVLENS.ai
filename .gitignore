@@ -49,3 +49,5 @@ backend/.coverage
 backend/htmlcov/
 backend/*.egg-info/
 
+# Scratch
+scratch/

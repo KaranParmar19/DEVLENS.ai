@@ -38,7 +38,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     def __init__(
         self,
         app: ASGIApp,
-        redis_client: aioredis.Redis,
+        redis_client: aioredis.Redis | None = None,
         ip_limit: int = 60,
         key_limit: int = 300,
         window_seconds: int = 60,
@@ -50,8 +50,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.window = window_seconds
 
     async def dispatch(self, request: Request, call_next) -> Response:
-        # Skip rate limiting on health checks
-        if request.url.path in ("/api/v1/health", "/"):
+        # Skip rate limiting on health checks and docs
+        if request.url.path in ("/api/v1/health", "/", "/api/docs", "/openapi.json"):
+            return await call_next(request)
+
+        redis = self.redis or getattr(request.app.state, "redis", None)
+        if not redis:
             return await call_next(request)
 
         now = time.time()
@@ -60,7 +64,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # ── Per-IP check ─────────────────────────────────────────────────────
         ip = request.client.host if request.client else "unknown"
         ip_key = f"rl:ip:{ip}"
-        ip_count = await self._sliding_window(ip_key, now, window_start)
+        ip_count = await self._sliding_window(redis, ip_key, now, window_start)
 
         if ip_count > self.ip_limit:
             log.warning("rate_limit_exceeded", scope="ip", ip=ip, count=ip_count)
@@ -78,7 +82,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         api_key = request.headers.get("X-API-Key")
         if api_key:
             key_bucket = f"rl:key:{api_key[:16]}"  # prefix only, don't store full key
-            key_count = await self._sliding_window(key_bucket, now, window_start)
+            key_count = await self._sliding_window(redis, key_bucket, now, window_start)
 
             if key_count > self.key_limit:
                 log.warning(
@@ -101,7 +105,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         return response
 
     async def _sliding_window(
-        self, key: str, now: float, window_start: float
+        self, redis: aioredis.Redis, key: str, now: float, window_start: float
     ) -> int:
         """
         Atomically update the sliding window and return the current count.
@@ -113,7 +117,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         4. Set TTL on the key (auto-cleanup)
         """
         member = str(uuid.uuid4())  # unique member per request
-        pipe = self.redis.pipeline()
+        pipe = redis.pipeline()
         pipe.zremrangebyscore(key, 0, window_start)
         pipe.zadd(key, {member: now})
         pipe.zcard(key)

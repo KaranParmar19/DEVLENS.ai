@@ -102,6 +102,12 @@ class GitHubClient:
         while True:
             resp = await self._client.get(path, params=params or None)
 
+            # If configured token was revoked or invalid, drop Authorization and retry once unauthenticated
+            if resp.status_code == 401 and "Authorization" in self._client.headers:
+                logger.warning("github_token_unauthorized_falling_back_unauthenticated", path=path)
+                self._client.headers.pop("Authorization", None)
+                continue
+
             # Primary rate limit (unauthenticated: 60/hr; authenticated: 5000/hr)
             if resp.status_code in (403, 429):
                 body_lower = resp.text.lower()
@@ -255,6 +261,33 @@ class GitHubClient:
             result = await coro
             if result:
                 yield result
+
+    async def get_recent_commits(
+        self, owner: str, name: str, branch: str = "main", per_page: int = 15
+    ) -> list[dict]:
+        """Fetch recent commit timeline with author, message, and timestamp."""
+        try:
+            commits = await self._get(
+                f"/repos/{owner}/{name}/commits",
+                sha=branch,
+                per_page=per_page,
+            )
+            return [
+                {
+                    "sha": c["sha"],
+                    "short_sha": c["sha"][:7],
+                    "message": c["commit"]["message"].split("\n")[0],
+                    "full_message": c["commit"]["message"],
+                    "author": c["commit"]["author"]["name"],
+                    "author_avatar": c.get("author", {}).get("avatar_url") if c.get("author") else None,
+                    "date": c["commit"]["author"]["date"],
+                }
+                for c in commits
+            ]
+        except Exception as exc:
+            logger.warning("get_recent_commits_failed", error=str(exc))
+            return []
+
 
 
 def parse_github_url(url: str) -> tuple[str, str]:
