@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { useAnalysis } from "@/hooks/useAnalysis";
 import { useChat } from "@/hooks/useChat";
 import { api } from "@/lib/api";
@@ -14,7 +15,11 @@ import { CodeFlowStepper } from "./code-flow-stepper";
 import { OnboardingDocView } from "./onboarding-doc-view";
 import { DriftTimelineView } from "./drift-timeline-view";
 import { CopilotRail } from "./copilot-rail";
-import { generateJsonExport, generateMermaidDiagram, generatePlantUmlDiagram } from "./export-utils";
+import {
+  generateJsonExport,
+  generateMermaidDiagram,
+  generatePlantUmlDiagram,
+} from "./export-utils";
 
 interface StudioWorkspaceProps {
   repoUrl: string;
@@ -23,12 +28,7 @@ interface StudioWorkspaceProps {
   onClose: () => void;
 }
 
-export function StudioWorkspace({
-  repoUrl,
-  jobId,
-  sessionId,
-  onClose,
-}: StudioWorkspaceProps) {
+export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWorkspaceProps) {
   const repoLabel = repoUrl.replace(/^https?:\/\/(www\.)?github\.com\//, "").replace(/\.git$/, "");
   const { state: analysisState, startAnalysis } = useAnalysis();
   const chat = useChat(analysisState.sessionId ?? sessionId ?? null);
@@ -54,7 +54,8 @@ export function StudioWorkspace({
   useEffect(() => {
     const sid = analysisState.sessionId ?? sessionId;
     if (sid && !onboardingDoc) {
-      api.getOnboardingDoc(sid)
+      api
+        .getOnboardingDoc(sid)
         .then((res) => {
           if (res?.markdown) {
             setOnboardingDoc(res.markdown);
@@ -103,15 +104,23 @@ export function StudioWorkspace({
         repoLabel,
         analyzedAt: new Date().toISOString(),
         status: "complete",
-        meta: analysisState.repoMeta ? {
-          stars: analysisState.repoMeta.stars,
-          files: analysisState.repoMeta.files,
-          sizeKb: analysisState.repoMeta.sizeKb,
-          languages: analysisState.repoMeta.languages,
-        } : undefined,
+        meta: analysisState.repoMeta
+          ? {
+              stars: analysisState.repoMeta.stars,
+              files: analysisState.repoMeta.files,
+              sizeKb: analysisState.repoMeta.sizeKb,
+              languages: analysisState.repoMeta.languages,
+            }
+          : undefined,
       });
     }
-  }, [analysisState.isComplete, analysisState.sessionId, repoUrl, repoLabel, analysisState.repoMeta]);
+  }, [
+    analysisState.isComplete,
+    analysisState.sessionId,
+    repoUrl,
+    repoLabel,
+    analysisState.repoMeta,
+  ]);
 
   // Available languages
   const languages = useMemo(() => {
@@ -123,132 +132,183 @@ export function StudioWorkspace({
 
   // File paths for ⌘K palette
   const filePaths = useMemo(() => {
-    return (analysisState.filesData?.tree ?? [])
-      .filter((f) => !f.is_dir)
-      .map((f) => f.path);
+    return (analysisState.filesData?.tree ?? []).filter((f) => !f.is_dir).map((f) => f.path);
   }, [analysisState.filesData]);
 
   // Export handlers
-  const handleExport = useCallback((format: "json" | "mermaid" | "plantuml" | "share") => {
-    if (format === "share") {
-      const url = `${window.location.origin}/dashboard?repo=${encodeURIComponent(repoUrl)}`;
-      navigator.clipboard.writeText(url);
-      showToast("✓ Studio share link copied to clipboard");
-      return;
-    }
-
-    if (format === "json") {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(generateJsonExport(analysisState.graphData));
-      const downloadAnchor = document.createElement("a");
-      downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `${repoLabel.replace(/\//g, "-")}-graph.json`);
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
-      showToast("✓ Architecture JSON downloaded");
-      return;
-    }
-
-    if (format === "mermaid") {
-      const sid = analysisState.sessionId ?? sessionId;
-      if (sid) {
-        api.exportGraph(sid, "mermaid")
-          .then((mermaidStr) => {
-            navigator.clipboard.writeText(mermaidStr);
-            showToast("✓ Mermaid diagram copied to clipboard");
-          })
-          .catch(() => {
-            const mermaidStr = generateMermaidDiagram(analysisState.graphData?.edges ?? []);
-            navigator.clipboard.writeText(mermaidStr);
-            showToast("✓ Mermaid diagram copied to clipboard");
-          });
+  const handleExport = useCallback(
+    (format: "json" | "mermaid" | "plantuml" | "share") => {
+      if (format === "share") {
+        const url = `${window.location.origin}/dashboard?repo=${encodeURIComponent(repoUrl)}`;
+        navigator.clipboard.writeText(url);
+        showToast("✓ Studio share link copied to clipboard");
         return;
       }
 
-      const mermaidStr = generateMermaidDiagram(analysisState.graphData?.edges ?? []);
-      navigator.clipboard.writeText(mermaidStr);
-      showToast("✓ Mermaid diagram copied to clipboard");
-      return;
-    }
-
-    if (format === "plantuml") {
-      const sid = analysisState.sessionId ?? sessionId;
-      if (sid) {
-        api.exportGraph(sid, "plantuml")
-          .then((pumlStr) => {
-            navigator.clipboard.writeText(pumlStr);
-            showToast("✓ PlantUML diagram copied to clipboard");
-          })
-          .catch(() => {
-            const pumlStr = generatePlantUmlDiagram(analysisState.graphData?.edges ?? [], repoLabel);
-            navigator.clipboard.writeText(pumlStr);
-            showToast("✓ PlantUML diagram copied to clipboard");
-          });
+      if (format === "json") {
+        const dataStr =
+          "data:text/json;charset=utf-8," +
+          encodeURIComponent(generateJsonExport(analysisState.graphData));
+        const downloadAnchor = document.createElement("a");
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `${repoLabel.replace(/\//g, "-")}-graph.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+        showToast("✓ Architecture JSON downloaded");
         return;
       }
 
-      const pumlStr = generatePlantUmlDiagram(analysisState.graphData?.edges ?? [], repoLabel);
-      navigator.clipboard.writeText(pumlStr);
-      showToast("✓ PlantUML diagram copied to clipboard");
-    }
-  }, [repoUrl, repoLabel, analysisState.graphData, analysisState.sessionId, sessionId, showToast]);
+      if (format === "mermaid") {
+        const sid = analysisState.sessionId ?? sessionId;
+        if (sid) {
+          api
+            .exportGraph(sid, "mermaid")
+            .then((mermaidStr) => {
+              navigator.clipboard.writeText(mermaidStr);
+              showToast("✓ Mermaid diagram copied to clipboard");
+            })
+            .catch(() => {
+              const mermaidStr = generateMermaidDiagram(analysisState.graphData?.edges ?? []);
+              navigator.clipboard.writeText(mermaidStr);
+              showToast("✓ Mermaid diagram copied to clipboard");
+            });
+          return;
+        }
 
-  const paletteActions = useMemo(() => [
-    { id: "arch", label: "Architecture Graph", icon: "🔷", group: "Views", shortcut: "1", onSelect: () => setActiveTab("architecture") },
-    { id: "flow", label: "Code Flow", icon: "🌊", group: "Views", shortcut: "2", onSelect: () => setActiveTab("flow") },
-    { id: "drift", label: "Drift Timeline", icon: "⏳", group: "Views", shortcut: "3", onSelect: () => setActiveTab("drift") },
-    { id: "doc", label: "Onboarding Doc", icon: "📋", group: "Views", shortcut: "4", onSelect: () => setActiveTab("doc") },
-    { id: "toggle-explorer", label: "Toggle File Explorer", icon: "📁", group: "Panels", onSelect: () => setExplorerCollapsed((v) => !v) },
-    { id: "toggle-copilot", label: "Toggle DevLens Copilot", icon: "💬", group: "Panels", onSelect: () => setCopilotCollapsed((v) => !v) },
-    { id: "export-json", label: "Export as JSON", icon: "⬇", group: "Export", onSelect: () => handleExport("json") },
-    { id: "export-mermaid", label: "Export as Mermaid", icon: "⬇", group: "Export", onSelect: () => handleExport("mermaid") },
-    { id: "export-plantuml", label: "Export as PlantUML", icon: "⬇", group: "Export", onSelect: () => handleExport("plantuml") },
-    { id: "share", label: "Copy Share Link", icon: "🔗", group: "Share", onSelect: () => handleExport("share") },
-    { id: "close", label: "Close Repository", icon: "✕", group: "Navigation", shortcut: "Esc", onSelect: onClose },
-  ], [handleExport, onClose]);
+        const mermaidStr = generateMermaidDiagram(analysisState.graphData?.edges ?? []);
+        navigator.clipboard.writeText(mermaidStr);
+        showToast("✓ Mermaid diagram copied to clipboard");
+        return;
+      }
 
-  // Rich fallback files for preview / offline mode
+      if (format === "plantuml") {
+        const sid = analysisState.sessionId ?? sessionId;
+        if (sid) {
+          api
+            .exportGraph(sid, "plantuml")
+            .then((pumlStr) => {
+              navigator.clipboard.writeText(pumlStr);
+              showToast("✓ PlantUML diagram copied to clipboard");
+            })
+            .catch(() => {
+              const pumlStr = generatePlantUmlDiagram(
+                analysisState.graphData?.edges ?? [],
+                repoLabel,
+              );
+              navigator.clipboard.writeText(pumlStr);
+              showToast("✓ PlantUML diagram copied to clipboard");
+            });
+          return;
+        }
+
+        const pumlStr = generatePlantUmlDiagram(analysisState.graphData?.edges ?? [], repoLabel);
+        navigator.clipboard.writeText(pumlStr);
+        showToast("✓ PlantUML diagram copied to clipboard");
+      }
+    },
+    [repoUrl, repoLabel, analysisState.graphData, analysisState.sessionId, sessionId, showToast],
+  );
+
+  const paletteActions = useMemo(
+    () => [
+      {
+        id: "arch",
+        label: "Architecture Graph",
+        icon: "🔷",
+        group: "Views",
+        shortcut: "1",
+        onSelect: () => setActiveTab("architecture"),
+      },
+      {
+        id: "flow",
+        label: "Code Flow",
+        icon: "🌊",
+        group: "Views",
+        shortcut: "2",
+        onSelect: () => setActiveTab("flow"),
+      },
+      {
+        id: "drift",
+        label: "Drift Timeline",
+        icon: "⏳",
+        group: "Views",
+        shortcut: "3",
+        onSelect: () => setActiveTab("drift"),
+      },
+      {
+        id: "doc",
+        label: "Onboarding Doc",
+        icon: "📋",
+        group: "Views",
+        shortcut: "4",
+        onSelect: () => setActiveTab("doc"),
+      },
+      {
+        id: "toggle-explorer",
+        label: "Toggle File Explorer",
+        icon: "📁",
+        group: "Panels",
+        onSelect: () => setExplorerCollapsed((v) => !v),
+      },
+      {
+        id: "toggle-copilot",
+        label: "Toggle DevLens Copilot",
+        icon: "💬",
+        group: "Panels",
+        onSelect: () => setCopilotCollapsed((v) => !v),
+      },
+      {
+        id: "export-json",
+        label: "Export as JSON",
+        icon: "⬇",
+        group: "Export",
+        onSelect: () => handleExport("json"),
+      },
+      {
+        id: "export-mermaid",
+        label: "Export as Mermaid",
+        icon: "⬇",
+        group: "Export",
+        onSelect: () => handleExport("mermaid"),
+      },
+      {
+        id: "export-plantuml",
+        label: "Export as PlantUML",
+        icon: "⬇",
+        group: "Export",
+        onSelect: () => handleExport("plantuml"),
+      },
+      {
+        id: "share",
+        label: "Copy Share Link",
+        icon: "🔗",
+        group: "Share",
+        onSelect: () => handleExport("share"),
+      },
+      {
+        id: "close",
+        label: "Close Repository",
+        icon: "✕",
+        group: "Navigation",
+        shortcut: "Esc",
+        onSelect: onClose,
+      },
+    ],
+    [handleExport, onClose],
+  );
+
+  // Real file tree, modules, and entry points only (no fabricated mock data)
   const displayFiles = useMemo(() => {
-    if (analysisState.filesData?.tree && analysisState.filesData.tree.length > 0) {
-      return analysisState.filesData.tree;
-    }
-    return [
-      { path: "src", name: "src", is_dir: true, depth: 0 },
-      { path: "src/App.tsx", name: "App.tsx", is_dir: false, depth: 1, line_count: 140, language: "TypeScript" },
-      { path: "src/router", name: "router", is_dir: true, depth: 1 },
-      { path: "src/router/Router.tsx", name: "Router.tsx", is_dir: false, depth: 2, line_count: 280, language: "TypeScript" },
-      { path: "src/services", name: "services", is_dir: true, depth: 1 },
-      { path: "src/services/AuthService.ts", name: "AuthService.ts", is_dir: false, depth: 2, line_count: 195, language: "TypeScript" },
-      { path: "src/lib", name: "lib", is_dir: true, depth: 1 },
-      { path: "src/lib/ApiClient.ts", name: "ApiClient.ts", is_dir: false, depth: 2, line_count: 160, language: "TypeScript" },
-      { path: "src/store", name: "store", is_dir: true, depth: 1 },
-      { path: "src/store/Store.ts", name: "Store.ts", is_dir: false, depth: 2, line_count: 310, language: "TypeScript" },
-      { path: "src/utils", name: "utils", is_dir: true, depth: 1 },
-      { path: "src/utils/Formatters.ts", name: "Formatters.ts", is_dir: false, depth: 2, line_count: 85, language: "TypeScript" },
-      { path: "src/db", name: "db", is_dir: true, depth: 1 },
-      { path: "src/db/Database.ts", name: "Database.ts", is_dir: false, depth: 2, line_count: 220, language: "TypeScript" },
-      { path: "package.json", name: "package.json", is_dir: false, depth: 0, line_count: 55, language: "JSON" },
-      { path: "README.md", name: "README.md", is_dir: false, depth: 0, line_count: 92, language: "Markdown" },
-    ];
+    return analysisState.filesData?.tree ?? [];
   }, [analysisState.filesData]);
 
   const displayModules = useMemo(() => {
-    if (analysisState.filesData?.modules && analysisState.filesData.modules.length > 0) {
-      return analysisState.filesData.modules;
-    }
-    return [
-      { name: "core/services", file_count: 4, files: ["AuthService.ts", "CodeGraphService.ts"] },
-      { name: "router", file_count: 2, files: ["Router.tsx"] },
-      { name: "store", file_count: 3, files: ["Store.ts"] },
-      { name: "db", file_count: 2, files: ["Database.ts"] },
-    ];
+    return analysisState.filesData?.modules ?? [];
   }, [analysisState.filesData]);
 
   const displayEntryPoints = useMemo(() => {
-    if (analysisState.filesData?.entry_points && analysisState.filesData.entry_points.length > 0) {
-      return analysisState.filesData.entry_points;
-    }
-    return ["src/App.tsx", "src/router/Router.tsx", "src/server/ingress.ts"];
+    return analysisState.filesData?.entry_points ?? [];
   }, [analysisState.filesData]);
 
   // Real dynamic graph metrics calculated from active ingested data
@@ -293,7 +353,6 @@ export function StudioWorkspace({
         error={analysisState.error}
         onRetry={() => startAnalysis(repoUrl)}
         onCancel={onClose}
-        onBypass={() => setIsProcessingDone(true)}
       />
     );
   }
@@ -355,48 +414,56 @@ export function StudioWorkspace({
 
         {/* Center Stage: Architecture | Code Flow | Onboarding Doc */}
         <main style={{ flex: 1, position: "relative", overflow: "hidden" }}>
-          {activeTab === "architecture" && (
-            <ArchitectureCanvas
-              graphData={analysisState.graphData}
-              sessionId={analysisState.sessionId ?? sessionId}
-              activeFile={activeFile}
-              onSelectNode={(_id, path) => setActiveFile(path)}
-              onAskCopilotAboutFile={(path) => {
-                chat.sendMessage(`Explain the role, dependencies, and blast radius of ${path}`);
-              }}
-            />
-          )}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, scale: 0.995 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.995 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              style={{ width: "100%", height: "100%", position: "relative" }}
+            >
+              {activeTab === "architecture" && (
+                <ArchitectureCanvas
+                  graphData={analysisState.graphData}
+                  sessionId={analysisState.sessionId ?? sessionId}
+                  activeFile={activeFile}
+                  onSelectNode={(_id, path) => setActiveFile(path)}
+                  onAskCopilotAboutFile={(path) => {
+                    chat.sendMessage(`Explain the role, dependencies, and blast radius of ${path}`);
+                  }}
+                />
+              )}
 
-          {activeTab === "flow" && (
-            <CodeFlowStepper
-              graphData={analysisState.graphData}
-              onAskCopilot={(prompt) => chat.sendMessage(prompt)}
-              onSelectFile={(path) => {
-                setActiveFile(path);
-                setActiveTab("architecture");
-              }}
-            />
-          )}
+              {activeTab === "flow" && (
+                <CodeFlowStepper
+                  graphData={analysisState.graphData}
+                  onAskCopilot={(prompt) => chat.sendMessage(prompt)}
+                  onSelectFile={(path) => {
+                    setActiveFile(path);
+                    setActiveTab("architecture");
+                  }}
+                />
+              )}
 
-          {activeTab === "drift" && (
-            <DriftTimelineView
-              sessionId={analysisState.sessionId ?? sessionId}
-              repoLabel={repoLabel}
-              graphData={analysisState.graphData}
-              onSelectFile={(path) => {
-                setActiveFile(path);
-                setActiveTab("architecture");
-              }}
-              onAskCopilot={(prompt) => chat.sendMessage(prompt)}
-            />
-          )}
+              {activeTab === "drift" && (
+                <DriftTimelineView
+                  sessionId={analysisState.sessionId ?? sessionId}
+                  repoLabel={repoLabel}
+                  graphData={analysisState.graphData}
+                  onSelectFile={(path) => {
+                    setActiveFile(path);
+                    setActiveTab("architecture");
+                  }}
+                  onAskCopilot={(prompt) => chat.sendMessage(prompt)}
+                />
+              )}
 
-          {activeTab === "doc" && (
-            <OnboardingDocView
-              repoLabel={repoLabel}
-              markdownContent={onboardingDoc}
-            />
-          )}
+              {activeTab === "doc" && (
+                <OnboardingDocView repoLabel={repoLabel} markdownContent={onboardingDoc} />
+              )}
+            </motion.div>
+          </AnimatePresence>
         </main>
 
         {/* Right Copilot Rail */}
@@ -457,42 +524,62 @@ export function StudioWorkspace({
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <span>INDEX: {graphStats.nodeCount} MODULES ({graphStats.edgeCount} EDGES)</span>
+          <span>
+            SEARCH:{" "}
+            <span
+              style={{
+                color:
+                  analysisState.graphData?.meta?.search_mode === "semantic" ? "#10b981" : "#eab308",
+              }}
+            >
+              {analysisState.graphData?.meta?.search_mode === "semantic"
+                ? "PGVECTOR SEMANTIC"
+                : "AST KEYWORD/HYBRID"}
+            </span>
+          </span>
+          <span style={{ color: "rgba(255,255,255,0.2)" }}>/</span>
+          <span>
+            INDEX: {graphStats.nodeCount} MODULES ({graphStats.edgeCount} EDGES)
+          </span>
           <span style={{ color: "rgba(255,255,255,0.2)" }}>/</span>
           <span style={{ color: "rgba(255,255,255,0.7)" }}>FASTAPI + AST</span>
         </div>
       </footer>
 
       {/* Floating Monoform Action Toast */}
-      {toastMessage && (
-        <div
-          role="status"
-          aria-live="polite"
-          style={{
-            position: "fixed",
-            bottom: 48,
-            left: "50%",
-            transform: "translateX(-50%)",
-            backgroundColor: "#ffffff",
-            color: "#000000",
-            fontFamily: "var(--mf-mono, monospace)",
-            fontSize: "0.75rem",
-            fontWeight: 500,
-            letterSpacing: "0.02em",
-            padding: "8px 18px",
-            borderRadius: 999,
-            boxShadow: "0 12px 32px rgba(0, 0, 0, 0.45)",
-            zIndex: 100,
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            pointerEvents: "none",
-            animation: "fadeInUp 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
-          }}
-        >
-          <span>{toastMessage}</span>
-        </div>
-      )}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            role="status"
+            aria-live="polite"
+            initial={{ opacity: 0, y: 16, x: "-50%" }}
+            animate={{ opacity: 1, y: 0, x: "-50%" }}
+            exit={{ opacity: 0, y: 12, x: "-50%" }}
+            transition={{ type: "spring", stiffness: 450, damping: 30 }}
+            style={{
+              position: "fixed",
+              bottom: 48,
+              left: "50%",
+              backgroundColor: "#ffffff",
+              color: "#000000",
+              fontFamily: "var(--mf-mono, monospace)",
+              fontSize: "0.75rem",
+              fontWeight: 500,
+              letterSpacing: "0.02em",
+              padding: "8px 18px",
+              borderRadius: 999,
+              boxShadow: "0 12px 32px rgba(0, 0, 0, 0.45)",
+              zIndex: 100,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              pointerEvents: "none",
+            }}
+          >
+            <span>{toastMessage}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

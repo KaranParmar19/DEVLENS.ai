@@ -28,37 +28,10 @@ export function ArchitectureCanvas({
   const [blastRadiusMode, setBlastRadiusMode] = useState(false);
   const [filterMode, setFilterMode] = useState<"all" | "entry" | "complexity" | "coupling">("all");
 
-  // Fallback default nodes if graphData is empty
-  const nodes: GraphNode[] = useMemo(() => {
-    if (graphData?.nodes && graphData.nodes.length > 0) {
-      return graphData.nodes;
-    }
-    // High-fidelity fallback topology
-    return [
-      { id: "node-app", label: "App.tsx", path: "src/App.tsx", x: 260, y: 120, complexity: 12, coupling: 18, is_entry: true, line_count: 140, language: "TypeScript" },
-      { id: "node-router", label: "Router.tsx", path: "src/router/Router.tsx", x: 420, y: 180, complexity: 24, coupling: 32, line_count: 280, language: "TypeScript" },
-      { id: "node-auth", label: "AuthService.ts", path: "src/services/AuthService.ts", x: 220, y: 320, complexity: 18, coupling: 14, line_count: 195, language: "TypeScript" },
-      { id: "node-api", label: "ApiClient.ts", path: "src/lib/ApiClient.ts", x: 580, y: 320, complexity: 15, coupling: 22, line_count: 160, language: "TypeScript" },
-      { id: "node-state", label: "Store.ts", path: "src/store/Store.ts", x: 380, y: 440, complexity: 35, coupling: 42, line_count: 310, language: "TypeScript" },
-      { id: "node-utils", label: "Formatters.ts", path: "src/utils/Formatters.ts", x: 740, y: 240, complexity: 6, coupling: 8, line_count: 85, language: "TypeScript" },
-      { id: "node-db", label: "Database.ts", path: "src/db/Database.ts", x: 540, y: 520, complexity: 28, coupling: 26, line_count: 220, language: "TypeScript" },
-    ];
-  }, [graphData]);
+  // Real graph only: an empty graph renders an explicit empty state (see below)
+  const nodes: GraphNode[] = useMemo(() => graphData?.nodes ?? [], [graphData]);
 
-  const edges: [string, string][] = useMemo(() => {
-    if (graphData?.edges && graphData.edges.length > 0) {
-      return graphData.edges;
-    }
-    return [
-      ["node-app", "node-router"],
-      ["node-router", "node-auth"],
-      ["node-router", "node-api"],
-      ["node-auth", "node-state"],
-      ["node-api", "node-state"],
-      ["node-api", "node-utils"],
-      ["node-state", "node-db"],
-    ];
-  }, [graphData]);
+  const edges: [string, string][] = useMemo(() => graphData?.edges ?? [], [graphData]);
 
   // Coordinate scaler: converts backend percentage coordinates (5-95%) into canvas pixel space
   const toPixelX = useCallback((x?: number) => {
@@ -72,16 +45,19 @@ export function ArchitectureCanvas({
   }, []);
 
   // Center canvas on a specific node
-  const centerNode = useCallback((node: GraphNode) => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) return;
-    const nx = toPixelX(node.x);
-    const ny = toPixelY(node.y);
-    const targetX = rect.width / 2 - nx * zoom;
-    const targetY = rect.height / 2 - ny * zoom;
-    setPan({ x: targetX, y: targetY });
-  }, [zoom, toPixelX, toPixelY]);
+  const centerNode = useCallback(
+    (node: GraphNode) => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+      const nx = toPixelX(node.x);
+      const ny = toPixelY(node.y);
+      const targetX = rect.width / 2 - nx * zoom;
+      const targetY = rect.height / 2 - ny * zoom;
+      setPan({ x: targetX, y: targetY });
+    },
+    [zoom, toPixelX, toPixelY],
+  );
 
   // Sync active file from explorer or copilot citation
   useEffect(() => {
@@ -92,7 +68,7 @@ export function ArchitectureCanvas({
         n.path === cleanPath ||
         n.label === cleanPath ||
         cleanPath.endsWith("/" + n.label) ||
-        (n.path && n.path.endsWith(cleanPath))
+        (n.path && n.path.endsWith(cleanPath)),
     );
     if (matched) {
       setSelectedNodeId(matched.id);
@@ -103,7 +79,7 @@ export function ArchitectureCanvas({
 
   const selectedNode = useMemo(
     () => nodes.find((n) => n.id === selectedNodeId) ?? null,
-    [nodes, selectedNodeId]
+    [nodes, selectedNodeId],
   );
 
   // Compute connected nodes for highlighted blast radius
@@ -132,7 +108,10 @@ export function ArchitectureCanvas({
 
   // Mouse pan handlers
   const onMouseDown = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).tagName.toLowerCase() === "circle" || (e.target as HTMLElement).tagName.toLowerCase() === "text") {
+    if (
+      (e.target as HTMLElement).tagName.toLowerCase() === "circle" ||
+      (e.target as HTMLElement).tagName.toLowerCase() === "text"
+    ) {
       return;
     }
     setIsDragging(true);
@@ -156,6 +135,37 @@ export function ArchitectureCanvas({
     setZoom(1);
     setPan({ x: 0, y: 0 });
   }, []);
+
+  if (nodes.length === 0) {
+    return (
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          backgroundColor: "#08080a",
+          display: "grid",
+          placeItems: "center",
+          color: "rgba(255, 255, 255, 0.6)",
+          fontFamily: "var(--mf-mono, monospace)",
+          fontSize: "0.8125rem",
+          padding: 24,
+          textAlign: "center",
+        }}
+      >
+        <div style={{ maxWidth: 420 }}>
+          <div
+            style={{ color: "#ffffff", fontWeight: 600, marginBottom: 8, fontSize: "0.9375rem" }}
+          >
+            No Architecture Graph Available
+          </div>
+          <p style={{ margin: 0, lineHeight: 1.5, color: "rgba(255, 255, 255, 0.45)" }}>
+            No indexed source files or dependencies were detected for this repository. Ingestion may
+            still be in progress or the repository contains only non-code assets.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -246,8 +256,7 @@ export function ArchitectureCanvas({
             const target = nodes.find((n) => n.id === v);
             if (!source || !target) return null;
 
-            const isHighlighted =
-              selectedNodeId && (u === selectedNodeId || v === selectedNodeId);
+            const isHighlighted = selectedNodeId && (u === selectedNodeId || v === selectedNodeId);
             const isDimmed = selectedNodeId && !isHighlighted;
 
             const sx = toPixelX(source.x);
@@ -262,7 +271,13 @@ export function ArchitectureCanvas({
                 y1={sy}
                 x2={tx}
                 y2={ty}
-                stroke={isHighlighted ? "#ffffff" : isDimmed ? "rgba(255, 255, 255, 0.08)" : "rgba(255, 255, 255, 0.22)"}
+                stroke={
+                  isHighlighted
+                    ? "#ffffff"
+                    : isDimmed
+                      ? "rgba(255, 255, 255, 0.08)"
+                      : "rgba(255, 255, 255, 0.22)"
+                }
                 strokeWidth={isHighlighted ? 2 : 1}
                 strokeDasharray={isHighlighted ? undefined : "3 3"}
               />
@@ -354,7 +369,13 @@ export function ArchitectureCanvas({
                 <text
                   x={radius + 8}
                   y={4}
-                  fill={isSelected ? "#ffffff" : isDimmed ? "rgba(255, 255, 255, 0.3)" : "rgba(255, 255, 255, 0.85)"}
+                  fill={
+                    isSelected
+                      ? "#ffffff"
+                      : isDimmed
+                        ? "rgba(255, 255, 255, 0.3)"
+                        : "rgba(255, 255, 255, 0.85)"
+                  }
                   fontSize="11"
                   fontFamily="var(--mf-mono, monospace)"
                   fontWeight={isSelected || node.is_entry ? 600 : 400}
@@ -465,7 +486,14 @@ export function ArchitectureCanvas({
             fontFamily: "var(--mf-font, 'Geist', sans-serif)",
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              marginBottom: 12,
+            }}
+          >
             <div>
               <span
                 style={{
@@ -478,7 +506,14 @@ export function ArchitectureCanvas({
               >
                 Node Inspector
               </span>
-              <h3 style={{ fontSize: "1.125rem", fontWeight: 500, margin: "4px 0", letterSpacing: "-0.02em" }}>
+              <h3
+                style={{
+                  fontSize: "1.125rem",
+                  fontWeight: 500,
+                  margin: "4px 0",
+                  letterSpacing: "-0.02em",
+                }}
+              >
                 {selectedNode.label}
               </h3>
             </div>
@@ -522,18 +557,42 @@ export function ArchitectureCanvas({
             }}
           >
             <div>
-              <div style={{ fontFamily: "var(--mf-mono, monospace)", fontSize: "0.625rem", color: "rgba(255,255,255,0.4)" }}>
+              <div
+                style={{
+                  fontFamily: "var(--mf-mono, monospace)",
+                  fontSize: "0.625rem",
+                  color: "rgba(255,255,255,0.4)",
+                }}
+              >
                 Complexity
               </div>
-              <div style={{ fontFamily: "var(--mf-mono, monospace)", fontSize: "1rem", fontWeight: 600 }}>
+              <div
+                style={{
+                  fontFamily: "var(--mf-mono, monospace)",
+                  fontSize: "1rem",
+                  fontWeight: 600,
+                }}
+              >
                 {selectedNode.complexity ?? 14}
               </div>
             </div>
             <div>
-              <div style={{ fontFamily: "var(--mf-mono, monospace)", fontSize: "0.625rem", color: "rgba(255,255,255,0.4)" }}>
+              <div
+                style={{
+                  fontFamily: "var(--mf-mono, monospace)",
+                  fontSize: "0.625rem",
+                  color: "rgba(255,255,255,0.4)",
+                }}
+              >
                 Coupling Score
               </div>
-              <div style={{ fontFamily: "var(--mf-mono, monospace)", fontSize: "1rem", fontWeight: 600 }}>
+              <div
+                style={{
+                  fontFamily: "var(--mf-mono, monospace)",
+                  fontSize: "1rem",
+                  fontWeight: 600,
+                }}
+              >
                 {selectedNode.coupling ?? 22}
               </div>
             </div>
@@ -553,7 +612,8 @@ export function ArchitectureCanvas({
             Modifying this file impacts{" "}
             <strong style={{ color: "#ffffff" }}>
               {Math.max(connectedNodeIds.size - 1, 1)} dependent modules
-            </strong>.
+            </strong>
+            .
           </div>
 
           {/* Action Buttons */}
@@ -622,7 +682,11 @@ export function ArchitectureCanvas({
 
             <button
               type="button"
-              onClick={() => onAskCopilotAboutFile(`Provide an architectural analysis of ${selectedNode.path}, including its core responsibility and dependents.`)}
+              onClick={() =>
+                onAskCopilotAboutFile(
+                  `Provide an architectural analysis of ${selectedNode.path}, including its core responsibility and dependents.`,
+                )
+              }
               style={{
                 width: "100%",
                 padding: "8px 12px",
@@ -642,7 +706,11 @@ export function ArchitectureCanvas({
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 4 }}>
               <button
                 type="button"
-                onClick={() => onAskCopilotAboutFile(`Generate a comprehensive unit test suite with edge cases for ${selectedNode.path}`)}
+                onClick={() =>
+                  onAskCopilotAboutFile(
+                    `Generate a comprehensive unit test suite with edge cases for ${selectedNode.path}`,
+                  )
+                }
                 style={{
                   padding: "6px 8px",
                   borderRadius: 6,
@@ -659,7 +727,11 @@ export function ArchitectureCanvas({
               </button>
               <button
                 type="button"
-                onClick={() => onAskCopilotAboutFile(`Audit ${selectedNode.path} for security vulnerabilities, injection risks, and authorization bypasses`)}
+                onClick={() =>
+                  onAskCopilotAboutFile(
+                    `Audit ${selectedNode.path} for security vulnerabilities, injection risks, and authorization bypasses`,
+                  )
+                }
                 style={{
                   padding: "6px 8px",
                   borderRadius: 6,
@@ -701,18 +773,33 @@ export function ArchitectureCanvas({
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#ffffff", animation: "mf-pulse 1s infinite" }} />
+            <span
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background: "#ffffff",
+                animation: "mf-pulse 1s infinite",
+              }}
+            />
             <span>BLAST RADIUS ACTIVE //</span>
             <span style={{ color: "#ffffff", fontWeight: 600 }}>{selectedNode.label}</span>
           </div>
 
           <div style={{ color: "rgba(255,255,255,0.7)" }}>
-            Impact: <strong style={{ color: "#ffffff" }}>{Math.max(connectedNodeIds.size - 1, 1)} direct dependents</strong>
+            Impact:{" "}
+            <strong style={{ color: "#ffffff" }}>
+              {Math.max(connectedNodeIds.size - 1, 1)} direct dependents
+            </strong>
           </div>
 
           <button
             type="button"
-            onClick={() => onAskCopilotAboutFile(`Simulate refactoring ${selectedNode.path}. Provide a safe step-by-step decoupling plan to avoid breaking dependents.`)}
+            onClick={() =>
+              onAskCopilotAboutFile(
+                `Simulate refactoring ${selectedNode.path}. Provide a safe step-by-step decoupling plan to avoid breaking dependents.`,
+              )
+            }
             style={{
               padding: "4px 12px",
               borderRadius: 999,

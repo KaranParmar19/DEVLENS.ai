@@ -18,7 +18,6 @@ export interface GitCommitItem {
   new_dependencies?: string[];
 }
 
-
 export interface GraphNode {
   id: string;
   label: string;
@@ -44,6 +43,7 @@ export interface GraphData {
     is_monorepo?: boolean;
     commit_sha?: string | null;
     cycles?: string[][];
+    search_mode?: "semantic" | "keyword";
   };
 }
 

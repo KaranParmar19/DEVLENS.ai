@@ -8,15 +8,15 @@
  *   const result = await api.analyze('https://github.com/org/repo');
  */
 
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
-const API_KEY  = import.meta.env.VITE_API_KEY  ?? '';
+const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const API_KEY = import.meta.env.VITE_API_KEY ?? "";
 
 // ── Base fetch wrapper ──────────────────────────────────────────────────
 
 function getSessionToken(): string | null {
   try {
-    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
-      return localStorage.getItem('devlens_session_token');
+    if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
+      return localStorage.getItem("devlens_session_token");
     }
   } catch {
     // Graceful fallback for restricted storage / SSR
@@ -29,9 +29,9 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {
-      'Content-Type': 'application/json',
-      'X-API-Key': API_KEY,
-      ...(sessionToken ? { 'X-Session-Token': sessionToken } : {}),
+      "Content-Type": "application/json",
+      "X-API-Key": API_KEY,
+      ...(sessionToken ? { "X-Session-Token": sessionToken } : {}),
       ...init?.headers,
     },
   });
@@ -87,6 +87,7 @@ export interface GraphData {
     is_monorepo: boolean;
     commit_sha: string | null;
     cycles?: string[][];
+    search_mode?: "semantic" | "keyword";
   };
 }
 
@@ -120,7 +121,7 @@ export interface GitCommitDetail {
   insertions: number;
   deletions: number;
   impacted_files: string[];
-  risk_level: 'low' | 'moderate' | 'high';
+  risk_level: "low" | "moderate" | "high";
   drift_summary: string;
 }
 
@@ -141,7 +142,7 @@ export interface FilesResponse {
 
 export interface JobStatus {
   id: string;
-  status: 'queued' | 'running' | 'complete' | 'failed';
+  status: "queued" | "running" | "complete" | "failed";
   current_step: string | null;
   current_step_index: number;
   progress_pct: number;
@@ -149,7 +150,7 @@ export interface JobStatus {
 }
 
 export interface HealthResponse {
-  status: 'ok' | 'degraded' | 'down';
+  status: "ok" | "degraded" | "down";
   version: string;
   services: Record<string, string>;
 }
@@ -171,36 +172,33 @@ export interface GitHubUser {
 
 export const api = {
   // Health
-  health: () => apiFetch<HealthResponse>('/api/v1/health'),
+  health: () => apiFetch<HealthResponse>("/api/v1/health"),
 
   // Repos
-  analyze: (repoUrl: string, branch = 'main') =>
-    apiFetch<AnalyzeResponse>('/api/v1/repos/analyze', {
-      method: 'POST',
+  analyze: (repoUrl: string, branch = "main") =>
+    apiFetch<AnalyzeResponse>("/api/v1/repos/analyze", {
+      method: "POST",
       body: JSON.stringify({ repo_url: repoUrl, branch }),
     }),
 
   // Analysis job status (poll fallback)
-  getJobStatus: (jobId: string) =>
-    apiFetch<JobStatus>(`/api/v1/analysis/${jobId}/status`),
+  getJobStatus: (jobId: string) => apiFetch<JobStatus>(`/api/v1/analysis/${jobId}/status`),
 
   // Graph
-  getGraph: (sessionId: string) =>
-    apiFetch<GraphData>(`/api/v1/sessions/${sessionId}/graph`),
+  getGraph: (sessionId: string) => apiFetch<GraphData>(`/api/v1/sessions/${sessionId}/graph`),
 
   // Files / tree
-  getFiles: (sessionId: string) =>
-    apiFetch<FilesResponse>(`/api/v1/sessions/${sessionId}/files`),
+  getFiles: (sessionId: string) => apiFetch<FilesResponse>(`/api/v1/sessions/${sessionId}/files`),
 
   // File detail & AST symbol inspection
   getFile: (sessionId: string, path: string) =>
-    apiFetch<FileDetailResponse>(`/api/v1/sessions/${sessionId}/file?path=${encodeURIComponent(path)}`),
+    apiFetch<FileDetailResponse>(
+      `/api/v1/sessions/${sessionId}/file?path=${encodeURIComponent(path)}`,
+    ),
 
   // Onboarding doc
   getOnboardingDoc: (sessionId: string) =>
-    apiFetch<{ markdown: string; repo: string }>(
-      `/api/v1/sessions/${sessionId}/onboarding`
-    ),
+    apiFetch<{ markdown: string; repo: string }>(`/api/v1/sessions/${sessionId}/onboarding`),
 
   // Commits & Architectural Drift
   getCommits: (sessionId: string) =>
@@ -212,16 +210,16 @@ export const api = {
 
   // Chat (REST — non-streaming fallback)
   chat: (sessionId: string, message: string) =>
-    apiFetch<ChatResponse>('/api/v1/chat', {
-      method: 'POST',
+    apiFetch<ChatResponse>("/api/v1/chat", {
+      method: "POST",
       body: JSON.stringify({ session_id: sessionId, message }),
     }),
 
   // Export
-  exportGraph: (sessionId: string, format: 'mermaid' | 'plantuml' = 'mermaid') =>
+  exportGraph: (sessionId: string, format: "mermaid" | "plantuml" = "mermaid") =>
     fetch(`${API_BASE}/api/v1/sessions/${sessionId}/export?format=${format}`, {
-      headers: { 'X-API-Key': API_KEY },
-    }).then(r => r.text()),
+      headers: { "X-API-Key": API_KEY },
+    }).then((r) => r.text()),
 
   // Auth
   getGitHubLoginUrl: () => `${API_BASE}/api/v1/auth/github/login`,
@@ -233,17 +231,17 @@ export const api = {
       github_name: string | null;
       github_avatar_url: string | null;
       api_key: string;
-    }>('/api/v1/auth/token', {
-      method: 'POST',
+    }>("/api/v1/auth/token", {
+      method: "POST",
       body: JSON.stringify({ token }),
     }),
 };
 
 // ── WebSocket URL Builder ────────────────────────────────────────────────
 
-const WS_BASE = API_BASE.replace(/^http/, 'ws');
+const WS_BASE = API_BASE.replace(/^http/, "ws");
 
 export const wsUrls = {
   jobProgress: (jobId: string) => `${WS_BASE}/ws/jobs/${jobId}`,
-  chat:        (sessionId: string) => `${WS_BASE}/ws/chat/${sessionId}`,
+  chat: (sessionId: string) => `${WS_BASE}/ws/chat/${sessionId}`,
 };

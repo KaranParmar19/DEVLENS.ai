@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import type { StudioTab } from "./studio-types";
 
 interface StudioTopbarProps {
@@ -94,7 +95,15 @@ export function StudioTopbar({
 
         {/* Repo Label */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.875rem" }}>
-          <span style={{ color: "rgba(255, 255, 255, 0.5)", fontFamily: "var(--mf-mono, monospace)", fontSize: "0.75rem" }}>repo:</span>
+          <span
+            style={{
+              color: "rgba(255, 255, 255, 0.5)",
+              fontFamily: "var(--mf-mono, monospace)",
+              fontSize: "0.75rem",
+            }}
+          >
+            repo:
+          </span>
           <span style={{ fontWeight: 500, letterSpacing: "-0.01em" }}>{repoLabel}</span>
 
           {/* Branch Dropdown */}
@@ -122,55 +131,61 @@ export function StudioTopbar({
               <span style={{ fontSize: "0.55rem", opacity: 0.7 }}>▼</span>
             </button>
 
-            {branchOpen && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: "100%",
-                  left: 0,
-                  marginTop: 6,
-                  background: "#121215",
-                  border: "1px solid rgba(255,255,255,0.15)",
-                  borderRadius: 10,
-                  minWidth: 140,
-                  boxShadow: "0 12px 32px rgba(0,0,0,0.6)",
-                  zIndex: 50,
-                  overflow: "hidden",
-                }}
-              >
-                {BRANCHES.map((b) => (
-                  <button
-                    key={b}
-                    type="button"
-                    onClick={() => {
-                      onBranchChange(b);
-                      setBranchOpen(false);
-                    }}
-                    style={{
-                      display: "block",
-                      width: "100%",
-                      textAlign: "left",
-                      padding: "8px 12px",
-                      background: b === branch ? "rgba(255,255,255,0.1)" : "transparent",
-                      border: "none",
-                      borderBottom: "1px solid rgba(255,255,255,0.05)",
-                      color: b === branch ? "#ffffff" : "rgba(255,255,255,0.7)",
-                      fontFamily: "var(--mf-mono, monospace)",
-                      fontSize: "0.75rem",
-                      cursor: "pointer",
-                    }}
-                  >
-                    {b === branch ? "✓ " : "  "}
-                    {b}
-                  </button>
-                ))}
-              </div>
-            )}
+            <AnimatePresence>
+              {branchOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 6, scale: 0.95 }}
+                  transition={{ type: "spring", stiffness: 450, damping: 28 }}
+                  style={{
+                    position: "absolute",
+                    top: "100%",
+                    left: 0,
+                    marginTop: 6,
+                    background: "#121215",
+                    border: "1px solid rgba(255,255,255,0.15)",
+                    borderRadius: 10,
+                    minWidth: 140,
+                    boxShadow: "0 12px 32px rgba(0,0,0,0.6)",
+                    zIndex: 50,
+                    overflow: "hidden",
+                  }}
+                >
+                  {BRANCHES.map((b) => (
+                    <button
+                      key={b}
+                      type="button"
+                      onClick={() => {
+                        onBranchChange(b);
+                        setBranchOpen(false);
+                      }}
+                      style={{
+                        display: "block",
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "8px 12px",
+                        background: b === branch ? "rgba(255,255,255,0.1)" : "transparent",
+                        border: "none",
+                        borderBottom: "1px solid rgba(255,255,255,0.05)",
+                        color: b === branch ? "#ffffff" : "rgba(255,255,255,0.7)",
+                        fontFamily: "var(--mf-mono, monospace)",
+                        fontSize: "0.75rem",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {b === branch ? "✓ " : "  "}
+                      {b}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </div>
 
-      {/* Center: Monoform Tab Switcher */}
+      {/* Center: Monoform Tab Switcher with Framer Motion Sliding Pill */}
       <div
         style={{
           display: "flex",
@@ -196,6 +211,7 @@ export function StudioTopbar({
               type="button"
               onClick={() => onTabChange(tab.id)}
               style={{
+                position: "relative",
                 padding: "6px 14px",
                 borderRadius: 999,
                 fontFamily: "var(--mf-mono, monospace)",
@@ -204,13 +220,26 @@ export function StudioTopbar({
                 textTransform: "uppercase",
                 border: "none",
                 cursor: "pointer",
-                background: isActive ? "#ffffff" : "transparent",
+                background: "transparent",
                 color: isActive ? "#000000" : "rgba(255, 255, 255, 0.65)",
                 fontWeight: isActive ? 600 : 400,
-                transition: "all 0.2s cubic-bezier(0.22, 1, 0.36, 1)",
+                outline: "none",
               }}
             >
-              {tab.label}
+              {isActive && (
+                <motion.div
+                  layoutId="studio-active-tab-indicator"
+                  transition={{ type: "spring", stiffness: 420, damping: 30 }}
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    borderRadius: 999,
+                    backgroundColor: "#ffffff",
+                    zIndex: 0,
+                  }}
+                />
+              )}
+              <span style={{ position: "relative", zIndex: 1 }}>{tab.label}</span>
             </button>
           );
         })}
@@ -325,53 +354,59 @@ export function StudioTopbar({
             <span style={{ fontSize: "0.55rem" }}>▼</span>
           </button>
 
-          {exportOpen && (
-            <div
-              style={{
-                position: "absolute",
-                top: "100%",
-                right: 0,
-                marginTop: 6,
-                background: "#121215",
-                border: "1px solid rgba(255,255,255,0.15)",
-                borderRadius: 10,
-                minWidth: 160,
-                boxShadow: "0 12px 32px rgba(0,0,0,0.6)",
-                zIndex: 50,
-                overflow: "hidden",
-              }}
-            >
-              {[
-                { label: "Export JSON", format: "json" as const },
-                { label: "Export Mermaid", format: "mermaid" as const },
-                { label: "Export PlantUML", format: "plantuml" as const },
-              ].map((opt) => (
-                <button
-                  key={opt.label}
-                  type="button"
-                  onClick={() => {
-                    onExport(opt.format);
-                    setExportOpen(false);
-                  }}
-                  style={{
-                    display: "block",
-                    width: "100%",
-                    textAlign: "left",
-                    padding: "8px 12px",
-                    background: "transparent",
-                    border: "none",
-                    borderBottom: "1px solid rgba(255,255,255,0.05)",
-                    color: "rgba(255,255,255,0.8)",
-                    fontFamily: "var(--mf-mono, monospace)",
-                    fontSize: "0.75rem",
-                    cursor: "pointer",
-                  }}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          )}
+          <AnimatePresence>
+            {exportOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: 6, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 6, scale: 0.95 }}
+                transition={{ type: "spring", stiffness: 450, damping: 28 }}
+                style={{
+                  position: "absolute",
+                  top: "100%",
+                  right: 0,
+                  marginTop: 6,
+                  background: "#121215",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  borderRadius: 10,
+                  minWidth: 160,
+                  boxShadow: "0 12px 32px rgba(0,0,0,0.6)",
+                  zIndex: 50,
+                  overflow: "hidden",
+                }}
+              >
+                {[
+                  { label: "Export JSON", format: "json" as const },
+                  { label: "Export Mermaid", format: "mermaid" as const },
+                  { label: "Export PlantUML", format: "plantuml" as const },
+                ].map((opt) => (
+                  <button
+                    key={opt.label}
+                    type="button"
+                    onClick={() => {
+                      onExport(opt.format);
+                      setExportOpen(false);
+                    }}
+                    style={{
+                      display: "block",
+                      width: "100%",
+                      textAlign: "left",
+                      padding: "8px 12px",
+                      background: "transparent",
+                      border: "none",
+                      borderBottom: "1px solid rgba(255,255,255,0.05)",
+                      color: "rgba(255,255,255,0.8)",
+                      fontFamily: "var(--mf-mono, monospace)",
+                      fontSize: "0.75rem",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Close Studio Button */}

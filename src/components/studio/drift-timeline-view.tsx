@@ -10,147 +10,60 @@ interface DriftTimelineViewProps {
   onAskCopilot?: (prompt: string) => void;
 }
 
-// Fallback high-fidelity commits illustrating architectural drift
-const FALLBACK_COMMITS: GitCommitItem[] = [
-  {
-    sha: "a98df2145b23d90f23e41289cf291a1084bce120",
-    short_sha: "a98df21",
-    message: "feat(rag): add pgvector similarity search & HNSW index",
-    full_message: "feat(rag): add pgvector similarity search & HNSW index\n\nMigrates vector storage from in-memory ChromaDB to Postgres pgvector table. Updates ingestion pipeline to compute OpenAI text-embedding-3-small vectors in batches of 64.",
-    author: "Karan Parmar",
-    author_avatar: "https://avatars.githubusercontent.com/u/1?v=4",
-    date: "2026-10-18T19:40:00Z",
-    files_changed: 6,
-    insertions: 340,
-    deletions: 85,
-    risk_level: "high",
-    drift_summary: "Introduced pgvector database dependency. Replaced in-memory vector store with async database connection pool.",
-    impacted_files: [
-      "backend/app/rag/vector_store.py",
-      "backend/app/core/chunker.py",
-      "backend/app/models/code_chunk.py",
-      "backend/alembic/versions/0002_pgvector.py",
-    ],
-    new_dependencies: ["pgvector", "sqlalchemy.dialects.postgresql", "asyncpg"],
-  },
-  {
-    sha: "4b82c18e77a2819c9012351abdef0091823ab192",
-    short_sha: "4b82c18",
-    message: "refactor(auth): enforce strict session token header validation",
-    full_message: "refactor(auth): enforce strict session token header validation\n\nEnforces X-Session-Token verification across all protected endpoints. Returns 401 if token is expired or user record is inactive.",
-    author: "Alex Rivera",
-    date: "2026-10-17T14:15:00Z",
-    files_changed: 4,
-    insertions: 110,
-    deletions: 42,
-    risk_level: "moderate",
-    drift_summary: "Tightened security boundary. Added dependency on User model in auth middleware.",
-    impacted_files: [
-      "backend/app/api/deps.py",
-      "backend/app/api/routes/auth.py",
-      "backend/app/middleware/rate_limit.py",
-    ],
-    new_dependencies: ["fastapi.security", "app.models.user"],
-  },
-  {
-    sha: "12fe9081a2bc0912d90812349120892019abcf71",
-    short_sha: "12fe908",
-    message: "feat(graph): parallelize AST import extraction using Tree-sitter",
-    full_message: "feat(graph): parallelize AST import extraction using Tree-sitter\n\nReplaces single-threaded regex extraction with multi-language Tree-sitter queries for Python, TypeScript, and Go.",
-    author: "Elena Rostova",
-    date: "2026-10-15T11:20:00Z",
-    files_changed: 8,
-    insertions: 420,
-    deletions: 190,
-    risk_level: "moderate",
-    drift_summary: "Performance refactor. Replaced regex import parser with Tree-sitter native AST queries.",
-    impacted_files: [
-      "backend/app/core/graph_builder.py",
-      "backend/app/core/language_detector.py",
-      "backend/app/tests/test_graph_builder.py",
-    ],
-    new_dependencies: ["tree_sitter", "tree_sitter_languages"],
-  },
-  {
-    sha: "891ab012c8230912e8712390823901923019abff",
-    short_sha: "891ab01",
-    message: "fix(router): resolve route parameter casing in client",
-    full_message: "fix(router): resolve route parameter casing in client\n\nNormalizes lowercase URL paths to prevent mismatch with TanStack router route definitions.",
-    author: "Karan Parmar",
-    author_avatar: "https://avatars.githubusercontent.com/u/1?v=4",
-    date: "2026-10-14T09:05:00Z",
-    files_changed: 2,
-    insertions: 18,
-    deletions: 12,
-    risk_level: "low",
-    drift_summary: "Minor bug fix. No architectural dependencies or caller signatures modified.",
-    impacted_files: ["src/router/Router.tsx", "src/App.tsx"],
-    new_dependencies: [],
-  },
-  {
-    sha: "001bc9102830912e823901923019230192301abc",
-    short_sha: "001bc91",
-    message: "chore: initial commit and monolithic project skeleton",
-    full_message: "chore: initial commit and monolithic project skeleton",
-    author: "Alex Rivera",
-    date: "2026-10-10T08:00:00Z",
-    files_changed: 24,
-    insertions: 1850,
-    deletions: 0,
-    risk_level: "low",
-    drift_summary: "Initial architectural baseline.",
-    impacted_files: ["package.json", "docker-compose.yml", "backend/app/main.py"],
-    new_dependencies: ["fastapi", "react", "vite"],
-  },
-];
-
 export function DriftTimelineView({
   sessionId,
   repoLabel,
-  graphData,
   onSelectFile,
   onAskCopilot,
 }: DriftTimelineViewProps) {
-  const [commits, setCommits] = useState<GitCommitItem[]>(FALLBACK_COMMITS);
-  const [selectedCommitSha, setSelectedCommitSha] = useState<string>(FALLBACK_COMMITS[0].sha);
+  const [commits, setCommits] = useState<GitCommitItem[]>([]);
+  const [selectedCommitSha, setSelectedCommitSha] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [copiedSha, setCopiedSha] = useState<string | null>(null);
 
-  // Fetch real commits from backend if session is valid
+  // Fetch real commits from the backend (no placeholder data is ever shown)
   useEffect(() => {
     if (!sessionId) return;
+    let cancelled = false;
     setLoading(true);
+    setLoadError(null);
     api
       .getCommits(sessionId)
       .then((res) => {
-        if (res?.commits && res.commits.length > 0) {
-          const enriched: GitCommitItem[] = res.commits.map((c) => ({
-            sha: c.sha,
-            short_sha: c.short_sha,
-            message: c.message,
-            full_message: c.full_message,
-            author: c.author,
-            author_avatar: c.author_avatar,
-            date: c.date,
-            files_changed: c.files_changed,
-            insertions: c.insertions,
-            deletions: c.deletions,
-            risk_level: c.risk_level || "low",
-            drift_summary: c.drift_summary || c.message,
-            impacted_files: c.impacted_files && c.impacted_files.length > 0
-              ? c.impacted_files
-              : (graphData?.nodes?.slice(0, 3).map((n) => n.path) || []),
-            new_dependencies: [],
-          }));
-          setCommits(enriched);
-          setSelectedCommitSha(enriched[0].sha);
-        }
+        if (cancelled) return;
+        const enriched: GitCommitItem[] = (res?.commits ?? []).map((c) => ({
+          sha: c.sha,
+          short_sha: c.short_sha,
+          message: c.message,
+          full_message: c.full_message,
+          author: c.author,
+          author_avatar: c.author_avatar,
+          date: c.date,
+          files_changed: c.files_changed,
+          insertions: c.insertions,
+          deletions: c.deletions,
+          risk_level: c.risk_level || "low",
+          drift_summary: c.drift_summary || c.message,
+          impacted_files: c.impacted_files ?? [],
+          new_dependencies: [],
+        }));
+        setCommits(enriched);
+        setSelectedCommitSha(enriched[0]?.sha ?? null);
       })
-      .catch(() => {
-        // Keep realistic fallback timeline
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setCommits([]);
+        setLoadError(err instanceof Error ? err.message : "Could not load commit history.");
       })
-      .finally(() => setLoading(false));
-  }, [sessionId, graphData]);
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId, reloadKey]);
 
   const selectedCommit = useMemo(() => {
     return commits.find((c) => c.sha === selectedCommitSha) || commits[0];
@@ -161,6 +74,61 @@ export function DriftTimelineView({
     setCopiedSha(sha);
     setTimeout(() => setCopiedSha(null), 2000);
   };
+
+  if (!selectedCommit) {
+    return (
+      <div
+        style={{
+          height: "100%",
+          display: "grid",
+          placeItems: "center",
+          backgroundColor: "#08080a",
+          color: "rgba(255,255,255,0.6)",
+          fontFamily: "var(--mf-mono, monospace)",
+          fontSize: "0.8125rem",
+          textAlign: "center",
+          padding: 24,
+        }}
+      >
+        <div style={{ maxWidth: 420 }}>
+          <div style={{ color: "#ffffff", fontWeight: 600, marginBottom: 8 }}>
+            {loading
+              ? "Loading commit history…"
+              : loadError
+                ? "Commit history unavailable"
+                : "No commits found"}
+          </div>
+          {!loading && (
+            <p style={{ margin: "0 0 16px", lineHeight: 1.5 }}>
+              {loadError ??
+                (sessionId
+                  ? "GitHub returned no recent commits for this branch."
+                  : "Analyze a repository to see its architectural drift timeline.")}
+            </p>
+          )}
+          {!loading && sessionId && (
+            <button
+              type="button"
+              onClick={() => setReloadKey((k) => k + 1)}
+              style={{
+                padding: "6px 14px",
+                borderRadius: 999,
+                background: "#ffffff",
+                color: "#000000",
+                border: "none",
+                fontFamily: "inherit",
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Retry
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -334,8 +302,8 @@ export function DriftTimelineView({
                           c.risk_level === "high"
                             ? "#ff6b6b"
                             : c.risk_level === "moderate"
-                            ? "#ffc078"
-                            : "#69db7c",
+                              ? "#ffc078"
+                              : "#69db7c",
                       }}
                     >
                       {c.risk_level ? `${c.risk_level.toUpperCase()} DRIFT` : "LOW DRIFT"}
@@ -358,7 +326,14 @@ export function DriftTimelineView({
             backgroundColor: "#09090b",
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              gap: 16,
+            }}
+          >
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
                 <span
@@ -414,7 +389,7 @@ export function DriftTimelineView({
                 onClick={() =>
                   onAskCopilot &&
                   onAskCopilot(
-                    `Analyze architectural drift in commit ${selectedCommit.short_sha}: "${selectedCommit.message}". What components were affected, and what are the testing risks?`
+                    `Analyze architectural drift in commit ${selectedCommit.short_sha}: "${selectedCommit.message}". What components were affected, and what are the testing risks?`,
                   )
                 }
                 style={{
@@ -437,7 +412,7 @@ export function DriftTimelineView({
                 onClick={() =>
                   onAskCopilot &&
                   onAskCopilot(
-                    `Write release notes and a changelog entry summarizing commit ${selectedCommit.short_sha}: ${selectedCommit.message}`
+                    `Write release notes and a changelog entry summarizing commit ${selectedCommit.short_sha}: ${selectedCommit.message}`,
                   )
                 }
                 style={{
@@ -564,8 +539,8 @@ export function DriftTimelineView({
                     selectedCommit.risk_level === "high"
                       ? "#ff6b6b"
                       : selectedCommit.risk_level === "moderate"
-                      ? "#ffc078"
-                      : "#69db7c",
+                        ? "#ffc078"
+                        : "#69db7c",
                 }}
               >
                 {selectedCommit.risk_level ? selectedCommit.risk_level.toUpperCase() : "LOW"}
@@ -626,7 +601,8 @@ export function DriftTimelineView({
                 marginBottom: 12,
               }}
             >
-              Modified Modules &amp; Blast Radius Targets ({selectedCommit.impacted_files?.length || 0}):
+              Modified Modules &amp; Blast Radius Targets (
+              {selectedCommit.impacted_files?.length || 0}):
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>

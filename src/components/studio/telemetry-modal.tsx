@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import type { AnalysisStep } from "@/hooks/useAnalysis";
 
 interface TelemetryModalProps {
@@ -15,7 +16,6 @@ interface TelemetryModalProps {
   error?: string | null;
   onRetry?: () => void;
   onCancel: () => void;
-  onBypass?: () => void;
 }
 
 export function TelemetryModal({
@@ -27,7 +27,6 @@ export function TelemetryModal({
   error,
   onRetry,
   onCancel,
-  onBypass,
 }: TelemetryModalProps) {
   const repoLabel = repoUrl.replace(/^https?:\/\/(www\.)?github\.com\//, "").replace(/\.git$/, "");
   const [logs, setLogs] = useState<Array<{ time: string; text: string }>>([]);
@@ -42,7 +41,12 @@ export function TelemetryModal({
     const pushLog = (key: string, text: string) => {
       if (loggedSteps.current.has(key)) return;
       loggedSteps.current.add(key);
-      const time = new Date().toLocaleTimeString([], { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      const time = new Date().toLocaleTimeString([], {
+        hour12: false,
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
       setLogs((prev) => [...prev, { time, text }].slice(-16));
     };
 
@@ -58,7 +62,11 @@ export function TelemetryModal({
       pushLog("files-found", `Discovered ${repoMeta.files.toLocaleString()} source files`);
     }
 
-    if (repoMeta?.languages && Object.keys(repoMeta.languages).length > 0 && !loggedSteps.current.has("langs-found")) {
+    if (
+      repoMeta?.languages &&
+      Object.keys(repoMeta.languages).length > 0 &&
+      !loggedSteps.current.has("langs-found")
+    ) {
       const topLangs = Object.keys(repoMeta.languages).slice(0, 4).join(", ");
       pushLog("langs-found", `Language spectra detected: [${topLangs}]`);
     }
@@ -71,7 +79,11 @@ export function TelemetryModal({
   }, [logs]);
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
       style={{
         position: "fixed",
         inset: 0,
@@ -86,15 +98,27 @@ export function TelemetryModal({
         overflow: "hidden",
       }}
     >
-      {/* Background architectural grid */}
+      {/* Background architectural grid with ambient scanline */}
       <div
         style={{
           position: "absolute",
           inset: 0,
-          backgroundImage: "linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)",
+          backgroundImage:
+            "linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)",
           backgroundSize: "64px 64px",
           pointerEvents: "none",
           opacity: 0.6,
+        }}
+      />
+      <motion.div
+        animate={{ y: ["-100%", "200%"] }}
+        transition={{ repeat: Infinity, duration: 8, ease: "linear" }}
+        style={{
+          position: "absolute",
+          inset: 0,
+          background:
+            "linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.03) 50%, transparent 100%)",
+          pointerEvents: "none",
         }}
       />
 
@@ -121,33 +145,19 @@ export function TelemetryModal({
               animation: "mf-pulse 1.8s infinite ease-in-out",
             }}
           />
-          <span style={{ fontFamily: "var(--mf-mono, monospace)", fontSize: "0.8125rem", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+          <span
+            style={{
+              fontFamily: "var(--mf-mono, monospace)",
+              fontSize: "0.8125rem",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+            }}
+          >
             DevLens // Ingestion Pipeline
           </span>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          {onBypass && (
-            <button
-              type="button"
-              onClick={onBypass}
-              style={{
-                fontFamily: "var(--mf-mono, monospace)",
-                fontSize: "0.75rem",
-                color: "#000000",
-                background: "#ffffff",
-                border: "1px solid #ffffff",
-                borderRadius: 999,
-                padding: "6px 14px",
-                cursor: "pointer",
-                fontWeight: 600,
-                transition: "all 0.2s",
-              }}
-            >
-              Bypass to Studio ↗
-            </button>
-          )}
-
           <button
             type="button"
             onClick={onCancel}
@@ -205,7 +215,10 @@ export function TelemetryModal({
           >
             Target Repository
           </span>
-          <h1
+          <motion.h1
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
             style={{
               fontSize: "clamp(2rem, 4.5vw, 4rem)",
               fontWeight: 500,
@@ -216,10 +229,14 @@ export function TelemetryModal({
             }}
           >
             {repoLabel}
-          </h1>
+          </motion.h1>
 
           <div style={{ display: "flex", alignItems: "baseline", gap: 16 }}>
-            <span
+            <motion.span
+              key={progressPct}
+              initial={{ opacity: 0.85, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.2 }}
               style={{
                 fontFamily: "var(--mf-mono, monospace)",
                 fontSize: "clamp(4.5rem, 9vw, 8rem)",
@@ -229,126 +246,94 @@ export function TelemetryModal({
               }}
             >
               {progressPct.toString().padStart(2, "0")}%
-            </span>
-            <span style={{ fontFamily: "var(--mf-mono, monospace)", fontSize: "0.875rem", color: "rgba(255,255,255,0.5)" }}>
+            </motion.span>
+            <span
+              style={{
+                fontFamily: "var(--mf-mono, monospace)",
+                fontSize: "0.875rem",
+                color: "rgba(255,255,255,0.5)",
+              }}
+            >
               // INDEXING
             </span>
           </div>
 
-          {/* Progress Bar Line */}
+          {/* Progress Bar Line with spring physics */}
           <div
             style={{
               width: "100%",
-              height: 3,
+              height: 4,
               background: "rgba(255,255,255,0.1)",
               borderRadius: 2,
               marginTop: 24,
               overflow: "hidden",
             }}
           >
-            <div
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${progressPct}%` }}
+              transition={{ type: "spring", stiffness: 140, damping: 22 }}
               style={{
-                width: `${progressPct}%`,
                 height: "100%",
                 background: error ? "#ef4444" : "#ffffff",
-                boxShadow: error ? "0 0 16px rgba(239,68,68,0.8)" : "0 0 16px rgba(255,255,255,0.8)",
-                transition: "width 400ms cubic-bezier(0.22, 1, 0.36, 1)",
+                boxShadow: error
+                  ? "0 0 16px rgba(239,68,68,0.8)"
+                  : "0 0 16px rgba(255,255,255,0.8)",
               }}
             />
           </div>
 
           {/* Analysis Error Alert */}
-          {error && (
-            <div
-              style={{
-                marginTop: 20,
-                padding: "16px 20px",
-                borderRadius: 12,
-                background: "rgba(239, 68, 68, 0.12)",
-                border: "1px solid rgba(239, 68, 68, 0.35)",
-                color: "#fca5a5",
-                fontFamily: "var(--mf-mono, monospace)",
-                fontSize: "0.8125rem",
-                display: "flex",
-                flexDirection: "column",
-                gap: 10,
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 600 }}>
-                <span>⚠</span>
-                <span>Analysis Issue Detected:</span>
-              </div>
-              <div style={{ color: "#ffffff", opacity: 0.9, lineHeight: 1.45 }}>{error}</div>
-              <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-                {onRetry && (
-                  <button
-                    type="button"
-                    onClick={onRetry}
-                    style={{
-                      padding: "6px 14px",
-                      borderRadius: 999,
-                      background: "#ffffff",
-                      color: "#000000",
-                      fontWeight: 600,
-                      fontSize: "0.75rem",
-                      cursor: "pointer",
-                      border: "none",
-                    }}
-                  >
-                    Retry Analysis
-                  </button>
-                )}
-                {onBypass && (
-                  <button
-                    type="button"
-                    onClick={onBypass}
-                    style={{
-                      padding: "6px 14px",
-                      borderRadius: 999,
-                      background: "transparent",
-                      color: "#ffffff",
-                      border: "1px solid rgba(255, 255, 255, 0.3)",
-                      fontWeight: 500,
-                      fontSize: "0.75rem",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Open in Studio Mode ↗
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Direct Bypass Button */}
-          {onBypass && (
-            <div style={{ marginTop: 24, display: "flex", alignItems: "center", gap: 12 }}>
-              <button
-                type="button"
-                onClick={onBypass}
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: 12, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.96 }}
                 style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "9px 18px",
-                  borderRadius: 999,
-                  background: "#ffffff",
-                  color: "#000000",
-                  border: "1px solid #ffffff",
+                  marginTop: 20,
+                  padding: "16px 20px",
+                  borderRadius: 12,
+                  background: "rgba(239, 68, 68, 0.12)",
+                  border: "1px solid rgba(239, 68, 68, 0.35)",
+                  color: "#fca5a5",
                   fontFamily: "var(--mf-mono, monospace)",
                   fontSize: "0.8125rem",
-                  fontWeight: 600,
-                  cursor: "pointer",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 10,
                 }}
               >
-                <span>⚡ Bypass Ingestion & Explore Studio Workspace</span>
-                <span>↗</span>
-              </button>
-              <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.4)", fontFamily: "var(--mf-mono, monospace)" }}>
-                (Backend offline mode)
-              </span>
-            </div>
-          )}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 600 }}>
+                  <span>⚠</span>
+                  <span>Analysis Issue Detected:</span>
+                </div>
+                <div style={{ color: "#ffffff", opacity: 0.9, lineHeight: 1.45 }}>{error}</div>
+                <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                  {onRetry && (
+                    <motion.button
+                      type="button"
+                      onClick={onRetry}
+                      whileHover={{ scale: 1.04 }}
+                      whileTap={{ scale: 0.96 }}
+                      style={{
+                        padding: "6px 14px",
+                        borderRadius: 999,
+                        background: "#ffffff",
+                        color: "#000000",
+                        fontWeight: 600,
+                        fontSize: "0.75rem",
+                        cursor: "pointer",
+                        border: "none",
+                      }}
+                    >
+                      Retry Analysis
+                    </motion.button>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Right Column: Step Checklist & Terminal Log */}
@@ -379,8 +364,11 @@ export function TelemetryModal({
                 const isDone = step.status === "done";
                 const isActive = step.status === "active";
                 return (
-                  <div
+                  <motion.div
                     key={step.label}
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.04 }}
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -404,22 +392,31 @@ export function TelemetryModal({
                       <span>{step.label}</span>
                     </div>
 
-                    <span
+                    <motion.span
+                      animate={
+                        isActive
+                          ? { scale: [1, 1.05, 1], transition: { repeat: Infinity, duration: 1.8 } }
+                          : { scale: 1 }
+                      }
                       style={{
                         fontFamily: "var(--mf-mono, monospace)",
                         fontSize: "0.6875rem",
                         padding: "2px 8px",
                         borderRadius: 999,
                         border: "1px solid",
-                        borderColor: isDone ? "rgba(255,255,255,0.3)" : isActive ? "#ffffff" : "rgba(255,255,255,0.1)",
+                        borderColor: isDone
+                          ? "rgba(255,255,255,0.3)"
+                          : isActive
+                            ? "#ffffff"
+                            : "rgba(255,255,255,0.1)",
                         background: isActive ? "#ffffff" : "transparent",
                         color: isActive ? "#000000" : isDone ? "#ffffff" : "rgba(255,255,255,0.3)",
                         textTransform: "uppercase",
                       }}
                     >
-                      {isDone ? "Done" : isActive ? "Active" : "Wait"}
-                    </span>
-                  </div>
+                      {isDone ? "✓ Done" : isActive ? "Active" : "Wait"}
+                    </motion.span>
+                  </motion.div>
                 );
               })}
             </div>
@@ -445,10 +442,20 @@ export function TelemetryModal({
               <div style={{ color: "rgba(255,255,255,0.3)" }}>Listening to worker stream...</div>
             ) : (
               logs.map((log, i) => (
-                <div key={i} style={{ display: "flex", gap: 12 }}>
+                <motion.div
+                  key={`${log.time}-${log.text}-${i}`}
+                  initial={{ opacity: 0, x: -6 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.18 }}
+                  style={{ display: "flex", gap: 12 }}
+                >
                   <span style={{ color: "rgba(255,255,255,0.3)", flexShrink: 0 }}>{log.time}</span>
-                  <span style={{ color: i === logs.length - 1 ? "#ffffff" : "rgba(255,255,255,0.7)" }}>{log.text}</span>
-                </div>
+                  <span
+                    style={{ color: i === logs.length - 1 ? "#ffffff" : "rgba(255,255,255,0.7)" }}
+                  >
+                    {log.text}
+                  </span>
+                </motion.div>
               ))
             )}
           </div>
@@ -476,6 +483,6 @@ export function TelemetryModal({
         <span>SECURITY: EPHEMERAL_WORKTREE</span>
         <span>LATENCY: &lt;14MS</span>
       </div>
-    </div>
+    </motion.div>
   );
 }

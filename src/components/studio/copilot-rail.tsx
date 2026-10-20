@@ -1,13 +1,39 @@
 import { useState, useRef, useEffect, useMemo } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import type { ChatMessage } from "@/hooks/useChat";
 import type { GraphData } from "./studio-types";
 
 export const SLASH_COMMANDS = [
-  { cmd: "/blast", label: "💥 /blast", desc: "Calculate blast radius and ripple impact of a module", requiresFile: true },
-  { cmd: "/cycles", label: "🔄 /cycles", desc: "Detect circular import dependency cycles in the architecture graph", requiresFile: false },
-  { cmd: "/explain", label: "🔍 /explain", desc: "Explain architecture, responsibilities, callers, and complexity", requiresFile: true },
-  { cmd: "/test", label: "🧪 /test", desc: "Generate unit test specifications covering functions & classes", requiresFile: true },
-  { cmd: "/onboarding", label: "📋 /onboarding", desc: "Overview of key architectural entry points and execution flows", requiresFile: false },
+  {
+    cmd: "/blast",
+    label: "💥 /blast",
+    desc: "Calculate blast radius and ripple impact of a module",
+    requiresFile: true,
+  },
+  {
+    cmd: "/cycles",
+    label: "🔄 /cycles",
+    desc: "Detect circular import dependency cycles in the architecture graph",
+    requiresFile: false,
+  },
+  {
+    cmd: "/explain",
+    label: "🔍 /explain",
+    desc: "Explain architecture, responsibilities, callers, and complexity",
+    requiresFile: true,
+  },
+  {
+    cmd: "/test",
+    label: "🧪 /test",
+    desc: "Generate unit test specifications covering functions & classes",
+    requiresFile: true,
+  },
+  {
+    cmd: "/onboarding",
+    label: "📋 /onboarding",
+    desc: "Overview of key architectural entry points and execution flows",
+    requiresFile: false,
+  },
 ];
 
 interface CopilotRailProps {
@@ -138,9 +164,7 @@ export function CopilotRail({
   const matchingFiles = useMemo(() => {
     if (atQuery === null) return [];
     const q = atQuery.toLowerCase();
-    return allFiles
-      .filter((f) => f.toLowerCase().includes(q))
-      .slice(0, 6);
+    return allFiles.filter((f) => f.toLowerCase().includes(q)).slice(0, 6);
   }, [atQuery, allFiles]);
 
   const matchingSlashCommands = useMemo(() => {
@@ -187,7 +211,7 @@ export function CopilotRail({
     inputRef.current?.focus();
   };
 
-  const handleSelectSlashCommand = (cmd: typeof SLASH_COMMANDS[0]) => {
+  const handleSelectSlashCommand = (cmd: (typeof SLASH_COMMANDS)[0]) => {
     if (cmd.requiresFile && activeFile) {
       setInput(`${cmd.cmd} ${activeFile}`);
     } else {
@@ -242,7 +266,9 @@ export function CopilotRail({
         return;
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        setSelectedSlashIndex((prev) => (prev - 1 + matchingSlashCommands.length) % matchingSlashCommands.length);
+        setSelectedSlashIndex(
+          (prev) => (prev - 1 + matchingSlashCommands.length) % matchingSlashCommands.length,
+        );
         return;
       } else if (e.key === "Enter" || e.key === "Tab") {
         e.preventDefault();
@@ -314,16 +340,36 @@ export function CopilotRail({
   const renderMessageContent = (content: string, msgIndex: number, isLastAssistant: boolean) => {
     if (!content && isLastAssistant && isStreaming) {
       return (
-        <div style={{ display: "flex", alignItems: "center", gap: 6, color: "rgba(255,255,255,0.5)", fontSize: "0.8125rem" }}>
-          <span
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: "50%",
-              backgroundColor: "#ffffff",
-              animation: "mf-pulse 1s infinite",
-            }}
-          />
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            color: "rgba(255,255,255,0.6)",
+            fontSize: "0.8125rem",
+          }}
+        >
+          <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
+            {[0, 1, 2].map((dot) => (
+              <motion.span
+                key={dot}
+                animate={{ y: [0, -4, 0] }}
+                transition={{
+                  repeat: Infinity,
+                  duration: 0.65,
+                  delay: dot * 0.15,
+                  ease: "easeInOut",
+                }}
+                style={{
+                  width: 4,
+                  height: 4,
+                  borderRadius: "50%",
+                  backgroundColor: "#ffffff",
+                  display: "inline-block",
+                }}
+              />
+            ))}
+          </div>
           <span style={{ fontFamily: "var(--mf-mono, monospace)", fontSize: "0.75rem" }}>
             Retrieving AST chunks & graph context...
           </span>
@@ -344,7 +390,7 @@ export function CopilotRail({
         elements.push(
           <div key={`txt-${segmentIdx++}`} style={{ whiteSpace: "pre-wrap" }}>
             {renderFormattedText(textSegment)}
-          </div>
+          </div>,
         );
       }
 
@@ -407,7 +453,7 @@ export function CopilotRail({
           >
             <code>{code}</code>
           </pre>
-        </div>
+        </div>,
       );
 
       lastIndex = match.index + match[0].length;
@@ -431,7 +477,7 @@ export function CopilotRail({
               }}
             />
           )}
-        </div>
+        </div>,
       );
     }
 
@@ -650,7 +696,13 @@ export function CopilotRail({
       </div>
 
       {/* Suggested Inquiries (Dynamically Grounded in Repo) */}
-      <div style={{ padding: "10px 14px", borderBottom: "1px solid rgba(255, 255, 255, 0.08)", backgroundColor: "rgba(255,255,255,0.01)" }}>
+      <div
+        style={{
+          padding: "10px 14px",
+          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+          backgroundColor: "rgba(255,255,255,0.01)",
+        }}
+      >
         <div
           style={{
             fontFamily: "var(--mf-mono, monospace)",
@@ -665,10 +717,18 @@ export function CopilotRail({
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
           {suggestions.map((q) => (
-            <button
+            <motion.button
               key={q}
               type="button"
               onClick={() => onSendMessage(q)}
+              whileHover={{
+                scale: 1.03,
+                y: -1,
+                backgroundColor: "rgba(255,255,255,0.12)",
+                color: "#ffffff",
+              }}
+              whileTap={{ scale: 0.96 }}
+              transition={{ type: "spring", stiffness: 420, damping: 25 }}
               style={{
                 background: "rgba(255, 255, 255, 0.04)",
                 border: "1px solid rgba(255, 255, 255, 0.1)",
@@ -678,19 +738,10 @@ export function CopilotRail({
                 color: "rgba(255, 255, 255, 0.8)",
                 cursor: "pointer",
                 textAlign: "left",
-                transition: "all 0.15s",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "rgba(255,255,255,0.12)";
-                e.currentTarget.style.color = "#ffffff";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "rgba(255,255,255,0.04)";
-                e.currentTarget.style.color = "rgba(255,255,255,0.8)";
               }}
             >
               {q}
-            </button>
+            </motion.button>
           ))}
         </div>
       </div>
@@ -708,7 +759,9 @@ export function CopilotRail({
         }}
       >
         {messages.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "40px 12px", color: "rgba(255,255,255,0.4)" }}>
+          <div
+            style={{ textAlign: "center", padding: "40px 12px", color: "rgba(255,255,255,0.4)" }}
+          >
             <div
               style={{
                 width: 38,
@@ -728,8 +781,16 @@ export function CopilotRail({
             <p style={{ fontSize: "0.8125rem", lineHeight: 1.5, margin: "0 0 8px" }}>
               Ask anything about <strong style={{ color: "#ffffff" }}>{repoLabel}</strong>.
             </p>
-            <p style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.4)", margin: 0, fontFamily: "var(--mf-mono, monospace)" }}>
-              Type @ to mention specific files, or ask about blast radius, entry points, or refactor risks.
+            <p
+              style={{
+                fontSize: "0.6875rem",
+                color: "rgba(255,255,255,0.4)",
+                margin: 0,
+                fontFamily: "var(--mf-mono, monospace)",
+              }}
+            >
+              Type @ to mention specific files, or ask about blast radius, entry points, or refactor
+              risks.
             </p>
           </div>
         ) : (
@@ -738,8 +799,11 @@ export function CopilotRail({
             const isLastAssistant = !isUser && i === messages.length - 1;
 
             return (
-              <div
+              <motion.div
                 key={i}
+                initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ type: "spring", stiffness: 400, damping: 28 }}
                 style={{
                   alignSelf: isUser ? "flex-end" : "flex-start",
                   maxWidth: "94%",
@@ -810,7 +874,7 @@ export function CopilotRail({
                     ))}
                   </div>
                 )}
-              </div>
+              </motion.div>
             );
           })
         )}
@@ -851,7 +915,8 @@ export function CopilotRail({
                 fontFamily: "var(--mf-mono, monospace)",
                 fontSize: "0.75rem",
                 color: idx === selectedMentionIndex ? "#ffffff" : "rgba(255,255,255,0.7)",
-                backgroundColor: idx === selectedMentionIndex ? "rgba(255,255,255,0.12)" : "transparent",
+                backgroundColor:
+                  idx === selectedMentionIndex ? "rgba(255,255,255,0.12)" : "transparent",
                 cursor: "pointer",
                 display: "flex",
                 justifyContent: "space-between",
@@ -901,7 +966,8 @@ export function CopilotRail({
                 fontFamily: "var(--mf-mono, monospace)",
                 fontSize: "0.75rem",
                 color: idx === selectedSlashIndex ? "#ffffff" : "rgba(255,255,255,0.7)",
-                backgroundColor: idx === selectedSlashIndex ? "rgba(255,255,255,0.12)" : "transparent",
+                backgroundColor:
+                  idx === selectedSlashIndex ? "rgba(255,255,255,0.12)" : "transparent",
                 cursor: "pointer",
                 display: "flex",
                 flexDirection: "column",
@@ -909,11 +975,15 @@ export function CopilotRail({
               }}
               onMouseEnter={() => setSelectedSlashIndex(idx)}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div
+                style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+              >
                 <span style={{ fontWeight: 600, color: "#ffffff" }}>{cmd.label}</span>
                 <span style={{ fontSize: "0.625rem", opacity: 0.5 }}>Tab ↵</span>
               </div>
-              <span style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.45)" }}>{cmd.desc}</span>
+              <span style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.45)" }}>
+                {cmd.desc}
+              </span>
             </div>
           ))}
         </div>
@@ -1011,9 +1081,12 @@ export function CopilotRail({
               color: "#ffffff",
             }}
           />
-          <button
+          <motion.button
             type="submit"
             disabled={!input.trim() || isStreaming}
+            whileHover={input.trim() && !isStreaming ? { scale: 1.08 } : undefined}
+            whileTap={input.trim() && !isStreaming ? { scale: 0.94 } : undefined}
+            transition={{ type: "spring", stiffness: 450, damping: 25 }}
             style={{
               width: 30,
               height: 30,
@@ -1026,11 +1099,10 @@ export function CopilotRail({
               placeItems: "center",
               fontSize: "0.8125rem",
               fontWeight: 600,
-              transition: "all 0.15s",
             }}
           >
             ↑
-          </button>
+          </motion.button>
         </div>
       </form>
     </aside>
