@@ -7,7 +7,7 @@ if required variables are missing — no more runtime KeyError surprises.
 
 from functools import lru_cache
 from typing import List
-from pydantic import AnyHttpUrl, field_validator
+from pydantic import AnyHttpUrl, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -80,6 +80,27 @@ class Settings(BaseSettings):
         if self.github_api_token:
             headers["Authorization"] = f"Bearer {self.github_api_token}"
         return headers
+
+    @model_validator(mode="after")
+    def auto_configure_gemini(self) -> "Settings":
+        """
+        Auto-detect Google Gemini API keys (starting with AQ. or AIza)
+        and point to the Google Gemini OpenAI-compatible proxy with optimized models.
+        """
+        key = getattr(self, "openai_api_key", "") or ""
+        base = getattr(self, "openai_api_base", "") or ""
+        is_gemini_key = key.startswith("AQ.") or key.startswith("AIza")
+        is_gemini_base = "generativelanguage.googleapis.com" in base
+
+        if is_gemini_key or is_gemini_base:
+            if base == "https://api.openai.com/v1" or not base:
+                self.openai_api_base = "https://generativelanguage.googleapis.com/v1beta/openai/"
+            if self.openai_chat_model == "gpt-4o":
+                self.openai_chat_model = "gemini-3.1-flash-lite"
+            if self.openai_embedding_model == "text-embedding-3-small":
+                self.openai_embedding_model = "gemini-embedding-001"
+                self.openai_embedding_dimensions = 1536
+        return self
 
     @field_validator("cors_origins", mode="before")
     @classmethod

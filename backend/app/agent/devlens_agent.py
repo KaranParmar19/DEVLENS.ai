@@ -218,51 +218,62 @@ class DevLensAgent:
         collected_sources: set[str] = set(retrieved_sources)
         full_reply = ""
 
-        try:
-            llm_with_tools = self.llm.bind_tools(self.tools)
+        is_gemini = "generativelanguage.googleapis.com" in settings.openai_api_base or settings.openai_api_key.startswith("AQ.")
 
-            # Tool calling loop (up to 3 iterations)
-            for _ in range(3):
-                response = await llm_with_tools.ainvoke(messages)
-                messages.append(response)
+        if is_gemini:
+            # Direct prompt invocation with rich grounded context (avoids Gemini function-calling proxy schema quirks)
+            try:
+                response = await self.llm.ainvoke(messages)
+                full_reply = response.content or ""
+            except Exception as exc:
+                logger.warning("gemini_chat_failed_using_grounded_fallback", error=str(exc))
+                full_reply = self._generate_deterministic_fallback(message, context_text, list(collected_sources))
+        else:
+            try:
+                llm_with_tools = self.llm.bind_tools(self.tools)
 
-                if not getattr(response, "tool_calls", None):
-                    full_reply = response.content or ""
-                    break
+                # Tool calling loop (up to 3 iterations)
+                for _ in range(3):
+                    response = await llm_with_tools.ainvoke(messages)
+                    messages.append(response)
 
-                for tc in response.tool_calls:
-                    t_name = tc["name"]
-                    t_args = tc.get("args", {})
-                    tool = self._tool_map.get(t_name)
+                    if not getattr(response, "tool_calls", None):
+                        full_reply = response.content or ""
+                        break
 
-                    if "file_path" in t_args:
-                        collected_sources.add(t_args["file_path"])
+                    for tc in response.tool_calls:
+                        t_name = tc["name"]
+                        t_args = tc.get("args", {})
+                        tool = self._tool_map.get(t_name)
 
-                    if tool:
-                        try:
-                            if getattr(tool, "coroutine", None):
-                                t_res = await tool.coroutine(**t_args)
-                            elif asyncio.iscoroutinefunction(tool.func):
-                                t_res = await tool.func(**t_args)
-                            else:
-                                t_res = tool.func(**t_args)
-                        except Exception as tool_err:
-                            t_res = f"Tool execution failed: {tool_err}"
-                    else:
-                        t_res = f"Tool '{t_name}' not recognized."
+                        if "file_path" in t_args:
+                            collected_sources.add(t_args["file_path"])
 
-                    # Extract any file paths from tool result
-                    for f in re.findall(r"\[\[(.*?)\]\]", str(t_res)):
-                        collected_sources.add(f)
+                        if tool:
+                            try:
+                                if getattr(tool, "coroutine", None):
+                                    t_res = await tool.coroutine(**t_args)
+                                elif asyncio.iscoroutinefunction(tool.func):
+                                    t_res = await tool.func(**t_args)
+                                else:
+                                    t_res = tool.func(**t_args)
+                            except Exception as tool_err:
+                                t_res = f"Tool execution failed: {tool_err}"
+                        else:
+                            t_res = f"Tool '{t_name}' not recognized."
 
-                    messages.append(ToolMessage(content=str(t_res), tool_call_id=tc["id"]))
-            else:
-                final_res = await self.llm.ainvoke(messages)
-                full_reply = final_res.content or ""
+                        # Extract any file paths from tool result
+                        for f in re.findall(r"\[\[(.*?)\]\]", str(t_res)):
+                            collected_sources.add(f)
 
-        except Exception as exc:
-            logger.warning("agent_llm_failed_using_grounded_fallback", error=str(exc))
-            full_reply = self._generate_deterministic_fallback(message, context_text, list(collected_sources))
+                        messages.append(ToolMessage(content=str(t_res), tool_call_id=tc["id"]))
+                else:
+                    final_res = await self.llm.ainvoke(messages)
+                    full_reply = final_res.content or ""
+
+            except Exception as exc:
+                logger.warning("agent_llm_failed_using_grounded_fallback", error=str(exc))
+                full_reply = self._generate_deterministic_fallback(message, context_text, list(collected_sources))
 
         # Extract any [[file_path]] citations from final response
         for citation in re.findall(r"\[\[(.*?)\]\]", full_reply):
