@@ -85,21 +85,12 @@ def _chunk_python(file_path: str, content: str) -> list[Chunk]:
     covered_lines: set[int] = set()
 
     idx = 0
-    for node in ast.walk(tree):
-        # Only process top-level definitions (not nested)
+    for node in tree.body:
         if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-            continue
-        # Skip nested (parent is not Module)
-        parent_is_module = any(
-            isinstance(parent, ast.Module)
-            for parent in ast.walk(tree)
-            if hasattr(parent, "body") and node in getattr(parent, "body", [])
-        )
-        if not parent_is_module:
             continue
 
         start = node.lineno - 1
-        end = node.end_lineno or start
+        end = node.end_lineno or (start + 1)
         node_lines = lines[start:end]
         node_content = "\n".join(node_lines)
 
