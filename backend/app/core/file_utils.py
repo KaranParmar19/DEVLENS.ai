@@ -6,6 +6,8 @@ and path-based utilities used throughout the ingestion pipeline.
 
 import os
 import re
+import io
+import tarfile
 from pathlib import Path
 
 from app.config import get_settings
@@ -144,3 +146,49 @@ def truncate_content(content: str, max_chars: int = 50_000) -> str:
     if len(content) <= max_chars:
         return content
     return content[:max_chars] + "\n\n# [DevLens: file truncated for token budget]"
+
+
+def extract_tarball_files(
+    tar_bytes: bytes,
+    allowed_paths: set[str] | None = None,
+    max_file_size_kb: int = 500,
+) -> dict[str, str]:
+    """
+    Extract text files from a downloaded GitHub tarball in-memory safely.
+    Strips GitHub's top-level directory prefix ('org-repo-sha/...').
+    Consumes zero additional API calls.
+    """
+    files: dict[str, str] = {}
+    try:
+        with tarfile.open(fileobj=io.BytesIO(tar_bytes), mode="r:*") as tar:
+            for member in tar.getmembers():
+                if not member.isfile():
+                    continue
+
+                parts = member.name.split("/", 1)
+                if len(parts) < 2:
+                    continue
+                rel_path = parts[1]
+
+                if allowed_paths is not None and rel_path not in allowed_paths:
+                    continue
+
+                if member.size > max_file_size_kb * 1024:
+                    continue
+
+                f = tar.extractfile(member)
+                if f is None:
+                    continue
+
+                try:
+                    raw = f.read()
+                    if b"\x00" in raw[:1024]:
+                        continue
+                    text = raw.decode("utf-8", errors="replace")
+                    files[rel_path] = truncate_content(text)
+                except Exception:
+                    continue
+    except Exception:
+        pass
+    return files
+

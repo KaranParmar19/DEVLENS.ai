@@ -127,6 +127,14 @@ class GitHubClient:
                             raise RuntimeError(
                                 f"GitHub rate limit exceeded after all retries for {path}"
                             )
+
+                    # Fail fast if wait is long instead of hanging worker thread for an hour
+                    if wait > 60:
+                        raise RuntimeError(
+                            f"GitHub API rate limit exceeded ({wait}s until reset). "
+                            "Please connect your GitHub account via Settings or provide a GitHub Personal Access Token."
+                        )
+
                     logger.warning("github_rate_limited", path=path, wait_seconds=wait)
                     await asyncio.sleep(wait)
                     continue
@@ -222,6 +230,28 @@ class GitHubClient:
             return raw
         except (httpx.HTTPStatusError, UnicodeDecodeError, Exception) as exc:
             logger.debug("file_fetch_skipped", path=path, reason=str(exc))
+            return None
+
+    async def download_tarball(
+        self, owner: str, name: str, branch: str = "main"
+    ) -> bytes | None:
+        """
+        Download repository contents as a single gzipped tarball.
+        Consumes only 1 GitHub API request regardless of repository size.
+        """
+        try:
+            resp = await self._client.get(
+                f"/repos/{owner}/{name}/tarball/{branch}",
+                follow_redirects=True,
+                timeout=httpx.Timeout(connect=15.0, read=120.0, write=15.0, pool=10.0),
+            )
+            if resp.status_code == 200:
+                logger.info("tarball_downloaded", owner=owner, name=name, bytes=len(resp.content))
+                return resp.content
+            logger.warning("tarball_download_status", status=resp.status_code)
+            return None
+        except Exception as exc:
+            logger.warning("tarball_download_failed", error=str(exc))
             return None
 
     # ── Batch File Fetcher (BUG-01 FIXED) ─────────────────────────────────

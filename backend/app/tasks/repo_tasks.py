@@ -38,7 +38,12 @@ from app.models.repository import Repository, RepoStatus
 from app.models.analysis_job import AnalysisJob, JobStatus
 from app.models.session import Session
 from app.core.github_client import GitHubClient, parse_github_url
-from app.core.file_utils import filter_file_tree, is_binary_content, truncate_content
+from app.core.file_utils import (
+    filter_file_tree,
+    is_binary_content,
+    truncate_content,
+    extract_tarball_files,
+)
 from app.core.language_detector import detect_language, detect_monorepo, detect_entry_points
 from app.core.chunker import chunk_file
 from app.core.graph_builder import GraphBuilder
@@ -267,17 +272,26 @@ async def _ingest_pipeline(
             },
         })
 
-        # ── Fetch all file contents ───────────────────────────────────────
-        # BUG-01 FIX: pass the already-built size_map; no second tree fetch.
+        # ── Fetch all file contents (1 API call via single tarball archive) ───
         file_contents: dict[str, str] = {}
         async with GitHubClient(user_token=user_github_token) as gh:
-            async for repo_file in gh.iter_repo_files(
-                owner, name, effective_branch, allowed_paths, size_map
-            ):
-                if not is_binary_content(repo_file.content):
-                    lang = detect_language(repo_file.path)
-                    repo_file.language = lang
-                    file_contents[repo_file.path] = truncate_content(repo_file.content)
+            tar_bytes = await gh.download_tarball(owner, name, effective_branch)
+            if tar_bytes:
+                logger.info("ingesting_via_tarball", owner=owner, name=name)
+                file_contents = extract_tarball_files(
+                    tar_bytes, set(allowed_paths), settings.max_file_size_kb
+                )
+
+            # Fallback to Contents API if tarball unavailable
+            if not file_contents:
+                logger.info("tarball_unavailable_falling_back_to_contents_api")
+                async for repo_file in gh.iter_repo_files(
+                    owner, name, effective_branch, allowed_paths, size_map
+                ):
+                    if not is_binary_content(repo_file.content):
+                        lang = detect_language(repo_file.path)
+                        repo_file.language = lang
+                        file_contents[repo_file.path] = truncate_content(repo_file.content)
 
         logger.info(
             "files_fetched",
