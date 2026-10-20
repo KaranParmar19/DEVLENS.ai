@@ -8,8 +8,8 @@
  *   const result = await api.analyze('https://github.com/org/repo');
  */
 
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
-const API_KEY  = import.meta.env.VITE_API_KEY  ?? '';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_KEY  = import.meta.env.VITE_API_KEY  || 'dev-api-key-change-in-production';
 
 // ── Base fetch wrapper ──────────────────────────────────────────────────
 
