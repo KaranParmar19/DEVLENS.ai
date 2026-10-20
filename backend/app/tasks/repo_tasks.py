@@ -333,9 +333,8 @@ async def _ingest_pipeline(
 
         vector_store = VectorStore(db, repo_id)
 
-        # Delete old chunks if re-indexing an existing repo
-        if repo.status == RepoStatus.READY:
-            await vector_store.delete_all()
+        # Always clear old chunks: a previous FAILED run may have left partial rows
+        await vector_store.delete_all()
 
         # Chunk all files
         all_chunks = []
@@ -348,6 +347,11 @@ async def _ingest_pipeline(
 
         # BUG-07 FIX: upsert_chunks now commits sub-batches internally.
         chunk_count = await vector_store.upsert_chunks(all_chunks)
+
+        # Record honestly whether semantic (vector) search is available
+        graph_cache.setdefault("meta", {})["search_mode"] = (
+            "semantic" if vector_store.semantic_enabled else "keyword"
+        )
 
         emit({
             "type": "step_done",

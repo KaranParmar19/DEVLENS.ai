@@ -87,6 +87,8 @@ class GraphMeta(BaseModel):
     is_monorepo: bool
     commit_sha: str | None
     cycles: list[list[str]] = []  # Detected circular dependency loops
+    # "semantic" = real embeddings + keyword search; "keyword" = keyword/symbol search only
+    search_mode: str = "keyword"
 
 
 class GraphData(BaseModel):

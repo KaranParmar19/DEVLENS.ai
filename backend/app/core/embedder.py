@@ -43,16 +43,25 @@ def _get_openai_client() -> AsyncOpenAI:
     return AsyncOpenAI(**kwargs)
 
 
+class EmbeddingUnavailableError(RuntimeError):
+    """Raised when the embedding provider cannot return real vectors
+    (quota exhausted, auth failure, network error). Callers must degrade to
+    keyword search instead of using fake vectors."""
+
+
 async def embed_texts(texts: list[str]) -> list[list[float]]:
     """
-    Embed a list of strings using OpenAI text-embedding-3-small.
+    Embed a list of strings using the configured OpenAI-compatible provider.
 
     Features:
     - Batches requests to stay within API limits.
-    - Guards against exceeding token budgets per batch.
     - Retries transient failures with exponential back-off + jitter.
     - Caps total inputs at MAX_CHUNKS_PER_INGESTION for cost control.
     - Returns a list of embedding vectors in the same order as inputs.
+
+    Raises EmbeddingUnavailableError if real embeddings cannot be produced.
+    No fake/placeholder vectors are ever returned: meaningless vectors would
+    silently corrupt similarity search.
 
     BUG-06 FIX: Replaced bare 3-attempt loop with robust retry logic.
     """
@@ -68,6 +77,9 @@ async def embed_texts(texts: list[str]) -> list[list[float]]:
         )
         texts = texts[:MAX_CHUNKS_PER_INGESTION]
 
+    if not settings.openai_api_key.strip() or settings.openai_api_key == "sk-YOUR_OPENAI_KEY_HERE":
+        raise EmbeddingUnavailableError("No embedding API key configured.")
+
     client = _get_openai_client()
     all_embeddings: list[list[float]] = []
 
@@ -79,33 +91,16 @@ async def embed_texts(texts: list[str]) -> list[list[float]]:
         return all_embeddings
     except Exception as exc:
         logger.warning(
-            "embedding_api_unavailable_using_deterministic_fallback",
-            error=str(exc),
+            "embedding_api_unavailable",
+            error=str(exc)[:300],
             chunk_count=len(texts),
         )
-        return _generate_fallback_embeddings(texts)
+        raise EmbeddingUnavailableError(str(exc)[:300]) from exc
     finally:
         try:
             await client.close()
         except Exception:
             pass
-
-
-def _generate_fallback_embeddings(texts: list[str]) -> list[list[float]]:
-    """
-    Generate deterministic pseudorandom embedding vectors.
-    Ensures identical texts yield identical vectors and ingestion never halts
-    due to third-party embedding rate limits or quotas.
-    """
-    import random
-
-    fallback_embeddings: list[list[float]] = []
-    dim = settings.openai_embedding_dimensions or 1536
-    for text in texts:
-        seed = sum(ord(c) for c in text) & 0xFFFFFFFF
-        rng = random.Random(seed)
-        fallback_embeddings.append([rng.uniform(-0.1, 0.1) for _ in range(dim)])
-    return fallback_embeddings
 
 
 async def _embed_batch_with_retry(

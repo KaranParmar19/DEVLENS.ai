@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.code_chunk import CodeChunk
 from app.core.chunker import Chunk
-from app.core.embedder import embed_texts, embed_single
+from app.core.embedder import embed_texts, embed_single, EmbeddingUnavailableError
 from app.config import get_settings
 
 logger = structlog.get_logger(__name__)
@@ -35,6 +35,8 @@ class VectorStore:
     def __init__(self, db: AsyncSession, repo_id: uuid.UUID):
         self.db = db
         self.repo_id = repo_id
+        # Set by upsert_chunks: True only if every chunk got a real embedding
+        self.semantic_enabled: bool = False
 
     # ── Upsert ────────────────────────────────────────────────────────────
 
@@ -54,9 +56,24 @@ class VectorStore:
 
         total_stored = 0
 
-        # Embed all chunks in one batched call (embed_texts handles sub-batching)
+        # Embed all chunks in one batched call (embed_texts handles sub-batching).
+        # If the provider is unavailable (quota/auth/network) we store chunks
+        # with NULL embeddings and rely on keyword/symbol search. We never
+        # store fake vectors.
         texts = [c.content for c in chunks]
-        embeddings = await embed_texts(texts)
+        self.semantic_enabled = True
+        try:
+            embeddings: list[list[float] | None] = list(await embed_texts(texts))
+        except EmbeddingUnavailableError as exc:
+            logger.warning("semantic_search_disabled_for_repo", repo_id=str(self.repo_id), reason=str(exc))
+            embeddings = []
+            self.semantic_enabled = False
+
+        # Chunks beyond the embedding cap (or all of them on failure) get NULL
+        if len(embeddings) < len(chunks):
+            if embeddings:
+                self.semantic_enabled = False  # partially embedded
+            embeddings.extend([None] * (len(chunks) - len(embeddings)))
 
         # Insert in DB_INSERT_BATCH_SIZE sub-batches with commits
         for batch_start in range(0, len(chunks), DB_INSERT_BATCH_SIZE):
@@ -197,8 +214,19 @@ class VectorStore:
             except Exception as e:
                 logger.warning("keyword_search_failed", error=str(e))
 
-        # 2. Semantic pgvector Cosine Distance Search
+        # 2. Semantic pgvector Cosine Distance Search (only over embedded chunks)
         try:
+            has_vectors = (
+                await self.db.execute(
+                    select(CodeChunk.id)
+                    .where(CodeChunk.repo_id == self.repo_id, CodeChunk.embedding.is_not(None))
+                    .limit(1)
+                )
+            ).first() is not None
+            if not has_vectors:
+                # Keyword-only repo: skip the (slow, failing) embedding API call
+                results.sort(key=lambda r: r.get("similarity", 0), reverse=True)
+                return results[:top_k]
             query_embedding = await embed_single(query)
             stmt = (
                 select(
@@ -206,6 +234,7 @@ class VectorStore:
                     CodeChunk.embedding.cosine_distance(query_embedding).label("distance"),
                 )
                 .where(CodeChunk.repo_id == self.repo_id)
+                .where(CodeChunk.embedding.is_not(None))
             )
             if language_filter:
                 stmt = stmt.where(CodeChunk.language == language_filter)
