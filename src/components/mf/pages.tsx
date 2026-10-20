@@ -3,16 +3,17 @@ import { PageHero, Pill, Reveal, SiteLayout } from "./site-layout";
 
 /* ═══ FEATURES ═══════════════════════════════════════════════════════ */
 const DETAIL = [
-  { n: "01", t: "Architecture map", d: "Every file becomes a node, every import an edge. Nodes are clustered by package and sized by coupling, so the load-bearing files are obvious at a glance.", pts: ["Force-directed layout with module hulls", "Complexity & coupling scores per node", "Blast-radius highlight on selection", "Export to Mermaid or JSON"] },
+  { n: "01", t: "Architecture map", d: "Every file becomes a node, every import an edge. Nodes are clustered by package and sized by coupling, so the load-bearing files are obvious at a glance.", pts: ["Force-directed layout with module hulls", "Complexity & coupling scores per node", "Blast-radius highlight on selection", "Export to Mermaid, PlantUML or JSON"] },
   { n: "02", t: "Code flow", d: "Pick an entry point and follow the call path down to the data layer. Step forward and back to see how a request actually moves.", pts: ["Entry-point detection", "Hop-by-hop stepper", "Cycle and hotspot flags", "Deep link to any step"] },
-  { n: "03", t: "Ask DevLens", d: "A streaming copilot grounded in the parsed repository. Mention files with @ to pin context, and every answer lists its sources.", pts: ["Citations to file and line", "@mention to force context", "Suggested questions per repo", "Conversation memory per session"] },
-  { n: "04", t: "Onboarding doc", d: "A readable guide generated from the graph: architecture overview, invariants, critical files and the traps to avoid.", pts: ["Markdown you can ship to your wiki", "Updates when you re-index", "Copy-ready code snippets", "Share by link"] },
+  { n: "03", t: "Drift timeline", d: "Track architectural shifts and dependency blast radius across Git commit history. Spot regressions and structural decay before merging.", pts: ["Commit-by-commit timeline stepper", "Automated drift risk ratings (Low/Mod/High)", "Dependency delta & touched files breakdown", "One-click AI copilot architectural audits"] },
+  { n: "04", t: "Ask DevLens", d: "A streaming copilot grounded in the parsed repository. Mention files with @ to pin context, and every answer lists its sources.", pts: ["Citations to file and line", "@mention to force context", "Suggested questions per repo", "Conversation memory per session"] },
+  { n: "05", t: "Onboarding doc", d: "A readable guide generated from the graph: architecture overview, invariants, critical files and the traps to avoid.", pts: ["Markdown you can ship to your wiki", "Updates when you re-index", "Copy-ready code snippets", "Share by link"] },
 ];
 
 export function FeaturesPage() {
   return (
     <SiteLayout>
-      <PageHero eyebrow="Features" title={<>Everything you need to <span className="mf-serif-i">understand</span> a repo.</>} lead="Four views over one parsed representation of your code — so the map, the flow, the answers and the docs never disagree." />
+      <PageHero eyebrow="Features" title={<>Everything you need to <span className="mf-serif-i">understand</span> a repo.</>} lead="Five views over one parsed representation of your code — so the map, the flow, the drift, the answers and the docs never disagree." />
       <section style={{ paddingBottom: "clamp(72px,10vw,144px)" }}>
         <div className="mf-wrap">
           {DETAIL.map((f, i) => (

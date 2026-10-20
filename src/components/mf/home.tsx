@@ -7,8 +7,9 @@ const TRY = ["facebook/react", "vercel/next.js", "tailwindlabs/tailwindcss", "fa
 const FEATURES = [
   { n: "01", t: "Architecture map", d: "A live dependency graph of every module, clustered by package, with coupling and complexity scored per node." },
   { n: "02", t: "Code flow", d: "Trace a request from entry point to data layer. Scrub through the call path one hop at a time." },
-  { n: "03", t: "Ask DevLens", d: "A copilot grounded in the parsed AST. Every answer cites the files it came from." },
-  { n: "04", t: "Onboarding doc", d: "A generated walkthrough: what matters, what's fragile, and where to start reading." },
+  { n: "03", t: "Drift timeline", d: "Step through commit history to assess blast radius, dependency deltas, and architectural drift before shipping." },
+  { n: "04", t: "Ask DevLens", d: "A copilot grounded in the parsed AST. Every answer cites the files it came from." },
+  { n: "05", t: "Onboarding doc", d: "A generated walkthrough: what matters, what's fragile, and where to start reading." },
 ];
 
 const STEPS = [
@@ -69,7 +70,7 @@ function ProductFrame() {
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <Pill dot={false}>Architecture</Pill><span className="mf-pill" style={{ opacity: .5 }}>Code flow</span><span className="mf-pill" style={{ opacity: .5 }}>Onboarding</span>
+            <Pill dot={false}>Architecture</Pill><span className="mf-pill" style={{ opacity: .5 }}>Code flow</span><span className="mf-pill" style={{ opacity: .5 }}>Drift timeline</span><span className="mf-pill" style={{ opacity: .5 }}>Onboarding</span>
           </div>
           <div style={{ flex: 1, minHeight: 260 }}><MiniGraph /></div>
         </div>
