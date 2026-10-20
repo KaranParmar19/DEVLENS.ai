@@ -5,6 +5,7 @@ import { CommandPalette, useCommandPalette } from "@/components/command-palette"
 import { repoHistory, type RepoHistoryEntry } from "@/lib/repo-history";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
+import { normalizeRepoUrl } from "@/lib/utils";
 
 type DashboardSearch = {
   repo?: string;
@@ -70,7 +71,8 @@ function RepoCard({ entry, onOpen, onDelete }: { entry: RepoHistoryEntry; onOpen
 }
 
 function DashboardPage() {
-  const { repo, jobId, sessionId } = Route.useSearch();
+  const { repo: rawRepo, jobId, sessionId } = Route.useSearch();
+  const repo = useMemo(() => (rawRepo ? normalizeRepoUrl(rawRepo) : undefined), [rawRepo]);
   const navigate = useNavigate({ from: Route.fullPath });
   const [inputRepo, setInputRepo] = useState("");
   const [version, setVersion] = useState(0);
@@ -81,9 +83,9 @@ function DashboardPage() {
   const history = useMemo(() => repoHistory.getAll(), [version, repo]);
 
   const open = (value: string) => {
-    const raw = value.trim();
-    if (!raw) return;
-    navigate({ search: { repo: raw.startsWith("http") ? raw : `https://github.com/${raw}` } });
+    const normalized = normalizeRepoUrl(value);
+    if (!normalized) return;
+    navigate({ search: { repo: normalized } });
   };
 
   const paletteActions = [

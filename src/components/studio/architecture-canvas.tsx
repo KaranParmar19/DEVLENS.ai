@@ -97,6 +97,7 @@ export function ArchitectureCanvas({
     if (matched) {
       setSelectedNodeId(matched.id);
       centerNode(matched);
+      setInspectingNode(matched);
     }
   }, [activeFile, nodes, centerNode]);
 

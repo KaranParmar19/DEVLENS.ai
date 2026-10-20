@@ -82,7 +82,23 @@ class DevLensAgent:
         node_map = {n["id"]: n for n in nodes}
         all_paths = list(node_map.keys())
 
-        query_lower = query.lower()
+        query_lower = query.lower().strip()
+
+        # 0. Slash Command Parsing & Keyword Normalization
+        clean_query = query.strip()
+        if clean_query.startswith("/blast"):
+            arg = clean_query[len("/blast"):].strip()
+            query_lower = f"blast radius breaking changes impact of {arg}".lower() if arg else "blast radius and high impact modules"
+        elif clean_query.startswith("/cycles"):
+            query_lower = "detect circular dependency cycles in modules"
+        elif clean_query.startswith("/explain"):
+            arg = clean_query[len("/explain"):].strip()
+            query_lower = f"explain architecture role dependencies of {arg}".lower() if arg else "explain core architecture overview"
+        elif clean_query.startswith("/test"):
+            arg = clean_query[len("/test"):].strip()
+            query_lower = f"generate unit tests for {arg}".lower() if arg else "generate unit tests"
+        elif clean_query.startswith("/onboarding"):
+            query_lower = "onboarding guide key entry points architecture overview"
 
         # 1. Check for specific file mentions in the query
         target_file = None
@@ -136,6 +152,19 @@ class DevLensAgent:
                 context_sections.append("### Architectural Entry Points:\n" + "\n".join(entry_lines))
                 for n in entry_nodes[:6]:
                     sources.add(n["id"])
+
+        # 4b. Target File Source Injection for Unit Test Generation
+        if "test" in query_lower and target_file:
+            try:
+                file_tool = self._tool_map.get("read_file")
+                if file_tool:
+                    file_src = file_tool.func(target_file)
+                    ext = target_file.split(".")[-1] if "." in target_file else "txt"
+                    context_sections.append(
+                        f"### Source Code for Unit Test Generation (`{target_file}`):\n```{ext}\n{file_src[:1400]}\n```"
+                    )
+            except Exception as e:
+                logger.warning("context_test_fetch_failed", error=str(e))
 
         # 5. Hybrid Semantic & Symbol Search
         try:

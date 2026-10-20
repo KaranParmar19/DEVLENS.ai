@@ -12,6 +12,8 @@ interface TelemetryModalProps {
     sizeKb: number;
   } | null;
   jobId?: string | null;
+  error?: string | null;
+  onRetry?: () => void;
   onCancel: () => void;
   onBypass?: () => void;
 }
@@ -22,6 +24,8 @@ export function TelemetryModal({
   progressPct,
   repoMeta,
   jobId,
+  error,
+  onRetry,
   onCancel,
   onBypass,
 }: TelemetryModalProps) {
@@ -246,12 +250,75 @@ export function TelemetryModal({
               style={{
                 width: `${progressPct}%`,
                 height: "100%",
-                background: "#ffffff",
-                boxShadow: "0 0 16px rgba(255,255,255,0.8)",
+                background: error ? "#ef4444" : "#ffffff",
+                boxShadow: error ? "0 0 16px rgba(239,68,68,0.8)" : "0 0 16px rgba(255,255,255,0.8)",
                 transition: "width 400ms cubic-bezier(0.22, 1, 0.36, 1)",
               }}
             />
           </div>
+
+          {/* Analysis Error Alert */}
+          {error && (
+            <div
+              style={{
+                marginTop: 20,
+                padding: "16px 20px",
+                borderRadius: 12,
+                background: "rgba(239, 68, 68, 0.12)",
+                border: "1px solid rgba(239, 68, 68, 0.35)",
+                color: "#fca5a5",
+                fontFamily: "var(--mf-mono, monospace)",
+                fontSize: "0.8125rem",
+                display: "flex",
+                flexDirection: "column",
+                gap: 10,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 600 }}>
+                <span>⚠</span>
+                <span>Analysis Issue Detected:</span>
+              </div>
+              <div style={{ color: "#ffffff", opacity: 0.9, lineHeight: 1.45 }}>{error}</div>
+              <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                {onRetry && (
+                  <button
+                    type="button"
+                    onClick={onRetry}
+                    style={{
+                      padding: "6px 14px",
+                      borderRadius: 999,
+                      background: "#ffffff",
+                      color: "#000000",
+                      fontWeight: 600,
+                      fontSize: "0.75rem",
+                      cursor: "pointer",
+                      border: "none",
+                    }}
+                  >
+                    Retry Analysis
+                  </button>
+                )}
+                {onBypass && (
+                  <button
+                    type="button"
+                    onClick={onBypass}
+                    style={{
+                      padding: "6px 14px",
+                      borderRadius: 999,
+                      background: "transparent",
+                      color: "#ffffff",
+                      border: "1px solid rgba(255, 255, 255, 0.3)",
+                      fontWeight: 500,
+                      fontSize: "0.75rem",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Open in Studio Mode ↗
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Direct Bypass Button */}
           {onBypass && (

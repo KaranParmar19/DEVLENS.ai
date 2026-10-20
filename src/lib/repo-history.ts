@@ -39,6 +39,9 @@ export interface StoredMessage {
 
 function load(): RepoHistoryEntry[] {
   try {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      return [];
+    }
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? (JSON.parse(raw) as RepoHistoryEntry[]) : [];
   } catch {
@@ -48,6 +51,9 @@ function load(): RepoHistoryEntry[] {
 
 function save(entries: RepoHistoryEntry[]) {
   try {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      return;
+    }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(entries.slice(0, MAX_ENTRIES)));
   } catch {
     // storage quota exceeded — ignore
@@ -56,9 +62,11 @@ function save(entries: RepoHistoryEntry[]) {
 
 export const repoHistory = {
   getAll(): RepoHistoryEntry[] {
-    return load().sort(
-      (a, b) => new Date(b.lastVisitedAt).getTime() - new Date(a.lastVisitedAt).getTime()
-    );
+    return load().sort((a, b) => {
+      const timeB = new Date(b.lastVisitedAt || b.analyzedAt || 0).getTime();
+      const timeA = new Date(a.lastVisitedAt || a.analyzedAt || 0).getTime();
+      return timeB - timeA;
+    });
   },
 
   upsert(entry: Omit<RepoHistoryEntry, 'lastVisitedAt'>): RepoHistoryEntry {

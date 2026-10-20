@@ -290,6 +290,8 @@ export function StudioWorkspace({
         progressPct={analysisState.progressPct}
         repoMeta={analysisState.repoMeta}
         jobId={analysisState.jobId}
+        error={analysisState.error}
+        onRetry={() => startAnalysis(repoUrl)}
         onCancel={onClose}
         onBypass={() => setIsProcessingDone(true)}
       />
@@ -411,6 +413,7 @@ export function StudioWorkspace({
           collapsed={copilotCollapsed}
           onToggleCollapse={() => setCopilotCollapsed((v) => !v)}
           graphData={analysisState.graphData}
+          activeFile={activeFile}
         />
       </div>
 

@@ -74,37 +74,38 @@ async def embed_texts(texts: list[str]) -> list[list[float]]:
     try:
         for batch_start in range(0, len(texts), EMBED_BATCH_SIZE):
             batch = texts[batch_start : batch_start + EMBED_BATCH_SIZE]
-
             embedding_result = await _embed_batch_with_retry(client, batch, batch_start)
             all_embeddings.extend(embedding_result)
+        return all_embeddings
     except Exception as exc:
-        is_auth_error = (
-            settings.openai_api_key == "sk-YOUR_OPENAI_KEY_HERE"
-            or not settings.openai_api_key.strip()
-            or "auth" in str(exc).lower()
-            or "401" in str(exc)
-            or "apikey" in str(exc).lower()
+        logger.warning(
+            "embedding_api_unavailable_using_deterministic_fallback",
+            error=str(exc),
+            chunk_count=len(texts),
         )
-        if is_auth_error:
-            logger.warning(
-                "openai_key_invalid_using_fallback_embeddings",
-                error=str(exc),
-                chunk_count=len(texts),
-            )
-            import random
-            fallback_embeddings = []
-            for text in texts:
-                # Deterministic seed using hash of text to represent same vector for same text
-                seed = sum(ord(c) for c in text) & 0xffffffff
-                rng = random.Random(seed)
-                fallback_embeddings.append(
-                    [rng.uniform(-0.1, 0.1) for _ in range(settings.openai_embedding_dimensions)]
-                )
-            return fallback_embeddings
-        raise
+        return _generate_fallback_embeddings(texts)
+    finally:
+        try:
+            await client.close()
+        except Exception:
+            pass
 
-    await client.close()
-    return all_embeddings
+
+def _generate_fallback_embeddings(texts: list[str]) -> list[list[float]]:
+    """
+    Generate deterministic pseudorandom embedding vectors.
+    Ensures identical texts yield identical vectors and ingestion never halts
+    due to third-party embedding rate limits or quotas.
+    """
+    import random
+
+    fallback_embeddings: list[list[float]] = []
+    dim = settings.openai_embedding_dimensions or 1536
+    for text in texts:
+        seed = sum(ord(c) for c in text) & 0xFFFFFFFF
+        rng = random.Random(seed)
+        fallback_embeddings.append([rng.uniform(-0.1, 0.1) for _ in range(dim)])
+    return fallback_embeddings
 
 
 async def _embed_batch_with_retry(
@@ -122,11 +123,14 @@ async def _embed_batch_with_retry(
 
     for attempt in range(MAX_RETRIES):
         try:
-            response = await client.embeddings.create(
-                model=settings.openai_embedding_model,
-                input=batch,
-                dimensions=settings.openai_embedding_dimensions,
-            )
+            embed_kwargs = {
+                "model": settings.openai_embedding_model,
+                "input": batch,
+            }
+            if "text-embedding-3" in settings.openai_embedding_model:
+                embed_kwargs["dimensions"] = settings.openai_embedding_dimensions
+
+            response = await client.embeddings.create(**embed_kwargs)
             embeddings = [item.embedding for item in response.data]
 
             logger.debug(
@@ -139,14 +143,17 @@ async def _embed_batch_with_retry(
 
         except RateLimitError as exc:
             last_exc = exc
-            # Respect Retry-After if present, else exponential back-off
-            retry_after = getattr(exc, "response", None)
-            if retry_after:
-                ra = retry_after.headers.get("retry-after")
-                wait = float(ra) if ra else (2 ** attempt * 5)
-            else:
-                wait = 2 ** attempt * 5
-            wait += random.uniform(0, 2)  # jitter
+            err_str = str(exc).lower()
+            # If quota is exhausted or after 1 retry, fail fast to fallback embeddings
+            if "quota" in err_str or "resource_exhausted" in err_str or "exhausted" in err_str or attempt >= 1:
+                logger.warning(
+                    "embedding_quota_or_rate_limit_fail_fast_to_fallback",
+                    error=str(exc),
+                    attempt=attempt + 1,
+                )
+                raise
+
+            wait = 2.0 + random.uniform(0, 1)  # brief 2-3s retry
             logger.warning(
                 "openai_rate_limit",
                 attempt=attempt + 1,

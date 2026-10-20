@@ -37,6 +37,25 @@ export function useChat(sessionId: string | null) {
   const [error, setError] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
 
+  // Rehydrate history when sessionId becomes available
+  useEffect(() => {
+    if (sessionId) {
+      const stored = repoHistory.getChatMessages(sessionId);
+      if (stored && stored.length > 0) {
+        setMessages((current) => {
+          if (current.length === 0) {
+            return stored.map((m) => ({
+              role: m.role,
+              content: m.content,
+              sources: m.sources,
+            }));
+          }
+          return current;
+        });
+      }
+    }
+  }, [sessionId]);
+
   // Sync to history on change
   useEffect(() => {
     if (sessionId && messages.length > 0) {

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Pill, Reveal, SiteLayout } from "./site-layout";
+import { normalizeRepoUrl } from "@/lib/utils";
 
 const TRY = ["facebook/react", "vercel/next.js", "tailwindlabs/tailwindcss", "fastapi/fastapi"];
 
@@ -92,9 +93,12 @@ export function HomePage() {
   const [repo, setRepo] = useState("");
 
   const go = (value: string) => {
-    const raw = value.trim();
-    if (!raw) { navigate({ to: "/dashboard" }); return; }
-    navigate({ to: "/dashboard", search: { repo: raw.startsWith("http") ? raw : `https://github.com/${raw}` } });
+    const normalized = normalizeRepoUrl(value);
+    if (!normalized) {
+      navigate({ to: "/dashboard" });
+      return;
+    }
+    navigate({ to: "/dashboard", search: { repo: normalized } });
   };
 
   return (

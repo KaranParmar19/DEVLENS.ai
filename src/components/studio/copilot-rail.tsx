@@ -2,6 +2,14 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import type { ChatMessage } from "@/hooks/useChat";
 import type { GraphData } from "./studio-types";
 
+export const SLASH_COMMANDS = [
+  { cmd: "/blast", label: "💥 /blast", desc: "Calculate blast radius and ripple impact of a module", requiresFile: true },
+  { cmd: "/cycles", label: "🔄 /cycles", desc: "Detect circular import dependency cycles in the architecture graph", requiresFile: false },
+  { cmd: "/explain", label: "🔍 /explain", desc: "Explain architecture, responsibilities, callers, and complexity", requiresFile: true },
+  { cmd: "/test", label: "🧪 /test", desc: "Generate unit test specifications covering functions & classes", requiresFile: true },
+  { cmd: "/onboarding", label: "📋 /onboarding", desc: "Overview of key architectural entry points and execution flows", requiresFile: false },
+];
+
 interface CopilotRailProps {
   repoLabel: string;
   messages: ChatMessage[];
@@ -12,6 +20,7 @@ interface CopilotRailProps {
   collapsed?: boolean;
   onToggleCollapse?: () => void;
   graphData?: GraphData | null;
+  activeFile?: string | null;
 }
 
 export function CopilotRail({
@@ -24,14 +33,57 @@ export function CopilotRail({
   collapsed = false,
   onToggleCollapse,
   graphData,
+  activeFile,
 }: CopilotRailProps) {
   const [input, setInput] = useState("");
   const [atQuery, setAtQuery] = useState<string | null>(null);
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
+  const [slashQuery, setSlashQuery] = useState<string | null>(null);
+  const [selectedSlashIndex, setSelectedSlashIndex] = useState(0);
   const [copiedCodeIdx, setCopiedCodeIdx] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Global keyboard shortcut: ⌘J or Ctrl+J focuses Copilot prompt
+  useEffect(() => {
+    const handleGlobalKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "j") {
+        e.preventDefault();
+        if (collapsed && onToggleCollapse) {
+          onToggleCollapse();
+        }
+        setTimeout(() => inputRef.current?.focus(), 60);
+      }
+    };
+    window.addEventListener("keydown", handleGlobalKey);
+    return () => window.removeEventListener("keydown", handleGlobalKey);
+  }, [collapsed, onToggleCollapse]);
+
+  // Export Chat notes as Markdown
+  const handleExportNotes = () => {
+    if (messages.length === 0) return;
+    const md = [
+      `# DevLens Copilot Architectural Notes — ${repoLabel}`,
+      `*Generated on ${new Date().toLocaleString()} via DevLens AI*\n`,
+      ...messages.map((m) => {
+        const role = m.role === "user" ? "### 👤 User Inquiry" : "### 🤖 DevLens Copilot";
+        const sources =
+          m.sources && m.sources.length > 0
+            ? `\n\n**Cited Sources:**\n${m.sources.map((s) => `- \`${s}\``).join("\n")}`
+            : "";
+        return `${role}\n\n${m.content}${sources}\n\n---\n`;
+      }),
+    ].join("\n");
+
+    const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${repoLabel.replace(/\//g, "-")}-copilot-notes.md`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
 
   // Auto-scroll on new messages or streaming deltas
   useEffect(() => {
@@ -91,19 +143,36 @@ export function CopilotRail({
       .slice(0, 6);
   }, [atQuery, allFiles]);
 
+  const matchingSlashCommands = useMemo(() => {
+    if (slashQuery === null) return [];
+    const q = slashQuery.toLowerCase();
+    return SLASH_COMMANDS.filter((s) => s.cmd.slice(1).toLowerCase().startsWith(q));
+  }, [slashQuery]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setInput(val);
 
+    // Handle @ mentions
     const lastAt = val.lastIndexOf("@");
     if (lastAt !== -1 && lastAt === val.length - 1) {
       setAtQuery("");
       setSelectedMentionIndex(0);
+      setSlashQuery(null);
     } else if (lastAt !== -1 && !val.slice(lastAt).includes(" ")) {
       setAtQuery(val.slice(lastAt + 1));
       setSelectedMentionIndex(0);
+      setSlashQuery(null);
     } else {
       setAtQuery(null);
+    }
+
+    // Handle / slash commands
+    if (val.startsWith("/") && !val.includes(" ")) {
+      setSlashQuery(val.slice(1));
+      setSelectedSlashIndex(0);
+    } else {
+      setSlashQuery(null);
     }
   };
 
@@ -118,16 +187,31 @@ export function CopilotRail({
     inputRef.current?.focus();
   };
 
+  const handleSelectSlashCommand = (cmd: typeof SLASH_COMMANDS[0]) => {
+    if (cmd.requiresFile && activeFile) {
+      setInput(`${cmd.cmd} ${activeFile}`);
+    } else {
+      setInput(`${cmd.cmd} `);
+    }
+    setSlashQuery(null);
+    inputRef.current?.focus();
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (atQuery !== null && matchingFiles.length > 0) {
       handleSelectMention(matchingFiles[selectedMentionIndex]);
       return;
     }
+    if (slashQuery !== null && matchingSlashCommands.length > 0) {
+      handleSelectSlashCommand(matchingSlashCommands[selectedSlashIndex]);
+      return;
+    }
     const q = input.trim();
     if (!q || isStreaming) return;
     setInput("");
     setAtQuery(null);
+    setSlashQuery(null);
     onSendMessage(q);
   };
 
@@ -136,14 +220,37 @@ export function CopilotRail({
       if (e.key === "ArrowDown") {
         e.preventDefault();
         setSelectedMentionIndex((prev) => (prev + 1) % matchingFiles.length);
+        return;
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
         setSelectedMentionIndex((prev) => (prev - 1 + matchingFiles.length) % matchingFiles.length);
+        return;
       } else if (e.key === "Enter" || e.key === "Tab") {
         e.preventDefault();
         handleSelectMention(matchingFiles[selectedMentionIndex]);
+        return;
       } else if (e.key === "Escape") {
         setAtQuery(null);
+        return;
+      }
+    }
+
+    if (slashQuery !== null && matchingSlashCommands.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSelectedSlashIndex((prev) => (prev + 1) % matchingSlashCommands.length);
+        return;
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSelectedSlashIndex((prev) => (prev - 1 + matchingSlashCommands.length) % matchingSlashCommands.length);
+        return;
+      } else if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        handleSelectSlashCommand(matchingSlashCommands[selectedSlashIndex]);
+        return;
+      } else if (e.key === "Escape") {
+        setSlashQuery(null);
+        return;
       }
     }
   };
@@ -479,22 +586,43 @@ export function CopilotRail({
 
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {messages.length > 0 && (
-            <button
-              type="button"
-              onClick={onClearChat}
-              style={{
-                background: "transparent",
-                border: "none",
-                color: "rgba(255,255,255,0.45)",
-                fontFamily: "var(--mf-mono, monospace)",
-                fontSize: "0.6875rem",
-                cursor: "pointer",
-                padding: "2px 6px",
-              }}
-              title="Clear message history"
-            >
-              Clear
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={handleExportNotes}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "rgba(255,255,255,0.6)",
+                  fontFamily: "var(--mf-mono, monospace)",
+                  fontSize: "0.6875rem",
+                  cursor: "pointer",
+                  padding: "2px 6px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 3,
+                }}
+                title="Export Q&A as Markdown file"
+              >
+                <span>⬇ Export</span>
+              </button>
+              <button
+                type="button"
+                onClick={onClearChat}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "rgba(255,255,255,0.45)",
+                  fontFamily: "var(--mf-mono, monospace)",
+                  fontSize: "0.6875rem",
+                  cursor: "pointer",
+                  padding: "2px 6px",
+                }}
+                title="Clear message history"
+              >
+                Clear
+              </button>
+            </>
           )}
 
           {onToggleCollapse && (
@@ -738,12 +866,119 @@ export function CopilotRail({
         </div>
       )}
 
+      {/* Slash Command Autocomplete Popover */}
+      {slashQuery !== null && matchingSlashCommands.length > 0 && (
+        <div
+          style={{
+            maxHeight: 200,
+            overflowY: "auto",
+            backgroundColor: "#111116",
+            border: "1px solid rgba(255,255,255,0.2)",
+            borderBottom: "none",
+            borderRadius: "6px 6px 0 0",
+            margin: "0 14px",
+            padding: "4px 0",
+            boxShadow: "0 -8px 24px rgba(0,0,0,0.5)",
+          }}
+        >
+          <div
+            style={{
+              padding: "4px 10px",
+              fontFamily: "var(--mf-mono, monospace)",
+              fontSize: "0.5625rem",
+              textTransform: "uppercase",
+              color: "rgba(255,255,255,0.4)",
+            }}
+          >
+            Slash Commands (/)
+          </div>
+          {matchingSlashCommands.map((cmd, idx) => (
+            <div
+              key={cmd.cmd}
+              onClick={() => handleSelectSlashCommand(cmd)}
+              style={{
+                padding: "8px 10px",
+                fontFamily: "var(--mf-mono, monospace)",
+                fontSize: "0.75rem",
+                color: idx === selectedSlashIndex ? "#ffffff" : "rgba(255,255,255,0.7)",
+                backgroundColor: idx === selectedSlashIndex ? "rgba(255,255,255,0.12)" : "transparent",
+                cursor: "pointer",
+                display: "flex",
+                flexDirection: "column",
+                gap: 2,
+              }}
+              onMouseEnter={() => setSelectedSlashIndex(idx)}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontWeight: 600, color: "#ffffff" }}>{cmd.label}</span>
+                <span style={{ fontSize: "0.625rem", opacity: 0.5 }}>Tab ↵</span>
+              </div>
+              <span style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.45)" }}>{cmd.desc}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Quick Slash Commands Toolbar */}
+      <div
+        style={{
+          display: "flex",
+          gap: 6,
+          overflowX: "auto",
+          padding: "8px 14px 4px",
+          backgroundColor: "#09090b",
+          borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+        }}
+      >
+        {SLASH_COMMANDS.map((cmd) => (
+          <button
+            key={cmd.cmd}
+            type="button"
+            onClick={() => {
+              if (cmd.requiresFile && activeFile) {
+                onSendMessage(`${cmd.cmd} ${activeFile}`);
+              } else if (!cmd.requiresFile) {
+                onSendMessage(cmd.cmd);
+              } else {
+                setInput(`${cmd.cmd} `);
+                inputRef.current?.focus();
+              }
+            }}
+            title={cmd.desc}
+            style={{
+              fontFamily: "var(--mf-mono, monospace)",
+              fontSize: "0.6875rem",
+              color: "rgba(255, 255, 255, 0.75)",
+              backgroundColor: "rgba(255, 255, 255, 0.05)",
+              border: "1px solid rgba(255, 255, 255, 0.12)",
+              borderRadius: 6,
+              padding: "3px 8px",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              transition: "all 0.15s ease",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.14)";
+              e.currentTarget.style.color = "#ffffff";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)";
+              e.currentTarget.style.color = "rgba(255, 255, 255, 0.75)";
+            }}
+          >
+            <span>{cmd.label}</span>
+          </button>
+        ))}
+      </div>
+
       {/* Chat Input Bar */}
       <form
         onSubmit={handleSubmit}
         style={{
-          padding: "12px 14px",
-          borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+          padding: "10px 14px 12px",
           backgroundColor: "#09090b",
         }}
       >

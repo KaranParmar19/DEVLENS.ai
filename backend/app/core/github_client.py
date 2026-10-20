@@ -351,14 +351,24 @@ def parse_github_url(url: str) -> tuple[str, str]:
       https://github.com/org/repo.git
       github.com/org/repo
       org/repo
+      https://github.com/github.com/org/repo (nested input defense)
     """
     url = url.strip().rstrip("/")
+    if url.endswith(".git"):
+        url = url[:-4]
+    # Clean up double github.com if accidentally prefixed
+    url = re.sub(
+        r"^(?:https?://)?(?:www\.)?github\.com/(?:https?://)?(?:www\.)?github\.com/",
+        "https://github.com/",
+        url,
+        flags=re.IGNORECASE,
+    )
     # Match: optional protocol + optional github.com/ + owner/name
-    match = re.match(r"(?:https?://)?(?:www\.)?github\.com/([^/]+)/([^/]+)", url)
+    match = re.match(r"^(?:https?://)?(?:www\.)?github\.com/([^/]+)/([^/]+)/?$", url, flags=re.IGNORECASE)
     if match:
         return match.group(1), match.group(2).removesuffix(".git")
     # Bare "owner/repo" format
     parts = url.split("/")
-    if len(parts) == 2:
-        return parts[0], parts[1]
+    if len(parts) == 2 and not parts[0].startswith("http"):
+        return parts[0], parts[1].removesuffix(".git")
     raise ValueError(f"Cannot parse GitHub URL: {url!r}")

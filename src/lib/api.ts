@@ -13,16 +13,25 @@ const API_KEY  = import.meta.env.VITE_API_KEY  ?? '';
 
 // ── Base fetch wrapper ──────────────────────────────────────────────────
 
+function getSessionToken(): string | null {
+  try {
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+      return localStorage.getItem('devlens_session_token');
+    }
+  } catch {
+    // Graceful fallback for restricted storage / SSR
+  }
+  return null;
+}
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const sessionToken = getSessionToken();
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
       'X-API-Key': API_KEY,
-      // GitHub OAuth token (if logged in) — stored in localStorage after /auth/github/callback
-      ...(localStorage.getItem('devlens_session_token')
-        ? { 'X-Session-Token': localStorage.getItem('devlens_session_token')! }
-        : {}),
+      ...(sessionToken ? { 'X-Session-Token': sessionToken } : {}),
       ...init?.headers,
     },
   });
