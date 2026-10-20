@@ -97,6 +97,9 @@ jobs:
       - name: Type check
         run: bun run tsc --noEmit
 
+      - name: Run unit tests
+        run: bun run test
+
       - name: Build (smoke test)
         run: bun run build
         env:

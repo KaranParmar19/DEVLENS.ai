@@ -14,6 +14,7 @@ import { CodeFlowStepper } from "./code-flow-stepper";
 import { OnboardingDocView } from "./onboarding-doc-view";
 import { DriftTimelineView } from "./drift-timeline-view";
 import { CopilotRail } from "./copilot-rail";
+import { generateJsonExport, generateMermaidDiagram, generatePlantUmlDiagram } from "./export-utils";
 
 interface StudioWorkspaceProps {
   repoUrl: string;
@@ -137,7 +138,7 @@ export function StudioWorkspace({
     }
 
     if (format === "json") {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(analysisState.graphData ?? {}, null, 2));
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(generateJsonExport(analysisState.graphData));
       const downloadAnchor = document.createElement("a");
       downloadAnchor.setAttribute("href", dataStr);
       downloadAnchor.setAttribute("download", `${repoLabel.replace(/\//g, "-")}-graph.json`);
@@ -157,23 +158,14 @@ export function StudioWorkspace({
             showToast("✓ Mermaid diagram copied to clipboard");
           })
           .catch(() => {
-            const edges = analysisState.graphData?.edges ?? [];
-            const lines = ["graph TD"];
-            edges.forEach(([u, v]) => {
-              lines.push(`  ${u.replace(/[^a-zA-Z0-9]/g, "_")} --> ${v.replace(/[^a-zA-Z0-9]/g, "_")}`);
-            });
-            navigator.clipboard.writeText(lines.join("\n"));
+            const mermaidStr = generateMermaidDiagram(analysisState.graphData?.edges ?? []);
+            navigator.clipboard.writeText(mermaidStr);
             showToast("✓ Mermaid diagram copied to clipboard");
           });
         return;
       }
 
-      const edges = analysisState.graphData?.edges ?? [];
-      const lines = ["graph TD"];
-      edges.forEach(([u, v]) => {
-        lines.push(`  ${u.replace(/[^a-zA-Z0-9]/g, "_")} --> ${v.replace(/[^a-zA-Z0-9]/g, "_")}`);
-      });
-      const mermaidStr = lines.join("\n");
+      const mermaidStr = generateMermaidDiagram(analysisState.graphData?.edges ?? []);
       navigator.clipboard.writeText(mermaidStr);
       showToast("✓ Mermaid diagram copied to clipboard");
       return;
@@ -188,29 +180,15 @@ export function StudioWorkspace({
             showToast("✓ PlantUML diagram copied to clipboard");
           })
           .catch(() => {
-            const edges = analysisState.graphData?.edges ?? [];
-            const lines = ["@startuml", `title ${repoLabel} Architecture`];
-            edges.slice(0, 80).forEach(([u, v]) => {
-              const uClean = u.split("/").pop() || u;
-              const vClean = v.split("/").pop() || v;
-              lines.push(`  [${uClean}] --> [${vClean}]`);
-            });
-            lines.push("@enduml");
-            navigator.clipboard.writeText(lines.join("\n"));
+            const pumlStr = generatePlantUmlDiagram(analysisState.graphData?.edges ?? [], repoLabel);
+            navigator.clipboard.writeText(pumlStr);
             showToast("✓ PlantUML diagram copied to clipboard");
           });
         return;
       }
 
-      const edges = analysisState.graphData?.edges ?? [];
-      const lines = ["@startuml", `title ${repoLabel} Architecture`];
-      edges.slice(0, 80).forEach(([u, v]) => {
-        const uClean = u.split("/").pop() || u;
-        const vClean = v.split("/").pop() || v;
-        lines.push(`  [${uClean}] --> [${vClean}]`);
-      });
-      lines.push("@enduml");
-      navigator.clipboard.writeText(lines.join("\n"));
+      const pumlStr = generatePlantUmlDiagram(analysisState.graphData?.edges ?? [], repoLabel);
+      navigator.clipboard.writeText(pumlStr);
       showToast("✓ PlantUML diagram copied to clipboard");
     }
   }, [repoUrl, repoLabel, analysisState.graphData, analysisState.sessionId, sessionId, showToast]);
