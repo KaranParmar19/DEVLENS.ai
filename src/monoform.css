@@ -210,7 +210,9 @@ button.mf-btn.sm {
 .mf-row > * { position: relative; z-index: 1; transition: color .3s; }
 .mf-row:hover::before { transform: scaleY(1); }
 .mf-row:hover { padding-inline: 8px; }
-.mf-row:hover > *, .mf-row:hover .mf-body { color: #fff; }
+.mf-row:hover > *, .mf-row:hover .mf-body, .mf-row:hover [data-wg], .mf-row:hover [data-wg] * { color: #ffffff !important; }
+.mf-row:hover .mf-pill { border-color: rgba(255, 255, 255, 0.4); color: #ffffff !important; background: rgba(255, 255, 255, 0.1); }
+.mf-row:hover .mf-dot { background: #ffffff; }
 .mf-row-title { font-size: clamp(1.75rem, 3.6vw, 3.25rem); letter-spacing: -0.045em; font-weight: 500; line-height: 1; }
 @media (max-width: 800px) { .mf-row { grid-template-columns: 40px 1fr 24px; } .mf-row > :nth-child(3) { grid-column: 2 / 3; } }
 

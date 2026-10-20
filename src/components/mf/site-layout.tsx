@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/useAuth";
+import { ScrollRevealText } from "@/components/ui/scroll-reveal-text";
 
 /* ── Reveal on scroll ─────────────────────────────────────────────── */
 export function Reveal({ children, delay = 0, className = "", as: Tag = "div" }: {
@@ -153,7 +154,15 @@ export function SiteFooter() {
       <div className="mf-wrap">
         <div className="mf-foot-cols">
           <div>
-            <h3 className="mf-h2" style={{ maxWidth: "11em" }}>Read any codebase like you wrote it.</h3>
+            <ScrollRevealText
+              as="h3"
+              className="mf-h2"
+              preset="Cinematic"
+              text="Read any codebase like you wrote it."
+              colorRevealed="#ffffff"
+              colorHidden="rgba(255,255,255,0.2)"
+              style={{ maxWidth: "11em" }}
+            />
             <div style={{ marginTop: 28 }}>
               <Link to="/dashboard" className="mf-btn inv">Start mapping <span className="mf-arrow">↗</span></Link>
             </div>
@@ -183,7 +192,15 @@ export function SiteFooter() {
           <span className="mf-mono mf-muted">Built for engineers who inherit code</span>
         </div>
       </div>
-      <div className="mf-foot-word" aria-hidden style={{ paddingInline: "var(--mf-pad)", marginBottom: "-0.06em" }}>devlens</div>
+      <ScrollRevealText
+        as="div"
+        className="mf-foot-word"
+        preset="Cinematic"
+        text="devlens"
+        colorRevealed="#ffffff"
+        colorHidden="rgba(255,255,255,0.08)"
+        style={{ paddingInline: "var(--mf-pad)", marginBottom: "-0.06em", display: "block" }}
+      />
     </footer>
   );
 }
