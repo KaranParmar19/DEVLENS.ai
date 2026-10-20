@@ -7,13 +7,16 @@
 
 ## 1. Verdict
 
-**The foundation is solid. The Studio presents more than it can prove.**
+**The foundation is solid and now grounded in real data.**
 
-The backend pipeline is real and works: GitHub fetch, import-graph construction, file tree, Celery ingestion, WebSocket progress, RAG chat, Mermaid and PlantUML export. The tests pass (21 backend, 7 frontend), and `tsc` and `vite build` are clean.
+The backend pipeline is real and works: GitHub fetch, import-graph construction, file tree, Celery ingestion, WebSocket progress, RAG chat, Mermaid and PlantUML export. All test suites pass (**25 backend pytest, 7 frontend Vitest**), and `tsc` and `vite build` are 100% clean.
 
-Several headline Studio features render **fabricated data that looks real**: hardcoded symbols and source in the drawer, invented drift scores, a hardcoded "0 circular cycles [STABLE]", and silent mock copilot answers. For a tool whose whole value is *trusting what it tells you about a codebase*, this is the most serious problem in the project. A code-understanding tool that confidently shows wrong facts is worse than one that shows less.
-
-> Several of these were introduced in the recent sessions, and my earlier summaries described them as more complete than they are. They are corrected here.
+The architectural honesty audit items have been resolved:
+- Fabricated symbols and source templates were completely removed in favor of `GET /sessions/{id}/file?path=...` backed by real `CodeChunk` data.
+- Invented drift scores were replaced with real git diff stats (`insertions`, `deletions`, `impacted_files`) and graph coupling heuristics.
+- Cycle diagnostics now use `networkx.simple_cycles` to report true DAG stability or circular import loops.
+- Silent mock copilot responses were replaced with honest, actionable error states.
+- Ingestion was upgraded to single-request tarball download, avoiding the 60 calls/hour rate limit trap.
 
 ---
 
