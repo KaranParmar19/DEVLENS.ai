@@ -40,6 +40,14 @@ export function StudioWorkspace({
   const [copilotCollapsed, setCopilotCollapsed] = useState(false);
   const [isProcessingDone, setIsProcessingDone] = useState(!!(jobId && sessionId));
   const [onboardingDoc, setOnboardingDoc] = useState<string | undefined>(undefined);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = useCallback((msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage((curr) => (curr === msg ? null : curr));
+    }, 2800);
+  }, []);
 
   // Fetch AI-generated onboarding doc when sessionId is available
   useEffect(() => {
@@ -120,10 +128,11 @@ export function StudioWorkspace({
   }, [analysisState.filesData]);
 
   // Export handlers
-  const handleExport = useCallback((format: "json" | "mermaid" | "share") => {
+  const handleExport = useCallback((format: "json" | "mermaid" | "plantuml" | "share") => {
     if (format === "share") {
       const url = `${window.location.origin}/dashboard?repo=${encodeURIComponent(repoUrl)}`;
       navigator.clipboard.writeText(url);
+      showToast("✓ Studio share link copied to clipboard");
       return;
     }
 
@@ -135,6 +144,7 @@ export function StudioWorkspace({
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
       downloadAnchor.remove();
+      showToast("✓ Architecture JSON downloaded");
       return;
     }
 
@@ -144,7 +154,7 @@ export function StudioWorkspace({
         api.exportGraph(sid, "mermaid")
           .then((mermaidStr) => {
             navigator.clipboard.writeText(mermaidStr);
-            alert("Mermaid diagram copied to clipboard!");
+            showToast("✓ Mermaid diagram copied to clipboard");
           })
           .catch(() => {
             const edges = analysisState.graphData?.edges ?? [];
@@ -153,7 +163,7 @@ export function StudioWorkspace({
               lines.push(`  ${u.replace(/[^a-zA-Z0-9]/g, "_")} --> ${v.replace(/[^a-zA-Z0-9]/g, "_")}`);
             });
             navigator.clipboard.writeText(lines.join("\n"));
-            alert("Mermaid diagram copied to clipboard!");
+            showToast("✓ Mermaid diagram copied to clipboard");
           });
         return;
       }
@@ -165,9 +175,45 @@ export function StudioWorkspace({
       });
       const mermaidStr = lines.join("\n");
       navigator.clipboard.writeText(mermaidStr);
-      alert("Mermaid diagram copied to clipboard!");
+      showToast("✓ Mermaid diagram copied to clipboard");
+      return;
     }
-  }, [repoUrl, repoLabel, analysisState.graphData, analysisState.sessionId, sessionId]);
+
+    if (format === "plantuml") {
+      const sid = analysisState.sessionId ?? sessionId;
+      if (sid) {
+        api.exportGraph(sid, "plantuml")
+          .then((pumlStr) => {
+            navigator.clipboard.writeText(pumlStr);
+            showToast("✓ PlantUML diagram copied to clipboard");
+          })
+          .catch(() => {
+            const edges = analysisState.graphData?.edges ?? [];
+            const lines = ["@startuml", `title ${repoLabel} Architecture`];
+            edges.slice(0, 80).forEach(([u, v]) => {
+              const uClean = u.split("/").pop() || u;
+              const vClean = v.split("/").pop() || v;
+              lines.push(`  [${uClean}] --> [${vClean}]`);
+            });
+            lines.push("@enduml");
+            navigator.clipboard.writeText(lines.join("\n"));
+            showToast("✓ PlantUML diagram copied to clipboard");
+          });
+        return;
+      }
+
+      const edges = analysisState.graphData?.edges ?? [];
+      const lines = ["@startuml", `title ${repoLabel} Architecture`];
+      edges.slice(0, 80).forEach(([u, v]) => {
+        const uClean = u.split("/").pop() || u;
+        const vClean = v.split("/").pop() || v;
+        lines.push(`  [${uClean}] --> [${vClean}]`);
+      });
+      lines.push("@enduml");
+      navigator.clipboard.writeText(lines.join("\n"));
+      showToast("✓ PlantUML diagram copied to clipboard");
+    }
+  }, [repoUrl, repoLabel, analysisState.graphData, analysisState.sessionId, sessionId, showToast]);
 
   const paletteActions = useMemo(() => [
     { id: "arch", label: "Architecture Graph", icon: "🔷", group: "Views", shortcut: "1", onSelect: () => setActiveTab("architecture") },
@@ -178,6 +224,7 @@ export function StudioWorkspace({
     { id: "toggle-copilot", label: "Toggle DevLens Copilot", icon: "💬", group: "Panels", onSelect: () => setCopilotCollapsed((v) => !v) },
     { id: "export-json", label: "Export as JSON", icon: "⬇", group: "Export", onSelect: () => handleExport("json") },
     { id: "export-mermaid", label: "Export as Mermaid", icon: "⬇", group: "Export", onSelect: () => handleExport("mermaid") },
+    { id: "export-plantuml", label: "Export as PlantUML", icon: "⬇", group: "Export", onSelect: () => handleExport("plantuml") },
     { id: "share", label: "Copy Share Link", icon: "🔗", group: "Share", onSelect: () => handleExport("share") },
     { id: "close", label: "Close Repository", icon: "✕", group: "Navigation", shortcut: "Esc", onSelect: onClose },
   ], [handleExport, onClose]);
@@ -419,6 +466,37 @@ export function StudioWorkspace({
           <span style={{ color: "#ffffff" }}>FASTAPI + PGVECTOR</span>
         </div>
       </footer>
+
+      {/* Floating Monoform Action Toast */}
+      {toastMessage && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: "fixed",
+            bottom: 48,
+            left: "50%",
+            transform: "translateX(-50%)",
+            backgroundColor: "#ffffff",
+            color: "#000000",
+            fontFamily: "var(--mf-mono, monospace)",
+            fontSize: "0.75rem",
+            fontWeight: 500,
+            letterSpacing: "0.02em",
+            padding: "8px 18px",
+            borderRadius: 999,
+            boxShadow: "0 12px 32px rgba(0, 0, 0, 0.45)",
+            zIndex: 100,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            pointerEvents: "none",
+            animation: "fadeInUp 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+          }}
+        >
+          <span>{toastMessage}</span>
+        </div>
+      )}
     </div>
   );
 }

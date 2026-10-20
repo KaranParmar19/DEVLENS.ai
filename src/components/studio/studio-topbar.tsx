@@ -11,7 +11,7 @@ interface StudioTopbarProps {
   selectedLang: string | null;
   onSelectLang: (lang: string | null) => void;
   onOpenPalette: () => void;
-  onExport: (format: "json" | "mermaid" | "share") => void;
+  onExport: (format: "json" | "mermaid" | "plantuml" | "share") => void;
   onClose: () => void;
 }
 
@@ -344,6 +344,7 @@ export function StudioTopbar({
               {[
                 { label: "Export JSON", format: "json" as const },
                 { label: "Export Mermaid", format: "mermaid" as const },
+                { label: "Export PlantUML", format: "plantuml" as const },
               ].map((opt) => (
                 <button
                   key={opt.label}
