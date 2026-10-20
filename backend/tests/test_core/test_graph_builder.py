@@ -128,3 +128,35 @@ def test_empty_graph():
     graph_data = builder.build().model_dump()
     assert graph_data["nodes"] == []
     assert graph_data["edges"] == []
+
+
+def test_detect_cycles():
+    """Graph with circular import (a -> b -> a) should detect cycle."""
+    cycle_files = {
+        "src/a.py": "from src.b import b_func\ndef a_func(): pass",
+        "src/b.py": "from src.a import a_func\ndef b_func(): pass",
+    }
+    builder = GraphBuilder(cycle_files)
+    graph_data = builder.build().model_dump()
+    cycles = graph_data["meta"]["cycles"]
+    assert len(cycles) > 0
+    assert any("src/a.py" in c and "src/b.py" in c for c in cycles)
+
+
+def test_cyclomatic_complexity():
+    """File with multiple branches should have cyclomatic complexity > 1."""
+    branching_code = """
+def process(x):
+    if x > 10:
+        for i in range(x):
+            if i % 2 == 0:
+                print(i)
+    elif x < 0:
+        while x < 0:
+            x += 1
+    return x
+"""
+    builder = GraphBuilder({"src/branch.py": branching_code})
+    data = builder.build().model_dump()
+    node = data["nodes"][0]
+    assert node["complexity"] >= 4

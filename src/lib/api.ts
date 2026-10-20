@@ -8,8 +8,8 @@
  *   const result = await api.analyze('https://github.com/org/repo');
  */
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-const API_KEY  = import.meta.env.VITE_API_KEY  || 'dev-api-key-change-in-production';
+const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
+const API_KEY  = import.meta.env.VITE_API_KEY  ?? '';
 
 // ── Base fetch wrapper ──────────────────────────────────────────────────
 
@@ -77,7 +77,42 @@ export interface GraphData {
     languages: Record<string, number>;
     is_monorepo: boolean;
     commit_sha: string | null;
+    cycles?: string[][];
   };
+}
+
+export interface SymbolDetail {
+  name: string;
+  type: string;
+  start_line?: number;
+  end_line?: number;
+  complexity: number;
+  parameters?: string[];
+  return_type?: string;
+}
+
+export interface FileDetailResponse {
+  path: string;
+  content: string;
+  line_count: number;
+  language: string;
+  symbols: SymbolDetail[];
+}
+
+export interface GitCommitDetail {
+  sha: string;
+  short_sha: string;
+  message: string;
+  full_message: string;
+  author: string;
+  author_avatar?: string | null;
+  date: string;
+  files_changed: number;
+  insertions: number;
+  deletions: number;
+  impacted_files: string[];
+  risk_level: 'low' | 'moderate' | 'high';
+  drift_summary: string;
 }
 
 export interface FileNode {
@@ -148,6 +183,10 @@ export const api = {
   getFiles: (sessionId: string) =>
     apiFetch<FilesResponse>(`/api/v1/sessions/${sessionId}/files`),
 
+  // File detail & AST symbol inspection
+  getFile: (sessionId: string, path: string) =>
+    apiFetch<FileDetailResponse>(`/api/v1/sessions/${sessionId}/file?path=${encodeURIComponent(path)}`),
+
   // Onboarding doc
   getOnboardingDoc: (sessionId: string) =>
     apiFetch<{ markdown: string; repo: string }>(
@@ -159,15 +198,7 @@ export const api = {
     apiFetch<{
       repo: string;
       branch: string;
-      commits: {
-        sha: string;
-        short_sha: string;
-        message: string;
-        full_message: string;
-        author: string;
-        author_avatar?: string | null;
-        date: string;
-      }[];
+      commits: GitCommitDetail[];
     }>(`/api/v1/sessions/${sessionId}/commits`),
 
   // Chat (REST — non-streaming fallback)

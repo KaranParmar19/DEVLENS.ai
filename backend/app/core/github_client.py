@@ -263,27 +263,50 @@ class GitHubClient:
                 yield result
 
     async def get_recent_commits(
-        self, owner: str, name: str, branch: str = "main", per_page: int = 15
+        self, owner: str, name: str, branch: str = "main", per_page: int = 10
     ) -> list[dict]:
-        """Fetch recent commit timeline with author, message, and timestamp."""
+        """Fetch recent commit timeline with real author, diff stats, and touched files."""
         try:
             commits = await self._get(
                 f"/repos/{owner}/{name}/commits",
                 sha=branch,
                 per_page=per_page,
             )
-            return [
-                {
-                    "sha": c["sha"],
-                    "short_sha": c["sha"][:7],
+            if not isinstance(commits, list):
+                return []
+
+            # Concurrently fetch detailed file diffs and stats for recent commits
+            async def enrich(c: dict) -> dict:
+                sha = c["sha"]
+                base_data = {
+                    "sha": sha,
+                    "short_sha": sha[:7],
                     "message": c["commit"]["message"].split("\n")[0],
                     "full_message": c["commit"]["message"],
                     "author": c["commit"]["author"]["name"],
                     "author_avatar": c.get("author", {}).get("avatar_url") if c.get("author") else None,
                     "date": c["commit"]["author"]["date"],
+                    "files_changed": 0,
+                    "insertions": 0,
+                    "deletions": 0,
+                    "impacted_files": [],
                 }
-                for c in commits
-            ]
+                try:
+                    detail = await self._get(f"/repos/{owner}/{name}/commits/{sha}")
+                    if isinstance(detail, dict):
+                        files = detail.get("files", [])
+                        stats = detail.get("stats", {})
+                        base_data["files_changed"] = len(files)
+                        base_data["insertions"] = stats.get("additions", 0)
+                        base_data["deletions"] = stats.get("deletions", 0)
+                        base_data["impacted_files"] = [f["filename"] for f in files[:20]]
+                except Exception:
+                    pass
+                return base_data
+
+            tasks = [enrich(c) for c in commits[:6]]
+            enriched_commits = await asyncio.gather(*tasks)
+            return list(enriched_commits)
         except Exception as exc:
             logger.warning("get_recent_commits_failed", error=str(exc))
             return []

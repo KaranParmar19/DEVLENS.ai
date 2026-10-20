@@ -183,20 +183,64 @@ class GraphBuilder:
             for node, (x, y) in pos.items()
         }
 
+    def _compute_cyclomatic_complexity(self, content: str, language: str) -> float:
+        """
+        Calculate McCabe Cyclomatic Complexity score (decision branches + 1).
+        Returns a float metric: < 10 is low, 10-20 moderate, > 20 high complexity.
+        """
+        if not content:
+            return 1.0
+
+        if language == "Python":
+            try:
+                import ast
+                tree = ast.parse(content)
+                complexity = 1
+                for node in ast.walk(tree):
+                    if isinstance(node, (ast.If, ast.While, ast.For, ast.AsyncFor,
+                                         ast.ExceptHandler, ast.With, ast.AsyncWith,
+                                         ast.comprehension)):
+                        complexity += 1
+                    elif isinstance(node, ast.BoolOp):
+                        complexity += len(node.values) - 1
+                return float(min(complexity, 100))
+            except Exception:
+                pass
+
+        # Decision branch patterns for JS, TS, Go, etc.
+        decision_patterns = [
+            r"\bif\b", r"\belse\s+if\b", r"\bfor\b", r"\bwhile\b",
+            r"\bcatch\b", r"\bcase\b", r"\&\&", r"\|\|", r"\?\s*[^:]+:"
+        ]
+        count = 1
+        for pat in decision_patterns:
+            count += len(re.findall(pat, content))
+        return float(min(count, 100))
+
+    def _detect_cycles(self) -> list[list[str]]:
+        """Detect circular dependency cycles in the directed graph."""
+        try:
+            cycles = []
+            for cycle in nx.simple_cycles(self.graph):
+                cycles.append(cycle)
+                if len(cycles) >= 20:
+                    break
+            return cycles
+        except Exception:
+            return []
+
     def _compute_metrics(self) -> dict[str, dict]:
-        """Compute coupling (degree) and complexity score per node."""
+        """Compute coupling (degree) and genuine McCabe cyclomatic complexity per node."""
         max_degree = max(
             (self.graph.degree(n) for n in self.graph.nodes), default=1
-        ) or 1
-        max_lines = max(
-            (self.graph.nodes[n].get("line_count", 0) for n in self.graph.nodes), default=1
         ) or 1
 
         return {
             node: {
                 "coupling": round(self.graph.degree(node) / max_degree, 3),
-                "complexity": round(
-                    self.graph.nodes[node].get("line_count", 0) / max_lines, 3
+                "complexity": self._compute_cyclomatic_complexity(
+                    self.files.get(node, ""),
+                    self.graph.nodes[node].get("language", "")
                 ),
                 "is_entry": (
                     self.graph.in_degree(node) == 0
@@ -223,7 +267,7 @@ class GraphBuilder:
                 label=label,
                 path=path,
                 desc=f"{lang} · {self.graph.nodes[path].get('line_count', 0)} lines",
-                complexity=m.get("complexity", 0.0),
+                complexity=m.get("complexity", 1.0),
                 coupling=m.get("coupling", 0.0),
                 is_entry=m.get("is_entry", False),
                 language=lang,
@@ -231,6 +275,7 @@ class GraphBuilder:
             ))
 
         edges = [[u, v] for u, v in self.graph.edges]
+        cycles = self._detect_cycles()
 
         return GraphData(
             nodes=nodes,
@@ -242,6 +287,7 @@ class GraphBuilder:
                 languages={},           # Populated by caller after build()
                 is_monorepo=False,      # Populated by caller after build()
                 commit_sha=None,        # Populated by caller after build()
+                cycles=cycles,
             ),
         )
 

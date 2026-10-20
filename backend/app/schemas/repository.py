@@ -86,6 +86,7 @@ class GraphMeta(BaseModel):
     languages: dict[str, int]
     is_monorepo: bool
     commit_sha: str | None
+    cycles: list[list[str]] = []  # Detected circular dependency loops
 
 
 class GraphData(BaseModel):
@@ -96,6 +97,28 @@ class GraphData(BaseModel):
     nodes: list[ArchNode]
     edges: list[list[str]]   # [[source_id, target_id], ...]
     meta: GraphMeta
+
+
+# ── File Detail & AST Symbol Inspection Schemas ────────────────────────
+
+class SymbolDetail(BaseModel):
+    """An AST function, method, or class extracted from source code."""
+    name: str
+    type: str = "function"  # function | class | method
+    start_line: int | None = None
+    end_line: int | None = None
+    complexity: int = 1
+    parameters: list[str] = []
+    return_type: str | None = None
+
+
+class FileDetailResponse(BaseModel):
+    """Response for GET /api/v1/sessions/{id}/file?path=..."""
+    path: str
+    content: str
+    line_count: int
+    language: str
+    symbols: list[SymbolDetail]
 
 
 # ── File Tree Schemas (Left Panel — FILES tab) ──────────────────────────

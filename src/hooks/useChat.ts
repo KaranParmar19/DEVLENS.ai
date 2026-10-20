@@ -187,13 +187,30 @@ export function useChat(sessionId: string | null) {
           { role: 'assistant', content: res.reply, sources: res.sources },
         ]);
         setIsStreaming(false);
-      } catch {
-        // Backend offline or REST failed: stream high-fidelity simulated response
-        streamSimulatedResponse(text);
+      } catch (err: any) {
+        setIsStreaming(false);
+        const errMsg = err?.message || "Failed to communicate with chat backend.";
+        setError(errMsg);
+        setMessages(prev => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: `⚠️ **Copilot Unavailable**: ${errMsg}\n\nVerify that the backend is running and \`OPENAI_API_KEY\` is configured in \`backend/.env\`.`,
+            sources: [],
+          },
+        ]);
       }
     } else {
-      // Offline / bypass preview mode: stream high-fidelity simulated response
-      streamSimulatedResponse(text);
+      setIsStreaming(false);
+      setError("No active repository session.");
+      setMessages(prev => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: "⚠️ **No Active Session**: Please index a repository to ask DevLens Copilot questions grounded in AST code context.",
+          sources: [],
+        },
+      ]);
     }
   }, [sessionId, isStreaming, streamSimulatedResponse]);
 

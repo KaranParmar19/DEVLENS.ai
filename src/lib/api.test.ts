@@ -16,6 +16,7 @@ describe("api client unit tests", () => {
     expect(typeof api.getJobStatus).toBe("function");
     expect(typeof api.getGraph).toBe("function");
     expect(typeof api.getFiles).toBe("function");
+    expect(typeof api.getFile).toBe("function");
     expect(typeof api.getOnboardingDoc).toBe("function");
     expect(typeof api.getCommits).toBe("function");
     expect(typeof api.exportGraph).toBe("function");

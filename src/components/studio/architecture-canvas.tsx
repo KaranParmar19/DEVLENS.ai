@@ -4,6 +4,7 @@ import { CodeViewerDrawer } from "./code-viewer-drawer";
 
 interface ArchitectureCanvasProps {
   graphData?: GraphData | null;
+  sessionId?: string;
   activeFile?: string | null;
   onSelectNode: (nodeId: string, path: string) => void;
   onAskCopilotAboutFile: (path: string) => void;
@@ -11,6 +12,7 @@ interface ArchitectureCanvasProps {
 
 export function ArchitectureCanvas({
   graphData,
+  sessionId,
   activeFile,
   onSelectNode,
   onAskCopilotAboutFile,
@@ -746,6 +748,7 @@ export function ArchitectureCanvas({
       {inspectingNode && (
         <CodeViewerDrawer
           node={inspectingNode}
+          sessionId={sessionId}
           incomingNodes={inspectingIncomingNodes}
           outgoingNodes={inspectingOutgoingNodes}
           onSelectNode={(nodeId, path) => {

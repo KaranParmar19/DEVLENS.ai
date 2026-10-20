@@ -255,7 +255,7 @@ export function StudioWorkspace({
   const graphStats = useMemo(() => {
     const nodes = analysisState.graphData?.nodes ?? [];
     const edges = analysisState.graphData?.edges ?? [];
-    const nodeCount = nodes.length > 0 ? nodes.length : displayFiles.filter((f) => !f.is_dir).length;
+    const nodeCount = nodes.length;
     const edgeCount = edges.length;
 
     const outDegrees = new Map<string, number>();
@@ -267,17 +267,19 @@ export function StudioWorkspace({
       if (deg > maxFanOut) maxFanOut = deg;
     });
 
-    const totalComp = nodes.reduce((acc, n) => acc + (n.complexity ?? 12), 0);
-    const avgComp = nodes.length > 0 ? (totalComp / nodes.length).toFixed(1) : "14.2";
+    const totalComp = nodes.reduce((acc, n) => acc + (n.complexity ?? 1), 0);
+    const avgComp = nodes.length > 0 ? (totalComp / nodes.length).toFixed(1) : "0.0";
+    const cyclesList = analysisState.graphData?.meta?.cycles ?? [];
 
     return {
       nodeCount,
       edgeCount,
-      maxFanOut: maxFanOut || 7,
+      maxFanOut,
       avgComp,
-      cycles: 0,
+      cycles: cyclesList.length,
+      cycleDetails: cyclesList,
     };
-  }, [analysisState.graphData, displayFiles]);
+  }, [analysisState.graphData]);
 
   // Show Ingest Telemetry Modal while analyzing
   if (!isProcessingDone && !analysisState.isComplete) {
@@ -354,6 +356,7 @@ export function StudioWorkspace({
           {activeTab === "architecture" && (
             <ArchitectureCanvas
               graphData={analysisState.graphData}
+              sessionId={analysisState.sessionId ?? sessionId}
               activeFile={activeFile}
               onSelectNode={(_id, path) => setActiveFile(path)}
               onAskCopilotAboutFile={(path) => {
@@ -429,19 +432,30 @@ export function StudioWorkspace({
       >
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#ffffff" }} />
-            <span>{graphStats.cycles} CIRCULAR CYCLES [STABLE]</span>
+            <span
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                background: graphStats.cycles === 0 ? "#10b981" : "#ef4444",
+              }}
+            />
+            <span>
+              {graphStats.cycles === 0
+                ? "0 CIRCULAR CYCLES [DAG STABLE]"
+                : `${graphStats.cycles} CIRCULAR CYCLE${graphStats.cycles > 1 ? "S" : ""} DETECTED`}
+            </span>
           </span>
           <span style={{ color: "rgba(255,255,255,0.2)" }}>/</span>
           <span>MAX FAN-OUT: {graphStats.maxFanOut} CALLERS</span>
           <span style={{ color: "rgba(255,255,255,0.2)" }}>/</span>
-          <span>AVG COMPLEXITY: {graphStats.avgComp}</span>
+          <span>AVG MCCABE COMPLEXITY: {graphStats.avgComp}</span>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <span>AST SYMBOLS: {graphStats.nodeCount} NODES ({graphStats.edgeCount || graphStats.nodeCount * 2} EDGES)</span>
+          <span>INDEX: {graphStats.nodeCount} MODULES ({graphStats.edgeCount} EDGES)</span>
           <span style={{ color: "rgba(255,255,255,0.2)" }}>/</span>
-          <span style={{ color: "#ffffff" }}>FASTAPI + PGVECTOR</span>
+          <span style={{ color: "rgba(255,255,255,0.7)" }}>FASTAPI + AST</span>
         </div>
       </footer>
 

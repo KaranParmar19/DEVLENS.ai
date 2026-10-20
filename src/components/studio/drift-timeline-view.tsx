@@ -124,24 +124,23 @@ export function DriftTimelineView({
       .getCommits(sessionId)
       .then((res) => {
         if (res?.commits && res.commits.length > 0) {
-          // Merge with architectural metadata
-          const enriched = res.commits.map((c, i) => ({
-            ...c,
-            files_changed: 3 + (i % 5) * 2,
-            insertions: 40 + (i % 8) * 45,
-            deletions: 10 + (i % 4) * 15,
-            risk_level: (i === 0 ? "high" : i === 1 ? "moderate" : "low") as "high" | "moderate" | "low",
-            drift_summary:
-              i === 0
-                ? "Recent update: altered core dependencies and AST topology."
-                : i === 1
-                ? "Middleware & routing guard enhancements."
-                : "Incremental module maintenance.",
-            impacted_files:
-              graphData?.nodes
-                ?.slice(i * 2, i * 2 + 4)
-                .map((n) => n.path) || ["src/App.tsx", "src/router/Router.tsx"],
-            new_dependencies: i === 0 ? ["fastapi", "pgvector"] : [],
+          const enriched: GitCommitItem[] = res.commits.map((c) => ({
+            sha: c.sha,
+            short_sha: c.short_sha,
+            message: c.message,
+            full_message: c.full_message,
+            author: c.author,
+            author_avatar: c.author_avatar,
+            date: c.date,
+            files_changed: c.files_changed,
+            insertions: c.insertions,
+            deletions: c.deletions,
+            risk_level: c.risk_level || "low",
+            drift_summary: c.drift_summary || c.message,
+            impacted_files: c.impacted_files && c.impacted_files.length > 0
+              ? c.impacted_files
+              : (graphData?.nodes?.slice(0, 3).map((n) => n.path) || []),
+            new_dependencies: [],
           }));
           setCommits(enriched);
           setSelectedCommitSha(enriched[0].sha);
