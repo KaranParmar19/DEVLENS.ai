@@ -104,7 +104,7 @@ def make_blast_tool(graph_cache: dict) -> Tool:
             for f in file_list:
                 node = nodes.get(f, {})
                 label = node.get("label", f)
-                lines.append(f"  ⚠️  {f} ({label})")
+                lines.append(f"  ⚠️  [[{f}]] ({label})")
             lines.append("")
 
         lines.append(

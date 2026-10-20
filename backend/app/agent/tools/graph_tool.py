@@ -62,7 +62,7 @@ def make_graph_tool(graph_cache: dict) -> Tool:
         if deps:
             lines.append(f"**Imports ({len(deps)} files):**")
             for d in sorted(deps):
-                lines.append(f"  → {d}")
+                lines.append(f"  → [[{d}]]")
         else:
             lines.append("**Imports:** none (leaf node)")
 
@@ -71,7 +71,7 @@ def make_graph_tool(graph_cache: dict) -> Tool:
         if dependents:
             lines.append(f"**Imported by ({len(dependents)} files):**")
             for d in sorted(dependents):
-                lines.append(f"  ← {d}")
+                lines.append(f"  ← [[{d}]]")
         else:
             lines.append("**Imported by:** none (dead code or entry point)")
 

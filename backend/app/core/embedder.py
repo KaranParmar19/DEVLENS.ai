@@ -31,12 +31,16 @@ def _get_openai_client() -> AsyncOpenAI:
     Return a fresh AsyncOpenAI client.
     M-05 FIX: Create per-call rather than as a module-level singleton,
     so Celery worker forks get a client bound to their own event loop.
+    Supports custom base_url for OpenAI-compatible providers.
     """
-    return AsyncOpenAI(
-        api_key=settings.openai_api_key,
-        max_retries=0,              # We handle retries ourselves with tenacity
-        timeout=60.0,
-    )
+    kwargs = {
+        "api_key": settings.openai_api_key,
+        "max_retries": 0,              # We handle retries ourselves with tenacity
+        "timeout": 60.0,
+    }
+    if settings.openai_api_base:
+        kwargs["base_url"] = settings.openai_api_base
+    return AsyncOpenAI(**kwargs)
 
 
 async def embed_texts(texts: list[str]) -> list[list[float]]:

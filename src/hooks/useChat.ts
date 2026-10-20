@@ -1,16 +1,15 @@
 /**
  * DevLens AI — useChat Hook
  * Manages the WebSocket chat connection to the backend.
- * Handles streaming token-by-token responses from Claude.
+ * Handles streaming token-by-token responses grounded in the repository's AST index.
  *
  * Usage:
- *   const { messages, sendMessage, isStreaming } = useChat(sessionId);
+ *   const { messages, sendMessage, isStreaming, isConnected, error, clearMessages } = useChat(sessionId);
  */
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { wsUrls, api } from '@/lib/api';
 import { repoHistory } from '@/lib/repo-history';
-import { getSimulatedCopilotResponse } from '@/lib/mock-ai-copilot';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -41,15 +40,19 @@ export function useChat(sessionId: string | null) {
   // Sync to history on change
   useEffect(() => {
     if (sessionId && messages.length > 0) {
-      repoHistory.saveChatMessages(
-        sessionId,
-        messages.map(m => ({
-          role: m.role,
-          content: m.content,
-          sources: m.sources,
-          timestamp: new Date().toISOString()
-        }))
-      );
+      // Only persist non-streaming messages
+      const finalized = messages.filter(m => !m.isStreaming);
+      if (finalized.length > 0) {
+        repoHistory.saveChatMessages(
+          sessionId,
+          finalized.map(m => ({
+            role: m.role,
+            content: m.content,
+            sources: m.sources,
+            timestamp: new Date().toISOString()
+          }))
+        );
+      }
     }
   }, [messages, sessionId]);
 
@@ -61,7 +64,10 @@ export function useChat(sessionId: string | null) {
       const ws = new WebSocket(wsUrls.chat(sessionId));
       wsRef.current = ws;
 
-      ws.onopen = () => setIsConnected(true);
+      ws.onopen = () => {
+        setIsConnected(true);
+        setError(null);
+      };
       ws.onclose = () => setIsConnected(false);
       ws.onerror = () => {
         setIsConnected(false);
@@ -102,11 +108,22 @@ export function useChat(sessionId: string | null) {
           }
 
           if (msg.type === 'stream_error') {
-            setError(msg.message as string);
+            const errText = msg.message as string;
+            setError(errText);
+            setMessages(prev => {
+              const last = prev[prev.length - 1];
+              if (last?.role === 'assistant') {
+                return [
+                  ...prev.slice(0, -1),
+                  { ...last, content: `⚠️ Error: ${errText}`, isStreaming: false },
+                ];
+              }
+              return prev;
+            });
             setIsStreaming(false);
           }
         } catch {
-          // ignore parsing error
+          // ignore parse errors
         }
       };
 
@@ -118,61 +135,17 @@ export function useChat(sessionId: string | null) {
     }
   }, [sessionId]);
 
-  // Simulated streaming helper for offline / demo mode
-  const streamSimulatedResponse = useCallback((query: string) => {
-    const simulated = getSimulatedCopilotResponse(query);
-    const fullText = simulated.reply;
-    let currentIndex = 0;
-    const chunkSize = 5;
-
-    // Append initial streaming placeholder
-    setMessages(prev => [
-      ...prev,
-      { role: 'assistant', content: '', isStreaming: true },
-    ]);
-
-    const interval = setInterval(() => {
-      currentIndex += chunkSize;
-      if (currentIndex >= fullText.length) {
-        clearInterval(interval);
-        setMessages(prev => {
-          const last = prev[prev.length - 1];
-          if (last?.role === 'assistant') {
-            return [
-              ...prev.slice(0, -1),
-              {
-                ...last,
-                content: fullText,
-                isStreaming: false,
-                sources: simulated.sources,
-              },
-            ];
-          }
-          return prev;
-        });
-        setIsStreaming(false);
-      } else {
-        setMessages(prev => {
-          const last = prev[prev.length - 1];
-          if (last?.role === 'assistant') {
-            return [
-              ...prev.slice(0, -1),
-              { ...last, content: fullText.slice(0, currentIndex) },
-            ];
-          }
-          return prev;
-        });
-      }
-    }, 18);
-  }, []);
-
   // ── Send a message ─────────────────────────────────────────────────
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isStreaming) return;
 
     setError(null);
-    // Optimistically add user message
-    setMessages(prev => [...prev, { role: 'user', content: text }]);
+    // Optimistically add user message and streaming assistant placeholder
+    setMessages(prev => [
+      ...prev,
+      { role: 'user', content: text },
+      { role: 'assistant', content: '', isStreaming: true },
+    ]);
     setIsStreaming(true);
 
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
@@ -182,37 +155,58 @@ export function useChat(sessionId: string | null) {
       // Fallback: Try REST
       try {
         const res = await api.chat(sessionId, text);
-        setMessages(prev => [
-          ...prev,
-          { role: 'assistant', content: res.reply, sources: res.sources },
-        ]);
+        setMessages(prev => {
+          const last = prev[prev.length - 1];
+          if (last?.role === 'assistant' && last.isStreaming) {
+            return [
+              ...prev.slice(0, -1),
+              { role: 'assistant', content: res.reply, sources: res.sources, isStreaming: false },
+            ];
+          }
+          return [
+            ...prev,
+            { role: 'assistant', content: res.reply, sources: res.sources, isStreaming: false },
+          ];
+        });
         setIsStreaming(false);
       } catch (err: any) {
         setIsStreaming(false);
         const errMsg = err?.message || "Failed to communicate with chat backend.";
         setError(errMsg);
-        setMessages(prev => [
-          ...prev,
-          {
-            role: 'assistant',
-            content: `⚠️ **Copilot Unavailable**: ${errMsg}\n\nVerify that the backend is running and \`OPENAI_API_KEY\` is configured in \`backend/.env\`.`,
-            sources: [],
-          },
-        ]);
+        setMessages(prev => {
+          const last = prev[prev.length - 1];
+          const errorMsg = `⚠️ **Copilot Error**: ${errMsg}\n\nPlease check server logs or verify your session.`;
+          if (last?.role === 'assistant' && last.isStreaming) {
+            return [
+              ...prev.slice(0, -1),
+              { role: 'assistant', content: errorMsg, sources: [], isStreaming: false },
+            ];
+          }
+          return [
+            ...prev,
+            { role: 'assistant', content: errorMsg, sources: [], isStreaming: false },
+          ];
+        });
       }
     } else {
       setIsStreaming(false);
       setError("No active repository session.");
-      setMessages(prev => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: "⚠️ **No Active Session**: Please index a repository to ask DevLens Copilot questions grounded in AST code context.",
-          sources: [],
-        },
-      ]);
+      setMessages(prev => {
+        const last = prev[prev.length - 1];
+        const noSessionMsg = "⚠️ **No Active Session**: Please index a repository to ask DevLens Copilot questions grounded in AST code context.";
+        if (last?.role === 'assistant' && last.isStreaming) {
+          return [
+            ...prev.slice(0, -1),
+            { role: 'assistant', content: noSessionMsg, sources: [], isStreaming: false },
+          ];
+        }
+        return [
+          ...prev,
+          { role: 'assistant', content: noSessionMsg, sources: [], isStreaming: false },
+        ];
+      });
     }
-  }, [sessionId, isStreaming, streamSimulatedResponse]);
+  }, [sessionId, isStreaming]);
 
   const clearMessages = useCallback(() => setMessages([]), []);
 

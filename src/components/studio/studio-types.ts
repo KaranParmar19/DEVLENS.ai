@@ -43,6 +43,7 @@ export interface GraphData {
     languages?: Record<string, number>;
     is_monorepo?: boolean;
     commit_sha?: string | null;
+    cycles?: string[][];
   };
 }
 

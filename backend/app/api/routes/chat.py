@@ -177,12 +177,14 @@ async def chat_ws(session_id: str, websocket: WebSocket):
                     )
                     continue
 
-                await websocket.send_text(StreamDone(sources=[]).model_dump_json())
+                await websocket.send_text(
+                    StreamDone(sources=agent.last_sources).model_dump_json()
+                )
 
                 # Persist to chat history with M-04 trim
                 new_history = _trim_history(list(history) + [
                     {"role": "user", "content": incoming.message},
-                    {"role": "assistant", "content": full_reply, "sources": []},
+                    {"role": "assistant", "content": full_reply, "sources": agent.last_sources},
                 ])
                 await db.execute(
                     update(Session)

@@ -42,6 +42,7 @@ class Settings(BaseSettings):
 
     # ── OpenAI (Embeddings + Chat) ─────────────────────────────────────────
     openai_api_key: str                   # Required — used for both embeddings and chat
+    openai_api_base: str = "https://api.openai.com/v1"  # Customizable for OpenRouter, Groq, Ollama, DeepSeek
     openai_embedding_model: str = "text-embedding-3-small"
     openai_embedding_dimensions: int = 1536
     openai_chat_model: str = "gpt-4o"     # Chat model (gpt-4o / gpt-4o-mini)

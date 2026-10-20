@@ -410,6 +410,7 @@ export function StudioWorkspace({
           }}
           collapsed={copilotCollapsed}
           onToggleCollapse={() => setCopilotCollapsed((v) => !v)}
+          graphData={analysisState.graphData}
         />
       </div>
 

@@ -10,7 +10,7 @@ BUG-07 FIX: upsert_chunks now commits in sub-batches so each batch
 
 import uuid
 import structlog
-from sqlalchemy import select, delete, func
+from sqlalchemy import select, delete, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.code_chunk import CodeChunk
@@ -100,6 +100,52 @@ class VectorStore:
         )
         return total_stored
 
+    # ── By-File Lookup ────────────────────────────────────────────────────
+
+    async def get_chunks_by_file(self, file_path: str) -> list[dict]:
+        """
+        Retrieve all indexed chunks for a specific file path, ordered by chunk_index.
+        Supports exact path match and suffix/substring fallback.
+        """
+        # Exact match first
+        stmt = (
+            select(CodeChunk)
+            .where(
+                CodeChunk.repo_id == self.repo_id,
+                CodeChunk.file_path == file_path,
+            )
+            .order_by(CodeChunk.chunk_index)
+        )
+        res = await self.db.execute(stmt)
+        chunks = res.scalars().all()
+
+        if not chunks:
+            # Fallback to suffix match (e.g. 'auth.py' matching 'src/auth.py')
+            stmt = (
+                select(CodeChunk)
+                .where(
+                    CodeChunk.repo_id == self.repo_id,
+                    CodeChunk.file_path.ilike(f"%{file_path}"),
+                )
+                .order_by(CodeChunk.chunk_index)
+            )
+            res = await self.db.execute(stmt)
+            chunks = res.scalars().all()
+
+        return [
+            {
+                "content": c.content,
+                "file_path": c.file_path,
+                "language": c.language,
+                "chunk_type": c.chunk_type,
+                "symbol_name": c.symbol_name,
+                "start_line": c.start_line,
+                "end_line": c.end_line,
+                "token_count": c.token_count,
+            }
+            for c in chunks
+        ]
+
     # ── Similarity Search ─────────────────────────────────────────────────
 
     async def similarity_search(
@@ -109,43 +155,84 @@ class VectorStore:
         language_filter: str | None = None,
     ) -> list[dict]:
         """
-        Embed the query and find the top_k most similar code chunks
-        using cosine distance (pgvector <=> operator).
-
-        Returns a list of dicts with chunk content and metadata.
-        BUG-07 FIX: language_filter WHERE clause applied before ORDER BY.
+        Hybrid search combining semantic pgvector cosine similarity with
+        direct SQL keyword & symbol matching.
+        Guarantees high relevance for code queries even when embeddings are
+        sparse or in fallback mode.
         """
-        query_embedding = await embed_single(query)
+        results: list[dict] = []
+        seen_keys: set[tuple[str, int]] = set()
 
-        stmt = (
-            select(
-                CodeChunk,
-                CodeChunk.embedding.cosine_distance(query_embedding).label("distance"),
+        # 1. Direct Keyword & Symbol Match (searches symbol_name, file_path, content)
+        clean_terms = [t.strip() for t in query.split() if len(t.strip()) > 2 and not t.startswith("file:")]
+        if clean_terms:
+            text_conditions = []
+            for term in clean_terms[:4]:
+                text_conditions.append(CodeChunk.symbol_name.ilike(f"%{term}%"))
+                text_conditions.append(CodeChunk.file_path.ilike(f"%{term}%"))
+                text_conditions.append(CodeChunk.content.ilike(f"%{term}%"))
+
+            text_stmt = select(CodeChunk).where(CodeChunk.repo_id == self.repo_id)
+            if language_filter:
+                text_stmt = text_stmt.where(CodeChunk.language == language_filter)
+            text_stmt = text_stmt.where(or_(*text_conditions)).limit(top_k)
+
+            try:
+                text_res = await self.db.execute(text_stmt)
+                for c in text_res.scalars().all():
+                    key = (c.file_path, c.chunk_index)
+                    if key not in seen_keys:
+                        seen_keys.add(key)
+                        is_symbol_match = any(t.lower() in (c.symbol_name or "").lower() for t in clean_terms)
+                        results.append({
+                            "content": c.content,
+                            "file_path": c.file_path,
+                            "language": c.language,
+                            "chunk_type": c.chunk_type,
+                            "symbol_name": c.symbol_name,
+                            "start_line": c.start_line,
+                            "end_line": c.end_line,
+                            "similarity": 0.95 if is_symbol_match else 0.85,
+                        })
+            except Exception as e:
+                logger.warning("keyword_search_failed", error=str(e))
+
+        # 2. Semantic pgvector Cosine Distance Search
+        try:
+            query_embedding = await embed_single(query)
+            stmt = (
+                select(
+                    CodeChunk,
+                    CodeChunk.embedding.cosine_distance(query_embedding).label("distance"),
+                )
+                .where(CodeChunk.repo_id == self.repo_id)
             )
-            .where(CodeChunk.repo_id == self.repo_id)
-        )
+            if language_filter:
+                stmt = stmt.where(CodeChunk.language == language_filter)
+            stmt = stmt.order_by("distance").limit(top_k)
 
-        if language_filter:
-            stmt = stmt.where(CodeChunk.language == language_filter)
+            result = await self.db.execute(stmt)
+            for row in result.all():
+                c = row.CodeChunk
+                key = (c.file_path, c.chunk_index)
+                if key not in seen_keys:
+                    seen_keys.add(key)
+                    results.append({
+                        "content": c.content,
+                        "file_path": c.file_path,
+                        "language": c.language,
+                        "chunk_type": c.chunk_type,
+                        "symbol_name": c.symbol_name,
+                        "start_line": c.start_line,
+                        "end_line": c.end_line,
+                        "similarity": round(1 - row.distance, 4),
+                    })
+        except Exception as e:
+            logger.warning("vector_similarity_search_failed", error=str(e))
 
-        stmt = stmt.order_by("distance").limit(top_k)
-
-        result = await self.db.execute(stmt)
-        rows = result.all()
-
-        return [
-            {
-                "content": row.CodeChunk.content,
-                "file_path": row.CodeChunk.file_path,
-                "language": row.CodeChunk.language,
-                "chunk_type": row.CodeChunk.chunk_type,
-                "symbol_name": row.CodeChunk.symbol_name,
-                "start_line": row.CodeChunk.start_line,
-                "end_line": row.CodeChunk.end_line,
-                "similarity": round(1 - row.distance, 4),
-            }
-            for row in rows
-        ]
+        # Sort by similarity descending, return top_k
+        results.sort(key=lambda r: r.get("similarity", 0), reverse=True)
+        return results[:top_k]
 
     # ── Delete (for re-indexing) ───────────────────────────────────────────
 
