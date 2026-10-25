@@ -2,8 +2,10 @@ import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { Pill, Reveal, SiteLayout } from "./site-layout";
+import { StatsSection } from "@/components/ui/stats-section";
+import { FAQSection } from "@/components/ui/faq-section";
+import { MorphText } from "@/components/ui/morph-text";
 import { normalizeRepoUrl } from "@/lib/utils";
-import { ScrollRevealText } from "@/components/ui/scroll-reveal-text";
 
 const TRY = [
   { label: "facebook/react", tag: "TS / Core" },
@@ -75,25 +77,6 @@ const MARQUEE = [
   "Go-Gin",
   "Flask",
   "Actix-Web",
-];
-
-const FAQ = [
-  [
-    "Does DevLens store my code?",
-    "No. Repositories are cloned to an ephemeral worker, parsed in memory, indexed to session graphs, and immediately discarded. Zero code is retained after your session.",
-  ],
-  [
-    "Which languages are supported?",
-    "TypeScript, JavaScript, Python, Go, Java, Rust, Ruby, and PHP resolve imports natively via Tree-sitter. All other languages receive full file tree mapping and keyword/symbol exploration.",
-  ],
-  [
-    "Can I analyze private repositories?",
-    "Yes. Connect your GitHub account or Personal Access Token (PAT) directly from the dashboard to analyze private repositories.",
-  ],
-  [
-    "How fast is the analysis?",
-    "Most repositories finish full AST parsing and graph generation in under eight seconds. Progress streams live over real-time WebSockets.",
-  ],
 ];
 
 function Marquee() {
@@ -382,37 +365,39 @@ function ProductFrame() {
               <>
                 <MiniGraph selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} />
                 <div
-                  style={{ position: "absolute", bottom: 12, left: 14, display: "flex", gap: 8 }}
+                  style={{
+                    position: "absolute",
+                    bottom: 12,
+                    left: 14,
+                    display: "flex",
+                    gap: 8,
+                    flexWrap: "wrap",
+                    zIndex: 10,
+                  }}
                 >
-                  <span
-                    className="mf-pill"
-                    style={{
-                      background: "rgba(0,0,0,0.75)",
-                      backdropFilter: "blur(6px)",
-                      fontSize: "0.625rem",
-                    }}
-                  >
-                    Selected: <strong>{activeNode.label}</strong>
+                  <span className="mf-studio-stat-pill">
+                    <span style={{ color: "rgba(255, 255, 255, 0.65)", fontWeight: 400 }}>
+                      Selected:
+                    </span>
+                    <strong style={{ color: "#ffffff", fontWeight: 700 }}>
+                      {activeNode.label}
+                    </strong>
                   </span>
-                  <span
-                    className="mf-pill"
-                    style={{
-                      background: "rgba(0,0,0,0.75)",
-                      backdropFilter: "blur(6px)",
-                      fontSize: "0.625rem",
-                    }}
-                  >
-                    Coupling: <strong>{activeNode.coupling}</strong>
+                  <span className="mf-studio-stat-pill">
+                    <span style={{ color: "rgba(255, 255, 255, 0.65)", fontWeight: 400 }}>
+                      Coupling:
+                    </span>
+                    <strong style={{ color: "#38bdf8", fontWeight: 700 }}>
+                      {activeNode.coupling}
+                    </strong>
                   </span>
-                  <span
-                    className="mf-pill"
-                    style={{
-                      background: "rgba(0,0,0,0.75)",
-                      backdropFilter: "blur(6px)",
-                      fontSize: "0.625rem",
-                    }}
-                  >
-                    Complexity: <strong>{activeNode.complexity}</strong>
+                  <span className="mf-studio-stat-pill">
+                    <span style={{ color: "rgba(255, 255, 255, 0.65)", fontWeight: 400 }}>
+                      Complexity:
+                    </span>
+                    <strong style={{ color: "#10b981", fontWeight: 700 }}>
+                      {activeNode.complexity}
+                    </strong>
                   </span>
                 </div>
               </>
@@ -650,7 +635,7 @@ export function HomePage() {
   return (
     <SiteLayout>
       {/* Hero Section */}
-      <section className="mf-hero">
+      <section className="mf-hero" data-theme="light">
         <div className="mf-hero-grid-bg" />
         <div className="mf-wrap">
           <motion.div
@@ -669,7 +654,15 @@ export function HomePage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
           >
-            See the <span className="mf-serif-i">shape</span>
+            See the{" "}
+            <span className="mf-serif-i">
+              <MorphText
+                words={["shape", "flows", "graph", "logic", "depth"]}
+                morphTime={1.1}
+                holdTime={1.8}
+                strength={8}
+              />
+            </span>
             <br />
             of any codebase.
           </motion.h1>
@@ -681,17 +674,10 @@ export function HomePage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.16, ease: [0.16, 1, 0.3, 1] }}
             >
-              <ScrollRevealText
-                as="p"
-                className="mf-lead"
-                preset="Soft Words"
-                trigger="On Load"
-                onLoadDuration={1.3}
-                text="DevLens turns any GitHub repository into an interactive architecture map, traceable code flows, and a cited copilot that shows its work — in under eight seconds."
-                colorRevealed="var(--mf-ink)"
-                colorHidden="rgba(10,10,10,0.18)"
-                style={{ marginBottom: 28 }}
-              />
+              <p className="mf-lead" style={{ marginBottom: 28 }}>
+                DevLens turns any GitHub repository into an interactive architecture map, traceable
+                code flows, and a cited copilot that shows its work — in under eight seconds.
+              </p>
 
               <form
                 className="mf-ingest"
@@ -743,54 +729,43 @@ export function HomePage() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5, delay: 0.22 }}
             >
-              <ScrollRevealText
-                as="div"
-                className="mf-big-stat"
-                preset="Scale Pop"
-                trigger="On Load"
-                onLoadDuration={1.1}
-                text="<8s"
-                colorRevealed="var(--mf-ink)"
-                colorHidden="rgba(10,10,10,0.15)"
-              />
-              <ScrollRevealText
-                as="div"
-                className="mf-mono mf-muted"
-                preset="Fade In Up"
-                trigger="On Load"
-                onLoadDuration={1.3}
-                text="Median time to full AST graph"
-                colorRevealed="var(--mf-ink-3)"
-                colorHidden="rgba(10,10,10,0.2)"
-                style={{ marginTop: 10 }}
-              />
+              <div className="mf-big-stat">&lt;8s</div>
+              <div className="mf-mono mf-muted" style={{ marginTop: 10 }}>
+                Median time to full AST graph
+              </div>
             </motion.div>
           </div>
         </div>
       </section>
 
-      {/* Interactive Product Preview Frame */}
-      <div className="mf-wrap" style={{ paddingBottom: 72 }}>
-        <Reveal>
-          <ProductFrame />
-        </Reveal>
-      </div>
+      {/* Interactive Product Preview Section */}
+      <section
+        className="mf-section mf-dark mf-preview-section"
+        data-theme="dark"
+        style={{
+          paddingBlock: "clamp(56px, 7vw, 104px)",
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        <div style={{ width: "100%", maxWidth: "100%", paddingInline: "clamp(16px, 3.5vw, 48px)" }}>
+          <Reveal>
+            <ProductFrame />
+          </Reveal>
+        </div>
+      </section>
 
       <Marquee />
 
       {/* Features Index Section */}
-      <section className="mf-section">
+      <section className="mf-section" data-theme="light">
         <div className="mf-wrap">
           <div className="mf-sec-head">
-            <ScrollRevealText
-              as="h2"
-              className="mf-h1"
-              preset="Cinematic"
-              text="Five lenses on one repository."
-              colorRevealed="var(--mf-ink)"
-              colorHidden="rgba(10,10,10,0.18)"
-              style={{ maxWidth: "10em" }}
-            />
+            <Reveal>
+              <h2 className="mf-h1" style={{ maxWidth: "10em" }}>
+                Five lenses on one repository.
+              </h2>
+            </Reveal>
             <Link to="/features" className="mf-btn ghost">
               Explore capabilities <span className="mf-arrow">↗</span>
             </Link>
@@ -806,14 +781,7 @@ export function HomePage() {
                 <Link to="/features" className="mf-row">
                   <span className="mf-num">0{idx + 1}</span>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 6 }}>
-                    <ScrollRevealText
-                      as="span"
-                      className="mf-row-title"
-                      preset="Cinematic"
-                      text={f.t}
-                      colorRevealed="var(--mf-ink)"
-                      colorHidden="rgba(10,10,10,0.2)"
-                    />
+                    <span className="mf-row-title">{f.t}</span>
                     <span
                       className="mf-pill"
                       style={{
@@ -826,14 +794,7 @@ export function HomePage() {
                       {f.tag}
                     </span>
                   </div>
-                  <ScrollRevealText
-                    as="span"
-                    className="mf-body"
-                    preset="Soft Words"
-                    text={f.d}
-                    colorRevealed="var(--mf-body)"
-                    colorHidden="rgba(10,10,10,0.2)"
-                  />
+                  <span className="mf-body">{f.d}</span>
                   <span className="mf-arrow" style={{ fontSize: 24 }}>
                     ↗
                   </span>
@@ -844,70 +805,27 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* Stats Bento */}
-      <section className="mf-section" style={{ paddingTop: 0 }}>
+      {/* Stats Section (Framer StatsSection Feature) */}
+      <section className="mf-section" data-theme="light" style={{ paddingTop: 0 }}>
         <div className="mf-wrap">
-          <div className="mf-grid c3">
-            {[
-              [
-                "14×",
-                "faster onboarding to an inherited codebase compared to manual file traversal.",
-              ],
-              [
-                "100%",
-                "deterministic Tree-sitter AST symbol parsing and cyclomatic coupling metrics.",
-              ],
-              ["0", "lines of code stored on disk after your ephemeral worker session terminates."],
-            ].map(([stat, desc], i) => (
-              <Reveal key={stat} delay={i * 90}>
-                <motion.div
-                  whileHover={{
-                    y: -6,
-                    transition: { type: "spring", stiffness: 350, damping: 24 },
-                  }}
-                  className={`mf-card ${i === 1 ? "ink" : "soft"}`}
-                  style={{ height: "100%", justifyContent: "space-between" }}
-                >
-                  <ScrollRevealText
-                    as="div"
-                    className="mf-big-stat"
-                    preset="Scale Pop"
-                    text={stat}
-                    colorRevealed={i === 1 ? "#ffffff" : "var(--mf-ink)"}
-                    colorHidden={i === 1 ? "rgba(255,255,255,0.2)" : "rgba(10,10,10,0.15)"}
-                  />
-                  <ScrollRevealText
-                    as="p"
-                    className="mf-body"
-                    preset="Soft Words"
-                    text={desc}
-                    colorRevealed={i === 1 ? "#bfbfbf" : "var(--mf-body)"}
-                    colorHidden={i === 1 ? "rgba(255,255,255,0.2)" : "rgba(10,10,10,0.18)"}
-                    style={{ maxWidth: "22em" }}
-                  />
-                </motion.div>
-              </Reveal>
-            ))}
-          </div>
+          <Reveal>
+            <StatsSection />
+          </Reveal>
         </div>
       </section>
 
       {/* Process / Pipeline */}
-      <section className="mf-section mf-dark">
+      <section className="mf-section mf-dark" data-theme="dark">
         <div className="mf-wrap">
           <div className="mf-sec-head">
             <Reveal>
               <Pill>Pipeline</Pill>
             </Reveal>
-            <ScrollRevealText
-              as="h2"
-              className="mf-h1"
-              preset="Soft Words"
-              text="From repository URL to full comprehension in seconds."
-              colorRevealed="#ffffff"
-              colorHidden="rgba(255,255,255,0.2)"
-              style={{ maxWidth: "10em" }}
-            />
+            <Reveal>
+              <h2 className="mf-h1" style={{ maxWidth: "10em" }}>
+                From repository URL to full comprehension in seconds.
+              </h2>
+            </Reveal>
           </div>
 
           {STEPS.map((s, i) => (
@@ -917,30 +835,9 @@ export function HomePage() {
                 whileHover={{ x: 6 }}
                 transition={{ type: "spring", stiffness: 400, damping: 26 }}
               >
-                <ScrollRevealText
-                  as="span"
-                  className="mf-step-n"
-                  preset="Fade In Up"
-                  text={`0${i + 1}`}
-                  colorRevealed="#ffffff"
-                  colorHidden="rgba(255,255,255,0.2)"
-                />
-                <ScrollRevealText
-                  as="h3"
-                  className="mf-h2"
-                  preset="Cinematic"
-                  text={s.t}
-                  colorRevealed="#ffffff"
-                  colorHidden="rgba(255,255,255,0.2)"
-                />
-                <ScrollRevealText
-                  as="p"
-                  className="mf-lead"
-                  preset="Soft Words"
-                  text={s.d}
-                  colorRevealed="rgba(255,255,255,0.85)"
-                  colorHidden="rgba(255,255,255,0.18)"
-                />
+                <span className="mf-step-n">0{i + 1}</span>
+                <h3 className="mf-h2">{s.t}</h3>
+                <p className="mf-lead">{s.d}</p>
               </motion.div>
             </Reveal>
           ))}
@@ -953,53 +850,12 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* FAQ */}
-      <section className="mf-section">
-        <div
-          className="mf-wrap"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "minmax(0,1fr) minmax(0,1.6fr)",
-            gap: 48,
-          }}
-        >
-          <div>
-            <Pill>FAQ</Pill>
-            <ScrollRevealText
-              as="h2"
-              className="mf-h1"
-              preset="Fade In Up"
-              text="Questions, answered."
-              colorRevealed="var(--mf-ink)"
-              colorHidden="rgba(10,10,10,0.2)"
-              style={{ marginTop: 24 }}
-            />
-          </div>
-          <div>
-            {FAQ.map(([q, a]) => (
-              <details className="mf-faq" key={q}>
-                <summary>
-                  <ScrollRevealText
-                    as="span"
-                    preset="Fade In Up"
-                    text={q}
-                    colorRevealed="var(--mf-ink)"
-                    colorHidden="rgba(10,10,10,0.22)"
-                  />
-                </summary>
-                <div className="mf-body" style={{ padding: "0 0 28px", maxWidth: "46em" }}>
-                  <ScrollRevealText
-                    as="span"
-                    preset="Soft Words"
-                    text={a}
-                    colorRevealed="var(--mf-body)"
-                    colorHidden="rgba(10,10,10,0.2)"
-                  />
-                </div>
-              </details>
-            ))}
-            <div className="mf-faq" />
-          </div>
+      {/* FAQ Section (Framer FAQ Feature) */}
+      <section className="mf-section" data-theme="light">
+        <div className="mf-wrap">
+          <Reveal>
+            <FAQSection />
+          </Reveal>
         </div>
       </section>
     </SiteLayout>
