@@ -75,39 +75,3 @@ export function HowItWorksPage() {
     </SiteLayout>
   );
 }
-
-/* ═══ PRICING ════════════════════════════════════════════════════════ */
-const PLANS = [
-  { name: "Explorer", price: "$0", per: "forever", feat: ["5 public repos / month", "Architecture map & code flow", "Ask DevLens (50 questions)", "Mermaid export"], cta: "Start free", ink: false },
-  { name: "Builder", price: "$19", per: "per month", feat: ["Unlimited public repos", "Private repos via GitHub", "Unlimited questions", "Onboarding doc generation", "Share links"], cta: "Go Builder", ink: true },
-  { name: "Team", price: "$49", per: "per seat / month", feat: ["Everything in Builder", "Shared workspaces", "SSO & audit log", "Priority indexing", "Dedicated support"], cta: "Talk to us", ink: false },
-];
-
-export function PricingPage() {
-  return (
-    <SiteLayout>
-      <PageHero eyebrow="Pricing" title={<>Simple, <span className="mf-serif-i">honest</span> pricing.</>} lead="Start free. Upgrade when your team starts mapping more than a repo a week." />
-      <section style={{ paddingBottom: "clamp(72px,10vw,144px)" }}>
-        <div className="mf-wrap">
-          <div className="mf-grid c3">
-            {PLANS.map((p, i) => (
-              <Reveal key={p.name} delay={i * 90}>
-                <div className={`mf-card ${p.ink ? "ink" : ""}`} style={{ minHeight: 480, height: "100%", justifyContent: "space-between" }}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span className="mf-h3">{p.name}</span>
-                      {p.ink && <Pill>Popular</Pill>}
-                    </div>
-                    <div><div className="mf-price">{p.price}</div><div className="mf-mono mf-muted" style={{ marginTop: 8 }}>{p.per}</div></div>
-                    <ul className="mf-list">{p.feat.map((f) => <li key={f}>{f}</li>)}</ul>
-                  </div>
-                  <Link to="/dashboard" className={`mf-btn ${p.ink ? "inv" : "ghost"}`}>{p.cta} <span className="mf-arrow">↗</span></Link>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-    </SiteLayout>
-  );
-}
