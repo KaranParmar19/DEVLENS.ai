@@ -2,7 +2,9 @@ import { useMemo, useState, useEffect, useCallback } from "react";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { StudioWorkspace } from "@/components/studio/studio-workspace";
-import { CommandPalette, useCommandPalette } from "@/components/command-palette";
+import { StatsSection, type StatMetric } from "@/components/ui/stats-section";
+import { CurvyShowcase } from "@/components/ui/curvy-showcase";
+import { ActivityBadge } from "@/components/ui/activity-badge";
 import { repoHistory, type RepoHistoryEntry } from "@/lib/repo-history";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
@@ -61,142 +63,6 @@ const QUICK = [
   { label: "tailwindlabs/tailwindcss", tag: "CSS Engine" },
 ];
 
-function RepoCard({
-  entry,
-  onOpen,
-  onDelete,
-}: {
-  entry: RepoHistoryEntry;
-  onOpen: () => void;
-  onDelete: () => void;
-}) {
-  const langs = Object.keys(entry.meta?.languages ?? {}).slice(0, 3);
-  const files = entry.meta?.files ?? 0;
-  const sizeKb = entry.meta?.sizeKb ?? 0;
-  const sizeFormatted =
-    sizeKb > 1024 ? `${(sizeKb / 1024).toFixed(1)} MB` : sizeKb ? `${sizeKb} KB` : null;
-  const pct = entry.status === "complete" ? 100 : entry.status === "failed" ? 0 : 55;
-
-  return (
-    <motion.div
-      className="mf-repo"
-      role="button"
-      tabIndex={0}
-      layout
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.94 }}
-      whileHover={{
-        y: -4,
-        borderColor: "var(--mf-ink)",
-        boxShadow: "0 14px 28px -10px rgba(0,0,0,0.14)",
-      }}
-      whileTap={{ scale: 0.985 }}
-      transition={{ type: "spring", stiffness: 380, damping: 28 }}
-      onClick={onOpen}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") onOpen();
-      }}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span className="mf-pill">
-          <span
-            className={`mf-dot ${entry.status === "complete" ? "live" : ""}`}
-            style={
-              entry.status === "complete"
-                ? { background: "#10b981" }
-                : entry.status === "failed"
-                  ? { background: "#ef4444" }
-                  : undefined
-            }
-          />
-          {entry.status}
-        </span>
-        <button
-          type="button"
-          aria-label="Remove repository"
-          className="mf-kbd"
-          style={{ cursor: "pointer", transition: "all 0.15s" }}
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
-          title="Remove from history"
-        >
-          ✕
-        </button>
-      </div>
-
-      <div>
-        <div className="mf-h3" style={{ wordBreak: "break-all", fontSize: "1.1875rem" }}>
-          {entry.repoLabel}
-        </div>
-        <div
-          className="mf-mono mf-muted"
-          style={{ marginTop: 8, display: "flex", gap: 10, alignItems: "center" }}
-        >
-          <span>Analyzed {timeAgo(entry.analyzedAt)}</span>
-          {sizeFormatted && <span>· {sizeFormatted}</span>}
-        </div>
-      </div>
-
-      <div>
-        <div className="mf-bar">
-          <i
-            style={{
-              width: `${pct}%`,
-              background: entry.status === "failed" ? "#ef4444" : "var(--mf-ink)",
-            }}
-          />
-        </div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginTop: 12,
-            gap: 8,
-            flexWrap: "wrap",
-          }}
-        >
-          <span
-            className="mf-mono mf-muted"
-            style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
-          >
-            <span>📄</span> {files ? `${files.toLocaleString()} files` : "— files"}
-          </span>
-
-          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            {langs.map((lang) => (
-              <span
-                key={lang}
-                className="mf-mono"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 4,
-                  fontSize: "0.6875rem",
-                  color: "var(--mf-ink-2)",
-                }}
-              >
-                <span
-                  style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: "50%",
-                    background: LANG_COLORS[lang] || "#888888",
-                  }}
-                />
-                {lang}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
 function DashboardPage() {
   const { repo: rawRepo, jobId, sessionId } = Route.useSearch();
   const repo = useMemo(() => (rawRepo ? normalizeRepoUrl(rawRepo) : undefined), [rawRepo]);
@@ -204,7 +70,6 @@ function DashboardPage() {
   const [inputRepo, setInputRepo] = useState("");
   const [version, setVersion] = useState(0);
   const [health, setHealth] = useState<"idle" | "ok" | "down">("idle");
-  const palette = useCommandPalette();
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const history = useMemo(() => repoHistory.getAll(), [version, repo]);
@@ -250,25 +115,6 @@ function DashboardPage() {
     }
   };
 
-  const paletteActions = [
-    {
-      id: "home",
-      label: "Go to Home",
-      icon: "🏠",
-      group: "Navigation",
-      shortcut: "G H",
-      onSelect: () => navigate({ to: "/" }),
-    },
-    ...history.map((r) => ({
-      id: `recent:${r.id}`,
-      label: r.repoLabel,
-      description: `Last analyzed: ${new Date(r.analyzedAt).toLocaleDateString()}`,
-      icon: "🗂",
-      group: "Recent Repos",
-      onSelect: () => navigate({ search: { repo: r.repoUrl } }),
-    })),
-  ];
-
   if (repo) {
     return (
       <StudioWorkspace
@@ -283,14 +129,29 @@ function DashboardPage() {
   const done = history.filter((h) => h.status === "complete").length;
   const totalFiles = history.reduce((s, h) => s + (h.meta?.files ?? 0), 0);
 
+  const dashboardStats: StatMetric[] = useMemo(
+    () => [
+      {
+        value: history.length,
+        label: "Repositories",
+        description: "Analyzed codebases in session",
+      },
+      {
+        value: done,
+        label: "Fully indexed",
+        description: "Complete AST graphs & symbol maps",
+      },
+      {
+        value: totalFiles || 0,
+        label: "Files mapped",
+        description: "Source files indexed across workspaces",
+      },
+    ],
+    [history.length, done, totalFiles],
+  );
+
   return (
     <div className="mf-root">
-      <CommandPalette
-        open={palette.open}
-        onClose={() => palette.setOpen(false)}
-        actions={paletteActions}
-      />
-
       {/* GitHub Personal Access Token Modal */}
       <AnimatePresence>
         {showTokenModal && (
@@ -440,20 +301,46 @@ function DashboardPage() {
             <Link to="/how-it-works" className="mf-side-link">
               How it works
             </Link>
-            <Link to="/pricing" className="mf-side-link">
-              Pricing
-            </Link>
             <Link to="/" className="mf-side-link">
               Back to site ↗
             </Link>
           </nav>
           <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
-            <button type="button" className="mf-btn ghost sm" onClick={checkHealth}>
-              {health === "idle"
-                ? "Checking backend..."
-                : health === "ok"
-                  ? "● Backend online"
-                  : "○ Backend offline"}
+            <button
+              type="button"
+              className="mf-btn ghost sm"
+              onClick={checkHealth}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+              }}
+              title="Click to check backend status"
+            >
+              <ActivityBadge
+                preset={health === "ok" ? "green" : health === "down" ? "red" : "orange"}
+                animation="circle"
+                scaleAmount={2.4}
+                rings={2}
+                minOpacity={0.7}
+                size={8}
+                transition={{ duration: 1.1, ease: "easeOut", delay: 0.2 }}
+                label={
+                  health === "idle"
+                    ? "Checking backend"
+                    : health === "ok"
+                      ? "Backend online"
+                      : "Backend offline"
+                }
+              />
+              <span>
+                {health === "idle"
+                  ? "Checking backend..."
+                  : health === "ok"
+                    ? "Backend online"
+                    : "Backend offline"}
+              </span>
             </button>
 
             {isAuthenticated && user ? (
@@ -586,10 +473,6 @@ function DashboardPage() {
                 </button>
               </div>
             )}
-
-            <button type="button" className="mf-btn ghost sm" onClick={palette.toggle}>
-              <span className="mf-kbd">⌘K</span> Command menu
-            </button>
           </div>
         </aside>
 
@@ -671,45 +554,15 @@ function DashboardPage() {
             ))}
           </motion.div>
 
-          <motion.div
-            className="mf-grid c3"
-            style={{ marginTop: 56 }}
-            initial="hidden"
-            animate="visible"
-            variants={{
-              hidden: { opacity: 0 },
-              visible: {
-                opacity: 1,
-                transition: { staggerChildren: 0.08, delayChildren: 0.22 },
-              },
-            }}
-          >
-            {[
-              [String(history.length), "Repositories"],
-              [String(done), "Fully indexed"],
-              [totalFiles ? totalFiles.toLocaleString() : "0", "Files mapped"],
-            ].map(([a, b], i) => (
-              <motion.div
-                key={b}
-                variants={{
-                  hidden: { opacity: 0, y: 14 },
-                  visible: {
-                    opacity: 1,
-                    y: 0,
-                    transition: { type: "spring", stiffness: 350, damping: 26 },
-                  },
-                }}
-                whileHover={{ y: -4, transition: { type: "spring", stiffness: 400, damping: 25 } }}
-                className={`mf-card ${i === 0 ? "ink" : "soft"}`}
-                style={{ minHeight: 170, justifyContent: "space-between" }}
-              >
-                <span className="mf-mono" style={{ opacity: 0.7 }}>
-                  {b}
-                </span>
-                <span className="mf-big-stat">{a}</span>
-              </motion.div>
-            ))}
-          </motion.div>
+          {/* Framer Stats Feature (Merged directly with page background) */}
+          <div style={{ marginTop: 44, marginBottom: 52 }}>
+            <StatsSection
+              stats={dashboardStats}
+              cardStyle={false}
+              divider={true}
+              duration={1.5}
+            />
+          </div>
 
           <div className="mf-sec-head" style={{ marginTop: 72, marginBottom: 24 }}>
             <h2 className="mf-h2">Recent repositories</h2>
@@ -834,21 +687,14 @@ function DashboardPage() {
               </div>
             </motion.div>
           ) : (
-            <div className="mf-grid c3">
-              <AnimatePresence mode="popLayout">
-                {history.map((h) => (
-                  <RepoCard
-                    key={h.id}
-                    entry={h}
-                    onOpen={() => navigate({ search: { repo: h.repoUrl } })}
-                    onDelete={() => {
-                      repoHistory.remove(h.id);
-                      setVersion((v) => v + 1);
-                    }}
-                  />
-                ))}
-              </AnimatePresence>
-            </div>
+            <CurvyShowcase
+              entries={history}
+              onOpen={(repoUrl) => navigate({ search: { repo: repoUrl } })}
+              onDelete={(id) => {
+                repoHistory.remove(id);
+                setVersion((v) => v + 1);
+              }}
+            />
           )}
         </main>
       </div>
