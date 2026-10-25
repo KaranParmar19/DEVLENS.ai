@@ -11,7 +11,6 @@ interface StudioTopbarProps {
   languages: string[];
   selectedLang: string | null;
   onSelectLang: (lang: string | null) => void;
-  onOpenPalette: () => void;
   onExport: (format: "json" | "mermaid" | "plantuml" | "share") => void;
   onClose: () => void;
 }
@@ -27,7 +26,6 @@ export function StudioTopbar({
   languages,
   selectedLang,
   onSelectLang,
-  onOpenPalette,
   onExport,
   onClose,
 }: StudioTopbarProps) {
@@ -287,28 +285,6 @@ export function StudioTopbar({
         </div>
 
         <div style={{ width: 1, height: 16, backgroundColor: "rgba(255, 255, 255, 0.15)" }} />
-
-        {/* ⌘K Trigger */}
-        <button
-          type="button"
-          onClick={onOpenPalette}
-          style={{
-            fontFamily: "var(--mf-mono, monospace)",
-            fontSize: "0.6875rem",
-            color: "rgba(255,255,255,0.6)",
-            background: "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(255,255,255,0.12)",
-            borderRadius: 6,
-            padding: "4px 8px",
-            cursor: "pointer",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 4,
-          }}
-          title="Command Menu (⌘K)"
-        >
-          <span>⌘K</span>
-        </button>
 
         {/* Share Button */}
         <button

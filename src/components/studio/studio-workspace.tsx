@@ -4,7 +4,6 @@ import { useAnalysis } from "@/hooks/useAnalysis";
 import { useChat } from "@/hooks/useChat";
 import { api } from "@/lib/api";
 import { repoHistory } from "@/lib/repo-history";
-import { CommandPalette, useCommandPalette } from "@/components/command-palette";
 
 import type { StudioTab } from "./studio-types";
 import { TelemetryModal } from "./telemetry-modal";
@@ -82,7 +81,6 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const palette = useCommandPalette();
 
   // Kick off real analysis on mount
   useEffect(() => {
@@ -129,11 +127,6 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
     }
     return ["TypeScript", "JavaScript", "Python", "Rust"];
   }, [analysisState.repoMeta]);
-
-  // File paths for ⌘K palette
-  const filePaths = useMemo(() => {
-    return (analysisState.filesData?.tree ?? []).filter((f) => !f.is_dir).map((f) => f.path);
-  }, [analysisState.filesData]);
 
   // Export handlers
   const handleExport = useCallback(
@@ -210,94 +203,6 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
     [repoUrl, repoLabel, analysisState.graphData, analysisState.sessionId, sessionId, showToast],
   );
 
-  const paletteActions = useMemo(
-    () => [
-      {
-        id: "arch",
-        label: "Architecture Graph",
-        icon: "🔷",
-        group: "Views",
-        shortcut: "1",
-        onSelect: () => setActiveTab("architecture"),
-      },
-      {
-        id: "flow",
-        label: "Code Flow",
-        icon: "🌊",
-        group: "Views",
-        shortcut: "2",
-        onSelect: () => setActiveTab("flow"),
-      },
-      {
-        id: "drift",
-        label: "Drift Timeline",
-        icon: "⏳",
-        group: "Views",
-        shortcut: "3",
-        onSelect: () => setActiveTab("drift"),
-      },
-      {
-        id: "doc",
-        label: "Onboarding Doc",
-        icon: "📋",
-        group: "Views",
-        shortcut: "4",
-        onSelect: () => setActiveTab("doc"),
-      },
-      {
-        id: "toggle-explorer",
-        label: "Toggle File Explorer",
-        icon: "📁",
-        group: "Panels",
-        onSelect: () => setExplorerCollapsed((v) => !v),
-      },
-      {
-        id: "toggle-copilot",
-        label: "Toggle DevLens Copilot",
-        icon: "💬",
-        group: "Panels",
-        onSelect: () => setCopilotCollapsed((v) => !v),
-      },
-      {
-        id: "export-json",
-        label: "Export as JSON",
-        icon: "⬇",
-        group: "Export",
-        onSelect: () => handleExport("json"),
-      },
-      {
-        id: "export-mermaid",
-        label: "Export as Mermaid",
-        icon: "⬇",
-        group: "Export",
-        onSelect: () => handleExport("mermaid"),
-      },
-      {
-        id: "export-plantuml",
-        label: "Export as PlantUML",
-        icon: "⬇",
-        group: "Export",
-        onSelect: () => handleExport("plantuml"),
-      },
-      {
-        id: "share",
-        label: "Copy Share Link",
-        icon: "🔗",
-        group: "Share",
-        onSelect: () => handleExport("share"),
-      },
-      {
-        id: "close",
-        label: "Close Repository",
-        icon: "✕",
-        group: "Navigation",
-        shortcut: "Esc",
-        onSelect: onClose,
-      },
-    ],
-    [handleExport, onClose],
-  );
-
   // Real file tree, modules, and entry points only (no fabricated mock data)
   const displayFiles = useMemo(() => {
     return analysisState.filesData?.tree ?? [];
@@ -369,18 +274,6 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
         overflow: "hidden",
       }}
     >
-      {/* ⌘K Command Palette */}
-      <CommandPalette
-        open={palette.open}
-        onClose={() => palette.setOpen(false)}
-        actions={paletteActions}
-        files={filePaths}
-        onFileSelect={(path) => {
-          setActiveFile(path);
-          setActiveTab("architecture");
-        }}
-      />
-
       {/* Studio Topbar */}
       <StudioTopbar
         repoUrl={repoUrl}
@@ -391,7 +284,6 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
         languages={languages}
         selectedLang={selectedLang}
         onSelectLang={setSelectedLang}
-        onOpenPalette={palette.toggle}
         onExport={handleExport}
         onClose={onClose}
       />
