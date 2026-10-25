@@ -10,6 +10,7 @@ import {
 
 import appCss from "../styles.css?url";
 import monoformCss from "../monoform.css?url";
+import { NextSmoothScroll } from "@/components/ui/smooth-scroll";
 
 function NotFoundComponent() {
   return (
@@ -128,6 +129,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <NextSmoothScroll />
       <Outlet />
     </QueryClientProvider>
   );

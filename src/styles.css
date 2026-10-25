@@ -798,31 +798,6 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   PRICING SPECIFIC
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-.dl-tier-card {
-  position: relative;
-  background: var(--dl-raised);
-  border: 1px solid var(--dl-line-1);
-  border-radius: var(--radius-lg);
-  padding: 28px;
-  display: flex;
-  flex-direction: column;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
-}
-
-.dl-tier-card:hover {
-  transform: translateY(-2px);
-}
-
-.dl-tier-card.featured {
-  border-color: rgba(0, 214, 143, 0.25);
-  background: linear-gradient(135deg, var(--dl-raised) 0%, rgba(0, 214, 143, 0.03) 100%);
-  box-shadow: 0 0 40px rgba(0, 214, 143, 0.06), 0 20px 60px rgba(0, 0, 0, 0.4);
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
    ONBOARDING SPECIFIC
    ═══════════════════════════════════════════════════════════════════════════ */
 
