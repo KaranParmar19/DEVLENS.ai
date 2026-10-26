@@ -1517,46 +1517,40 @@ button.mf-btn.sm {
 }
 
 /* Interactive Index Strip in Hero */
-/* ── Linear Process Flow with Curved Arches (Framer AnimatedPath) ── */
-.feat-linear-flow-wrap {
+/* ── Cascading Process Flow (Framer AnimatedPath Design matching Image 1) ── */
+.feat-cascade-wrap {
   margin-top: clamp(48px, 6vw, 84px);
   position: relative;
   width: 100%;
 }
 
-.feat-linear-arches-canvas {
+.feat-cascade-canvas {
   position: relative;
   width: 100%;
-  height: 90px;
-  overflow: visible;
+  height: 480px;
+  display: block;
 }
 
-.feat-linear-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 20px;
-  margin-top: 14px;
-}
-
-.feat-linear-card {
+.feat-cascade-card {
+  position: absolute;
   background: transparent;
   border: none;
-  padding: 0;
+  padding: 16px 0 0 0;
   text-align: left;
   cursor: pointer;
   color: var(--mf-ink, #0a0a0a);
   font-family: inherit;
-  width: 100%;
-  max-width: 215px;
-  margin: 0 auto;
+  width: 220px;
+  transform: translateX(-6px);
   transition: transform 0.25s var(--mf-ease);
+  z-index: 2;
 }
 
-.feat-linear-card:hover {
-  transform: translateY(-3px);
+.feat-cascade-card:hover {
+  transform: translateX(-6px) translateY(-3px);
 }
 
-.feat-linear-title {
+.feat-cascade-title {
   font-size: 1.0625rem;
   font-weight: 600;
   line-height: 1.25;
@@ -1565,17 +1559,18 @@ button.mf-btn.sm {
   transition: color 0.2s ease;
 }
 
-.feat-linear-card:hover .feat-linear-title {
+.feat-cascade-card:hover .feat-cascade-title {
+  color: var(--mf-ink);
   text-decoration: underline;
   text-underline-offset: 4px;
 }
 
-.feat-linear-num {
+.feat-cascade-num {
   font-weight: 700;
   margin-right: 4px;
 }
 
-.feat-linear-desc {
+.feat-cascade-desc {
   font-size: 0.84375rem;
   line-height: 1.48;
   color: var(--mf-ink-2, #666666);
@@ -1583,20 +1578,190 @@ button.mf-btn.sm {
   margin-bottom: 0;
 }
 
-@media (max-width: 900px) {
-  .feat-linear-arches-canvas {
-    display: none;
-  }
-  .feat-linear-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 24px;
-  }
+/* ── Telemetry Console in the lower-left cascade void ── */
+.feat-cascade-telemetry {
+  position: absolute;
+  left: 24px;
+  top: 165px;
+  width: clamp(340px, 48%, 560px);
+  background: var(--mf-bg, #ffffff);
+  border: 1px solid var(--mf-line);
+  border-radius: 20px;
+  padding: 22px 24px;
+  box-shadow: 0 16px 40px -16px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: all 0.35s var(--mf-ease);
 }
 
-@media (max-width: 600px) {
-  .feat-linear-grid {
-    grid-template-columns: 1fr;
-    gap: 20px;
+.feat-cascade-telemetry:hover {
+  border-color: var(--mf-ink);
+  box-shadow: 0 24px 48px -16px rgba(0, 0, 0, 0.14);
+}
+
+.feat-telemetry-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.feat-telemetry-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--mf-mono, monospace);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--mf-ink);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.feat-telemetry-tabs {
+  display: flex;
+  gap: 3px;
+  background: var(--mf-soft);
+  padding: 3px;
+  border-radius: 999px;
+  border: 1px solid var(--mf-line);
+}
+
+.feat-telemetry-tab {
+  background: transparent;
+  border: none;
+  font-family: var(--mf-mono, monospace);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+  color: var(--mf-ink-2);
+  transition: all 0.2s ease;
+}
+
+.feat-telemetry-tab:hover {
+  color: var(--mf-ink);
+}
+
+.feat-telemetry-tab[data-active="true"] {
+  background: var(--mf-ink);
+  color: #ffffff;
+}
+
+.feat-telemetry-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.feat-telemetry-heading {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--mf-ink);
+  letter-spacing: -0.015em;
+  margin: 0;
+}
+
+.feat-telemetry-sub {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--mf-ink-2);
+  margin: 0;
+}
+
+.feat-telemetry-code {
+  background: #0d0d0f;
+  color: #e4e4e7;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-family: var(--mf-mono, monospace);
+  font-size: 0.71875rem;
+  line-height: 1.55;
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  white-space: pre;
+  margin: 2px 0 0;
+}
+
+.feat-telemetry-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 10px;
+  border-top: 1px solid var(--mf-line);
+  font-family: var(--mf-mono, monospace);
+  font-size: 0.6875rem;
+}
+
+.feat-telemetry-benchmark {
+  color: var(--mf-ink-2);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.feat-telemetry-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--mf-ink);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: inherit;
+  transition: transform 0.15s ease;
+}
+
+.feat-telemetry-btn:hover {
+  transform: translateX(3px);
+}
+
+/* Mobile responsive view */
+.feat-cascade-mobile {
+  display: none;
+  flex-direction: column;
+  gap: 20px;
+  padding: 16px 0;
+}
+
+.feat-cascade-mobile-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  background: transparent;
+  border: none;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--mf-line);
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font-family: inherit;
+}
+
+.feat-cascade-mobile-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--mf-ink, #0a0a0a);
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .feat-cascade-canvas {
+    display: none;
+  }
+  .feat-cascade-mobile {
+    display: flex;
   }
 }
 

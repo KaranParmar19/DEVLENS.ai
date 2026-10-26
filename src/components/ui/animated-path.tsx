@@ -25,37 +25,38 @@ export interface AnimatedPathProps {
   preserveAspectRatio?: string;
   className?: string;
   style?: React.CSSProperties;
+  activePointIndex?: number;
 }
 
 /*
- * Linear 5-Step Process Flow with High Parabolic Arches
- * All 5 steps in a single horizontal line, connected by graceful upward-looping arches:
- * Dot 1 ⤻ Dot 2 ⤻ Dot 3 ⤻ Dot 4 ⤻ Dot 5
+ * 5-Step Process Flow Cascade (Framer AnimatedPath Companion Layout)
+ * Arches rise gracefully from dot to dot above each step in a diagonal cascade:
+ * 01 Architecture map → 02 Code flow tracer → 03 Drift timeline → 04 Ask DevLens → 05 Onboarding doc
  */
-export const LINEAR_ARCHES_PATH = `
-  M 100 78
-  C 156 12, 244 12, 300 78
-  C 356 12, 444 12, 500 78
-  C 556 12, 644 12, 700 78
-  C 756 12, 844 12, 900 78
+export const CASCADE_PATH = `
+  M 70 44
+  C 125 0, 265 6, 320 114
+  C 375 70, 515 76, 570 184
+  C 625 140, 765 146, 820 254
+  C 875 210, 1015 216, 1070 324
 `;
 
-export const LINEAR_ARCHES_POINTS: AnimatedPathPoint[] = [
-  { x: 100, y: 78 },
-  { x: 300, y: 78 },
-  { x: 500, y: 78 },
-  { x: 700, y: 78 },
-  { x: 900, y: 78 },
+export const CASCADE_POINTS: AnimatedPathPoint[] = [
+  { x: 70, y: 44 },
+  { x: 320, y: 114 },
+  { x: 570, y: 184 },
+  { x: 820, y: 254 },
+  { x: 1070, y: 324 },
 ];
 
 export function AnimatedPath({
-  path = LINEAR_ARCHES_PATH,
-  points = LINEAR_ARCHES_POINTS,
-  viewWidth = 1000,
-  viewHeight = 90,
+  path = CASCADE_PATH,
+  points = CASCADE_POINTS,
+  viewWidth = 1180,
+  viewHeight = 480,
   lineColor = "var(--mf-ink, #111111)",
   dotColor = "var(--mf-ink, #111111)",
-  strokeWidth = 1.25,
+  strokeWidth = 1.2,
   dashLength = 6,
   gapLength = 6,
   dotSize = 10,
@@ -68,6 +69,7 @@ export function AnimatedPath({
   preserveAspectRatio = "none",
   className,
   style,
+  activePointIndex,
 }: AnimatedPathProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const measurementPathRef = useRef<SVGPathElement>(null);
@@ -239,26 +241,35 @@ export function AnimatedPath({
         />
 
         {/* 3. Station dots at each cell waypoint */}
-        {points.map((pt, i) => (
-          <g key={`point-${i}`}>
-            {/* Outer halo */}
-            <circle
-              cx={pt.x}
-              cy={pt.y}
-              r={dotSize / 2 + 3}
-              fill={dotColor}
-              opacity={0.12}
-            />
-            {/* Core dot */}
-            <circle
-              cx={pt.x}
-              cy={pt.y}
-              r={dotSize / 2}
-              fill={dotColor}
-              opacity={0.85}
-            />
-          </g>
-        ))}
+        {points.map((pt, i) => {
+          const isActive = activePointIndex === i;
+          return (
+            <g key={`point-${i}`}>
+              {/* Outer halo */}
+              <circle
+                cx={pt.x}
+                cy={pt.y}
+                r={isActive ? dotSize / 2 + 5 : dotSize / 2 + 3}
+                fill={dotColor}
+                opacity={isActive ? 0.32 : 0.12}
+                style={{
+                  transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+                }}
+              />
+              {/* Core dot */}
+              <circle
+                cx={pt.x}
+                cy={pt.y}
+                r={isActive ? dotSize / 2 + 1 : dotSize / 2}
+                fill={dotColor}
+                opacity={0.95}
+                style={{
+                  transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+                }}
+              />
+            </g>
+          );
+        })}
       </svg>
     </div>
   );
