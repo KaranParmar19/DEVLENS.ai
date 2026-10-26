@@ -1517,40 +1517,46 @@ button.mf-btn.sm {
 }
 
 /* Interactive Index Strip in Hero */
-/* ── Cascading Process Flow (Framer AnimatedPath Design matching Image 1) ── */
-.feat-cascade-wrap {
+/* ── Linear Process Flow with Curved Arches (Framer AnimatedPath) ── */
+.feat-linear-flow-wrap {
   margin-top: clamp(48px, 6vw, 84px);
   position: relative;
   width: 100%;
 }
 
-.feat-cascade-canvas {
+.feat-linear-arches-canvas {
   position: relative;
   width: 100%;
-  height: 480px;
-  display: block;
+  height: 90px;
+  overflow: visible;
 }
 
-.feat-cascade-card {
-  position: absolute;
+.feat-linear-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 20px;
+  margin-top: 14px;
+}
+
+.feat-linear-card {
   background: transparent;
   border: none;
-  padding: 16px 0 0 0;
+  padding: 0;
   text-align: left;
   cursor: pointer;
   color: var(--mf-ink, #0a0a0a);
   font-family: inherit;
-  width: 220px;
-  transform: translateX(-6px);
+  width: 100%;
+  max-width: 215px;
+  margin: 0 auto;
   transition: transform 0.25s var(--mf-ease);
-  z-index: 2;
 }
 
-.feat-cascade-card:hover {
-  transform: translateX(-6px) translateY(-3px);
+.feat-linear-card:hover {
+  transform: translateY(-3px);
 }
 
-.feat-cascade-title {
+.feat-linear-title {
   font-size: 1.0625rem;
   font-weight: 600;
   line-height: 1.25;
@@ -1559,18 +1565,17 @@ button.mf-btn.sm {
   transition: color 0.2s ease;
 }
 
-.feat-cascade-card:hover .feat-cascade-title {
-  color: var(--mf-ink);
+.feat-linear-card:hover .feat-linear-title {
   text-decoration: underline;
   text-underline-offset: 4px;
 }
 
-.feat-cascade-num {
+.feat-linear-num {
   font-weight: 700;
   margin-right: 4px;
 }
 
-.feat-cascade-desc {
+.feat-linear-desc {
   font-size: 0.84375rem;
   line-height: 1.48;
   color: var(--mf-ink-2, #666666);
@@ -1578,43 +1583,20 @@ button.mf-btn.sm {
   margin-bottom: 0;
 }
 
-/* Mobile responsive view */
-.feat-cascade-mobile {
-  display: none;
-  flex-direction: column;
-  gap: 20px;
-  padding: 16px 0;
-}
-
-.feat-cascade-mobile-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  background: transparent;
-  border: none;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--mf-line);
-  text-align: left;
-  cursor: pointer;
-  color: inherit;
-  font-family: inherit;
-}
-
-.feat-cascade-mobile-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--mf-ink, #0a0a0a);
-  margin-top: 6px;
-  flex-shrink: 0;
-}
-
 @media (max-width: 900px) {
-  .feat-cascade-canvas {
+  .feat-linear-arches-canvas {
     display: none;
   }
-  .feat-cascade-mobile {
-    display: flex;
+  .feat-linear-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+}
+
+@media (max-width: 600px) {
+  .feat-linear-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
   }
 }
 

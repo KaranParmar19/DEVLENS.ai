@@ -28,34 +28,34 @@ export interface AnimatedPathProps {
 }
 
 /*
- * 5-Step Process Flow Cascade (Framer AnimatedPath Companion Layout)
- * Arches rise gracefully from dot to dot above each step in a diagonal cascade:
- * 01 Architecture map → 02 Code flow tracer → 03 Drift timeline → 04 Ask DevLens → 05 Onboarding doc
+ * Linear 5-Step Process Flow with High Parabolic Arches
+ * All 5 steps in a single horizontal line, connected by graceful upward-looping arches:
+ * Dot 1 ⤻ Dot 2 ⤻ Dot 3 ⤻ Dot 4 ⤻ Dot 5
  */
-export const CASCADE_PATH = `
-  M 70 44
-  C 125 0, 265 6, 320 114
-  C 375 70, 515 76, 570 184
-  C 625 140, 765 146, 820 254
-  C 875 210, 1015 216, 1070 324
+export const LINEAR_ARCHES_PATH = `
+  M 100 78
+  C 156 12, 244 12, 300 78
+  C 356 12, 444 12, 500 78
+  C 556 12, 644 12, 700 78
+  C 756 12, 844 12, 900 78
 `;
 
-export const CASCADE_POINTS: AnimatedPathPoint[] = [
-  { x: 70, y: 44 },
-  { x: 320, y: 114 },
-  { x: 570, y: 184 },
-  { x: 820, y: 254 },
-  { x: 1070, y: 324 },
+export const LINEAR_ARCHES_POINTS: AnimatedPathPoint[] = [
+  { x: 100, y: 78 },
+  { x: 300, y: 78 },
+  { x: 500, y: 78 },
+  { x: 700, y: 78 },
+  { x: 900, y: 78 },
 ];
 
 export function AnimatedPath({
-  path = CASCADE_PATH,
-  points = CASCADE_POINTS,
-  viewWidth = 1180,
-  viewHeight = 480,
+  path = LINEAR_ARCHES_PATH,
+  points = LINEAR_ARCHES_POINTS,
+  viewWidth = 1000,
+  viewHeight = 90,
   lineColor = "var(--mf-ink, #111111)",
   dotColor = "var(--mf-ink, #111111)",
-  strokeWidth = 1.2,
+  strokeWidth = 1.25,
   dashLength = 6,
   gapLength = 6,
   dotSize = 10,
