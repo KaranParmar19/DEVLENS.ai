@@ -3,6 +3,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { Pill, Reveal, SiteLayout } from "./site-layout";
 import { MorphText } from "@/components/ui/morph-text";
+import { AnimatedPath } from "@/components/ui/animated-path";
 import { normalizeRepoUrl } from "@/lib/utils";
 
 /* ═══ INTERACTIVE DATA FOR FEATURES SHOWCASE ════════════════════════ */
@@ -332,13 +333,28 @@ export function FeaturesPage() {
             </motion.div>
           </div>
 
-          {/* Interactive 5-Cell Jump Strip */}
+          {/* Interactive 5-Cell Jump Strip with Framer AnimatedPath */}
           <motion.div
             className="feat-jump-bar"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.22 }}
           >
+            <AnimatedPath
+              className="feat-jump-animated-path"
+              viewWidth={1000}
+              viewHeight={112}
+              lineColor="var(--mf-ink, #0a0a0a)"
+              dotColor="var(--mf-ink, #0a0a0a)"
+              strokeWidth={1.25}
+              dashLength={7}
+              gapLength={7}
+              dotSize={8}
+              speed={130}
+              trailLength={0.28}
+              baseOpacity={0.16}
+            />
+
             {JUMP_INDEX.map((item) => (
               <button
                 key={item.id}

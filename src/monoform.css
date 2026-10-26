@@ -1523,6 +1523,14 @@ button.mf-btn.sm {
   border-bottom: 1px solid var(--mf-line);
   display: grid;
   grid-template-columns: repeat(5, 1fr);
+  position: relative;
+}
+
+.feat-jump-animated-path {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .feat-jump-item {
@@ -1541,6 +1549,7 @@ button.mf-btn.sm {
   border-bottom: 0;
   border-left: 0;
   position: relative;
+  z-index: 2;
   overflow: hidden;
   transition: background 0.35s var(--mf-ease), color 0.35s var(--mf-ease), padding-left 0.35s var(--mf-ease);
 }
@@ -1916,6 +1925,9 @@ button.mf-btn.sm {
   }
   .feat-jump-bar {
     grid-template-columns: repeat(2, 1fr);
+  }
+  .feat-jump-animated-path {
+    display: none;
   }
   .feat-copilot-sidebar {
     border-right: none;
