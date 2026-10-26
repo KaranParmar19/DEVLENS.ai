@@ -167,18 +167,6 @@ function DashboardPage() {
 
   const secondaryLinks: MotionSecondaryLink[] = useMemo(
     () => [
-      {
-        label: "GitHub PAT Token",
-        onClick: () => setShowTokenModal(true),
-      },
-      {
-        label: "Features",
-        to: "/features",
-      },
-      {
-        label: "How it works",
-        to: "/how-it-works",
-      },
       ...(isAuthenticated
         ? [
             {
@@ -190,6 +178,10 @@ function DashboardPage() {
             {
               label: "Connect GitHub ↗",
               onClick: loginWithGitHub,
+            },
+            {
+              label: "GitHub PAT Token",
+              onClick: () => setShowTokenModal(true),
             },
           ]),
     ],
@@ -331,23 +323,6 @@ function DashboardPage() {
           >
             <span>Connect GitHub</span>
             <span style={{ fontSize: "0.75rem" }}>↗</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowTokenModal(true)}
-            style={{
-              background: "transparent",
-              border: "1px solid rgba(0, 0, 0, 0.12)",
-              borderRadius: 999,
-              padding: "5px 10px",
-              fontFamily: "var(--mf-mono, monospace)",
-              fontSize: "0.6875rem",
-              color: "var(--mf-ink-2, #333)",
-              cursor: "pointer",
-            }}
-            title="Connect with GitHub Personal Access Token"
-          >
-            PAT
           </button>
         </div>
       )}
