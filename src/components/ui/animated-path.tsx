@@ -28,44 +28,43 @@ export interface AnimatedPathProps {
 }
 
 /*
- * Default 5-cell harmonic wave traversing:
+ * 5-Step Process Flow Cascade (Framer AnimatedPath Companion Layout)
+ * Arches rise gracefully from dot to dot above each step in a diagonal cascade:
  * 01 Architecture map → 02 Code flow tracer → 03 Drift timeline → 04 Ask DevLens → 05 Onboarding doc
  */
-const DEFAULT_5_CELL_PATH = `
-  M 30 46
-  L 100 46
-  C 180 46, 220 66, 300 66
-  C 380 66, 420 46, 500 46
-  C 580 46, 620 66, 700 66
-  C 780 66, 820 46, 900 46
-  L 970 46
+export const CASCADE_PATH = `
+  M 70 44
+  C 125 0, 265 6, 320 114
+  C 375 70, 515 76, 570 184
+  C 625 140, 765 146, 820 254
+  C 875 210, 1015 216, 1070 324
 `;
 
-const DEFAULT_5_CELL_POINTS: AnimatedPathPoint[] = [
-  { x: 100, y: 46 },
-  { x: 300, y: 66 },
-  { x: 500, y: 46 },
-  { x: 700, y: 66 },
-  { x: 900, y: 46 },
+export const CASCADE_POINTS: AnimatedPathPoint[] = [
+  { x: 70, y: 44 },
+  { x: 320, y: 114 },
+  { x: 570, y: 184 },
+  { x: 820, y: 254 },
+  { x: 1070, y: 324 },
 ];
 
 export function AnimatedPath({
-  path = DEFAULT_5_CELL_PATH,
-  points = DEFAULT_5_CELL_POINTS,
-  viewWidth = 1000,
-  viewHeight = 120,
+  path = CASCADE_PATH,
+  points = CASCADE_POINTS,
+  viewWidth = 1180,
+  viewHeight = 480,
   lineColor = "var(--mf-ink, #111111)",
   dotColor = "var(--mf-ink, #111111)",
-  strokeWidth = 1.25,
-  dashLength = 7,
-  gapLength = 7,
-  dotSize = 9,
+  strokeWidth = 1.2,
+  dashLength = 6,
+  gapLength = 6,
+  dotSize = 10,
   speed = 130,
   trailLength = 0.28,
   startDelay = 0,
   startOnView = true,
   showBase = true,
-  baseOpacity = 0.18,
+  baseOpacity = 0.16,
   preserveAspectRatio = "none",
   className,
   style,

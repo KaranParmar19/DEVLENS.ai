@@ -1517,6 +1517,107 @@ button.mf-btn.sm {
 }
 
 /* Interactive Index Strip in Hero */
+/* ── Cascading Process Flow (Framer AnimatedPath Design matching Image 1) ── */
+.feat-cascade-wrap {
+  margin-top: clamp(48px, 6vw, 84px);
+  position: relative;
+  width: 100%;
+}
+
+.feat-cascade-canvas {
+  position: relative;
+  width: 100%;
+  height: 480px;
+  display: block;
+}
+
+.feat-cascade-card {
+  position: absolute;
+  background: transparent;
+  border: none;
+  padding: 16px 0 0 0;
+  text-align: left;
+  cursor: pointer;
+  color: var(--mf-ink, #0a0a0a);
+  font-family: inherit;
+  width: 220px;
+  transform: translateX(-6px);
+  transition: transform 0.25s var(--mf-ease);
+  z-index: 2;
+}
+
+.feat-cascade-card:hover {
+  transform: translateX(-6px) translateY(-3px);
+}
+
+.feat-cascade-title {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--mf-ink, #0a0a0a);
+  letter-spacing: -0.015em;
+  transition: color 0.2s ease;
+}
+
+.feat-cascade-card:hover .feat-cascade-title {
+  color: var(--mf-ink);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.feat-cascade-num {
+  font-weight: 700;
+  margin-right: 4px;
+}
+
+.feat-cascade-desc {
+  font-size: 0.84375rem;
+  line-height: 1.48;
+  color: var(--mf-ink-2, #666666);
+  margin-top: 8px;
+  margin-bottom: 0;
+}
+
+/* Mobile responsive view */
+.feat-cascade-mobile {
+  display: none;
+  flex-direction: column;
+  gap: 20px;
+  padding: 16px 0;
+}
+
+.feat-cascade-mobile-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  background: transparent;
+  border: none;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--mf-line);
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font-family: inherit;
+}
+
+.feat-cascade-mobile-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--mf-ink, #0a0a0a);
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .feat-cascade-canvas {
+    display: none;
+  }
+  .feat-cascade-mobile {
+    display: flex;
+  }
+}
+
 .feat-jump-bar {
   margin-top: clamp(48px, 6vw, 84px);
   border-top: 1px solid var(--mf-line);

@@ -16,6 +16,54 @@ const JUMP_INDEX = [
   { id: "feat-05", n: "05", t: "Onboarding doc", tag: "Auto-Wiki Dossier" },
 ];
 
+const PROCESS_STEPS = [
+  {
+    id: "feat-01",
+    num: "01)",
+    title: "Architecture map",
+    tag: "AST Force Graph",
+    desc: "AST-projected force layout mapping files, symbols, and dependencies in real time.",
+    x: 70,
+    y: 44,
+  },
+  {
+    id: "feat-02",
+    num: "02)",
+    title: "Code flow tracer",
+    tag: "Execution Hops",
+    desc: "Multi-hop execution tracing from HTTP ingress down to database mutation.",
+    x: 320,
+    y: 114,
+  },
+  {
+    id: "feat-03",
+    num: "03)",
+    title: "Drift timeline",
+    tag: "Commit Blast Radius",
+    desc: "Commit-by-commit blast radius tracking structural divergence across branches.",
+    x: 570,
+    y: 184,
+  },
+  {
+    id: "feat-04",
+    num: "04)",
+    title: "Ask DevLens",
+    tag: "Line-Cited Copilot",
+    desc: "Line-cited contextual reasoning powered by multi-file AST multi-graphs.",
+    x: 820,
+    y: 254,
+  },
+  {
+    id: "feat-05",
+    num: "05)",
+    title: "Onboarding doc",
+    tag: "Auto-Wiki Dossier",
+    desc: "Synthesizes architecture mental models and domain dossiers on demand.",
+    x: 1070,
+    y: 324,
+  },
+];
+
 const FEAT_NODES = [
   {
     id: 0,
@@ -333,47 +381,69 @@ export function FeaturesPage() {
             </motion.div>
           </div>
 
-          {/* Interactive 5-Cell Jump Strip with Framer AnimatedPath */}
+          {/* Cascading Process Flow (Framer AnimatedPath Design matching Image 1) */}
           <motion.div
-            className="feat-jump-bar"
-            initial={{ opacity: 0, y: 16 }}
+            className="feat-cascade-wrap"
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.22 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
           >
-            <AnimatedPath
-              className="feat-jump-animated-path"
-              viewWidth={1000}
-              viewHeight={112}
-              lineColor="var(--mf-ink, #0a0a0a)"
-              dotColor="var(--mf-ink, #0a0a0a)"
-              strokeWidth={1.25}
-              dashLength={7}
-              gapLength={7}
-              dotSize={8}
-              speed={130}
-              trailLength={0.28}
-              baseOpacity={0.16}
-            />
+            {/* Desktop / Tablet SVG animated canvas */}
+            <div className="feat-cascade-canvas">
+              <AnimatedPath
+                viewWidth={1180}
+                viewHeight={480}
+                lineColor="var(--mf-ink, #0a0a0a)"
+                dotColor="var(--mf-ink, #0a0a0a)"
+                strokeWidth={1.25}
+                dashLength={6}
+                gapLength={6}
+                dotSize={10}
+                speed={130}
+                trailLength={0.28}
+                baseOpacity={0.16}
+              />
 
-            {JUMP_INDEX.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className="feat-jump-item"
-                onClick={() => scrollToSection(item.id)}
-              >
-                <div className="feat-jump-top">
-                  <span className="feat-jump-num">/ {item.n}</span>
-                  <span className="mf-arrow">↘</span>
-                </div>
-                <div>
-                  <div className="feat-jump-title">{item.t}</div>
-                  <div className="feat-jump-tag" style={{ marginTop: 4 }}>
-                    {item.tag}
+              {/* Positioned Step Cards matching Image 1 */}
+              {PROCESS_STEPS.map((step) => (
+                <button
+                  key={step.id}
+                  type="button"
+                  className="feat-cascade-card"
+                  style={{
+                    left: `${(step.x / 1180) * 100}%`,
+                    top: `${(step.y / 480) * 100}%`,
+                  }}
+                  onClick={() => scrollToSection(step.id)}
+                  title={`Jump to ${step.title}`}
+                >
+                  <div className="feat-cascade-title">
+                    <span className="feat-cascade-num">{step.num}</span> {step.title}
                   </div>
-                </div>
-              </button>
-            ))}
+                  <p className="feat-cascade-desc">{step.desc}</p>
+                </button>
+              ))}
+            </div>
+
+            {/* Mobile Responsive List (< 900px) */}
+            <div className="feat-cascade-mobile">
+              {PROCESS_STEPS.map((step) => (
+                <button
+                  key={step.id}
+                  type="button"
+                  className="feat-cascade-mobile-item"
+                  onClick={() => scrollToSection(step.id)}
+                >
+                  <div className="feat-cascade-mobile-dot" />
+                  <div>
+                    <div className="feat-cascade-title">
+                      <span className="feat-cascade-num">{step.num}</span> {step.title}
+                    </div>
+                    <p className="feat-cascade-desc">{step.desc}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
           </motion.div>
         </div>
       </section>
