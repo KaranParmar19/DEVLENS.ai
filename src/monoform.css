@@ -1227,6 +1227,44 @@ button.mf-btn.sm {
 }
 
 /* ═══ DASHBOARD (hub) — light editorial ═════════════════════════════ */
+.mf-dashboard-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--mf-bg, #ffffff);
+  color: var(--mf-ink, #0a0a0a);
+}
+
+.mf-dashboard-nav-wrap {
+  position: sticky;
+  top: 14px;
+  z-index: 50;
+  width: 100%;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 0 20px;
+  box-sizing: border-box;
+}
+
+.mf-dashboard-main {
+  width: 100%;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 36px 24px 80px;
+  box-sizing: border-box;
+  flex: 1;
+}
+
+@media (max-width: 768px) {
+  .mf-dashboard-nav-wrap {
+    top: 8px;
+    padding: 0 12px;
+  }
+  .mf-dashboard-main {
+    padding: 20px 16px 64px;
+  }
+}
+
 .mf-app { display: grid; grid-template-columns: 248px 1fr; min-height: 100vh; }
 .mf-side { position: sticky; top: 0; height: 100vh; border-right: 1px solid var(--mf-line); padding: 24px 16px; display: flex; flex-direction: column; gap: 28px; background: #fff; }
 .mf-side-link { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; font-size: .9375rem; color: var(--mf-ink-2); letter-spacing: -.01em; transition: all .2s var(--mf-ease); }
@@ -1425,6 +1463,875 @@ button.mf-btn.sm {
   background: var(--mf-ink);
 }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   FEATURES PAGE — EDITORIAL ARCHITECTURE & ASYMMETRIC LAYOUTS
+   ═══════════════════════════════════════════════════════════════════════ */
 
+.feat-hero-grid {
+  display: grid;
+  grid-template-columns: 1.35fr 0.85fr;
+  gap: clamp(32px, 5vw, 72px);
+  align-items: end;
+  padding-top: clamp(12px, 2vw, 28px);
+}
 
+.feat-display-title {
+  font-weight: 500;
+  font-size: clamp(3.25rem, 8.8vw, 8.25rem);
+  line-height: 0.91;
+  letter-spacing: -0.055em;
+  margin: 0;
+}
 
+.feat-line-indent {
+  display: block;
+  padding-left: clamp(28px, 9vw, 150px);
+  margin-top: 0.04em;
+}
+
+.feat-hero-aside {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-bottom: 8px;
+  border-left: 1px solid var(--mf-line);
+  padding-left: clamp(20px, 3vw, 36px);
+}
+
+.feat-spec-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.feat-spec-chip {
+  font-family: var(--mf-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: var(--mf-soft);
+  color: var(--mf-ink-2);
+  border: 1px solid var(--mf-line);
+}
+
+/* Interactive Index Strip in Hero */
+.feat-jump-bar {
+  margin-top: clamp(48px, 6vw, 84px);
+  border-top: 1px solid var(--mf-line);
+  border-bottom: 1px solid var(--mf-line);
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.feat-jump-item {
+  padding: 20px 18px;
+  border-right: 1px solid var(--mf-line);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  cursor: pointer;
+  background: transparent;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+  border-top: 0;
+  border-bottom: 0;
+  border-left: 0;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.35s var(--mf-ease), color 0.35s var(--mf-ease), padding-left 0.35s var(--mf-ease);
+}
+
+.feat-jump-item:last-child {
+  border-right: none;
+}
+
+.feat-jump-item:hover {
+  background: var(--mf-ink);
+  color: #ffffff !important;
+  padding-left: 24px;
+}
+
+.feat-jump-item:hover * {
+  color: #ffffff !important;
+}
+
+.feat-jump-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.feat-jump-num {
+  font-family: var(--mf-mono);
+  font-size: 0.75rem;
+  color: var(--mf-ink-3);
+  letter-spacing: 0.06em;
+}
+
+.feat-jump-title {
+  font-size: 1.0625rem;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+}
+
+.feat-jump-tag {
+  font-family: var(--mf-mono);
+  font-size: 0.625rem;
+  color: var(--mf-ink-3);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Giant Outline / Editorial Index Numeral */
+.feat-giant-num {
+  font-family: var(--mf-font);
+  font-size: clamp(4.75rem, 10.5vw, 9.5rem);
+  font-weight: 600;
+  line-height: 0.8;
+  letter-spacing: -0.065em;
+  color: transparent;
+  -webkit-text-stroke: 1.5px var(--mf-line);
+  user-select: none;
+  transition: -webkit-text-stroke-color 0.4s var(--mf-ease), transform 0.4s var(--mf-ease);
+}
+
+.feat-block:hover .feat-giant-num {
+  -webkit-text-stroke-color: var(--mf-ink);
+  transform: translateX(4px);
+}
+
+.mf-root[data-theme='dark'] .feat-giant-num {
+  -webkit-text-stroke-color: rgba(255, 255, 255, 0.22);
+}
+
+.mf-root[data-theme='dark'] .feat-block:hover .feat-giant-num {
+  -webkit-text-stroke-color: #ffffff;
+}
+
+/* Feature 01 — Asymmetric Split Showcase */
+.feat-split-01 {
+  display: grid;
+  grid-template-columns: 0.95fr 1.25fr;
+  gap: clamp(36px, 5vw, 72px);
+  align-items: start;
+}
+
+.feat-sticky-col {
+  position: sticky;
+  top: 104px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.feat-num-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--mf-line);
+  padding-bottom: 20px;
+}
+
+.feat-subgrid-2x2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.feat-micro-card {
+  border: 1px solid var(--mf-line);
+  border-radius: 14px;
+  padding: 16px 18px;
+  background: var(--mf-bg);
+  transition: border-color 0.25s var(--mf-ease), transform 0.25s var(--mf-ease);
+}
+
+.feat-micro-card:hover {
+  border-color: var(--mf-ink);
+  transform: translateY(-2px);
+}
+
+.feat-micro-idx {
+  font-family: var(--mf-mono);
+  font-size: 0.65rem;
+  color: var(--mf-ink-3);
+  letter-spacing: 0.06em;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.feat-micro-text {
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  line-height: 1.35;
+}
+
+/* Interactive Dark Visual Canvas Card */
+.feat-canvas-shell {
+  border-radius: 22px;
+  background: #0c0c0f;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 36px 90px -24px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  margin-top: clamp(0px, 2.5vw, 32px);
+}
+
+.feat-canvas-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.feat-canvas-dots {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.feat-canvas-dots i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: inline-block;
+}
+
+/* Features 02 & 03 — Staggered Diagonal Offset Grid */
+.feat-stagger-wrap {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  row-gap: clamp(64px, 9vw, 128px);
+  column-gap: 24px;
+}
+
+.feat-stagger-left {
+  grid-column: 1 / 9;
+}
+
+.feat-stagger-right {
+  grid-column: 5 / 13;
+}
+
+.feat-editorial-card {
+  border: 1px solid var(--mf-line);
+  border-radius: 24px;
+  padding: clamp(28px, 4vw, 48px);
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(12px);
+  position: relative;
+  overflow: hidden;
+}
+
+.feat-hop-track {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin-top: 28px;
+}
+
+.feat-hop-btn {
+  padding: 12px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.03);
+  color: #bfbfbf;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.25s var(--mf-ease);
+}
+
+.feat-hop-btn:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+}
+
+.feat-hop-btn.active {
+  background: #ffffff;
+  color: #0a0a0a !important;
+  border-color: #ffffff;
+}
+
+.feat-hop-btn.active * {
+  color: #0a0a0a !important;
+}
+
+/* Feature 04 — Center-Stage Spotlight */
+.feat-spotlight-head {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 40px;
+  align-items: end;
+  margin-bottom: clamp(36px, 5vw, 60px);
+}
+
+.feat-copilot-grid {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 24px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.feat-copilot-sidebar {
+  padding: 24px;
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.feat-prompt-btn {
+  width: 100%;
+  text-align: left;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  color: #d4d4d4;
+  font-family: var(--mf-font);
+  font-size: 0.875rem;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: all 0.22s var(--mf-ease);
+}
+
+.feat-prompt-btn:hover {
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+}
+
+.feat-prompt-btn.active {
+  background: #ffffff;
+  color: #0a0a0a !important;
+  border-color: #ffffff;
+  font-weight: 500;
+}
+
+.feat-Prompt-btn.active * {
+  color: #0a0a0a !important;
+}
+
+/* Feature 05 — Reversed Editorial Dossier Layout */
+.feat-split-05 {
+  display: grid;
+  grid-template-columns: 1.2fr 0.95fr;
+  gap: clamp(36px, 5vw, 72px);
+  align-items: start;
+}
+
+.feat-dossier {
+  border: 1px solid var(--mf-ink);
+  border-radius: 22px;
+  background: #ffffff;
+  color: #0a0a0a;
+  overflow: hidden;
+  box-shadow: 0 28px 64px -20px rgba(0, 0, 0, 0.12);
+}
+
+.feat-dossier-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--mf-line);
+  background: var(--mf-soft);
+  padding: 8px 12px 0;
+  gap: 6px;
+}
+
+.feat-dossier-tab {
+  padding: 10px 16px;
+  font-family: var(--mf-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 10px 10px 0 0;
+  background: transparent;
+  color: var(--mf-ink-3);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.feat-dossier-tab.active {
+  background: #ffffff;
+  color: #0a0a0a;
+  border-color: var(--mf-line);
+  font-weight: 600;
+}
+
+/* Architectural Comparison Matrix */
+.feat-matrix {
+  width: 100%;
+  border-collapse: collapse;
+  border-top: 1px solid var(--mf-line);
+}
+
+.feat-matrix th,
+.feat-matrix td {
+  padding: 20px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--mf-line);
+  font-size: 0.9375rem;
+}
+
+.feat-matrix th {
+  font-family: var(--mf-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mf-ink-3);
+}
+
+.feat-matrix td:first-child {
+  font-weight: 500;
+  color: var(--mf-ink);
+}
+
+@media (max-width: 1024px) {
+  .feat-hero-grid,
+  .feat-split-01,
+  .feat-split-05,
+  .feat-spotlight-head,
+  .feat-copilot-grid {
+    grid-template-columns: 1fr;
+  }
+  .feat-sticky-col {
+    position: static;
+  }
+  .feat-stagger-left,
+  .feat-stagger-right {
+    grid-column: 1 / -1;
+  }
+  .feat-jump-bar {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .feat-copilot-sidebar {
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  }
+}
+
+@media (max-width: 640px) {
+  .feat-line-indent {
+    padding-left: 0;
+  }
+  .feat-jump-bar,
+  .feat-subgrid-2x2,
+  .feat-hop-track {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   HOW IT WORKS PAGE — SWISS BLUEPRINT & CHRONOLOGICAL TELEMETRY SPINE
+   (Distinct sharp architectural schematic — 0px radius, crosshairs, time-axis)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* 3-Tier Monumental Typographic Cascade Hero */
+.hiw-cascade-wrap {
+  padding-top: clamp(16px, 2.5vw, 36px);
+  border-top: 1px solid var(--mf-ink);
+  position: relative;
+}
+
+.hiw-cascade-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--mf-line);
+  font-family: var(--mf-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: var(--mf-ink-3);
+}
+
+.hiw-tier-1 {
+  font-weight: 500;
+  font-size: clamp(2.8rem, 7.6vw, 7.2rem);
+  line-height: 0.92;
+  letter-spacing: -0.055em;
+  margin: clamp(28px, 4vw, 48px) 0 0;
+  text-align: left;
+}
+
+.hiw-tier-2 {
+  font-weight: 500;
+  font-size: clamp(3.2rem, 9.2vw, 8.8rem);
+  line-height: 0.9;
+  letter-spacing: -0.06em;
+  margin: 4px 0 0;
+  text-align: center;
+}
+
+.hiw-tier-3 {
+  font-weight: 500;
+  font-size: clamp(2.6rem, 6.8vw, 6.4rem);
+  line-height: 0.94;
+  letter-spacing: -0.05em;
+  margin: 6px 0 0;
+  text-align: right;
+}
+
+.hiw-hero-deck {
+  margin-top: clamp(32px, 4.5vw, 56px);
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  border-top: 1px solid var(--mf-line);
+  border-bottom: 1px solid var(--mf-ink);
+}
+
+.hiw-hero-deck-cell {
+  padding: 22px 24px;
+  border-right: 1px solid var(--mf-line);
+}
+
+.hiw-hero-deck-cell:first-child {
+  padding-left: 0;
+}
+
+.hiw-hero-deck-cell:last-child {
+  border-right: none;
+  padding-right: 0;
+}
+
+/* Proportional Execution Time-Ruler Schematic */
+.hiw-ruler-wrap {
+  margin-top: clamp(36px, 5vw, 64px);
+  border: 1px solid var(--mf-ink);
+  background: var(--mf-bg);
+}
+
+.hiw-ruler-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--mf-line);
+  background: var(--mf-soft);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.hiw-ruler-ticks {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 20px;
+  border-bottom: 1px solid var(--mf-line);
+  font-family: var(--mf-mono);
+  font-size: 0.625rem;
+  color: var(--mf-ink-3);
+  letter-spacing: 0.04em;
+}
+
+.hiw-ruler-bar {
+  display: grid;
+  grid-template-columns: 0.8fr 1.88fr 1.41fr 2.05fr 1.44fr;
+  border-bottom: 1px solid var(--mf-ink);
+}
+
+.hiw-ruler-seg {
+  padding: 18px 16px;
+  border-right: 1px solid var(--mf-line);
+  background: transparent;
+  color: var(--mf-ink);
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  border-top: 0;
+  border-bottom: 0;
+  border-left: 0;
+  position: relative;
+  transition: background 0.25s var(--mf-ease), color 0.25s var(--mf-ease);
+}
+
+.hiw-ruler-seg:last-child {
+  border-right: none;
+}
+
+.hiw-ruler-seg:hover {
+  background: var(--mf-soft);
+}
+
+.hiw-ruler-seg.active {
+  background: var(--mf-ink);
+  color: #ffffff !important;
+}
+
+.hiw-ruler-seg.active * {
+  color: #ffffff !important;
+}
+
+.hiw-ruler-readout {
+  display: grid;
+  grid-template-columns: 260px 1fr 280px;
+  background: #0a0a0a;
+  color: #ffffff;
+}
+
+.hiw-ruler-readout > div {
+  padding: 20px 24px;
+  border-right: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.hiw-ruler-readout > div:last-child {
+  border-right: none;
+}
+
+/* Continuous Chronological Conduit Spine Layout */
+.hiw-conduit-section {
+  position: relative;
+  border-top: 1px solid var(--mf-line);
+}
+
+.hiw-conduit-row {
+  display: grid;
+  grid-template-columns: 210px 1fr;
+  border-bottom: 1px solid var(--mf-line);
+  position: relative;
+}
+
+.hiw-time-rail {
+  padding: clamp(32px, 4.5vw, 64px) 24px clamp(32px, 4.5vw, 64px) 0;
+  border-right: 1px solid var(--mf-line);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+}
+
+/* Crosshair (+) Architectural Node Marker on the Spine */
+.hiw-crosshair {
+  position: absolute;
+  right: -6px;
+  top: clamp(32px, 4.5vw, 64px);
+  width: 11px;
+  height: 11px;
+  background: var(--mf-ink);
+  display: grid;
+  place-items: center;
+  color: var(--mf-bg);
+  font-family: var(--mf-mono);
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.hiw-time-stamp {
+  font-family: var(--mf-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--mf-ink);
+}
+
+.hiw-time-delta {
+  font-family: var(--mf-mono);
+  font-size: 2.25rem;
+  font-weight: 500;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  margin-top: 8px;
+}
+
+.hiw-stage-canvas {
+  padding: clamp(32px, 4.5vw, 64px) 0 clamp(32px, 4.5vw, 64px) clamp(24px, 4vw, 56px);
+}
+
+/* Exposed Swiss Blueprint Schematic Cells (0px radius) */
+.hiw-schematic-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 1px solid var(--mf-ink);
+  margin-top: 32px;
+}
+
+.hiw-schematic-cell {
+  padding: 24px;
+  border-right: 1px solid var(--mf-line);
+  background: var(--mf-bg);
+  position: relative;
+}
+
+.hiw-schematic-cell:last-child {
+  border-right: none;
+}
+
+/* 3-Column Compiler Translation Triptych (Stage 02) */
+.hiw-compiler-triptych {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr 0.85fr;
+  border: 1px solid var(--mf-ink);
+  margin-top: 32px;
+  background: #0a0a0a;
+  color: #ffffff;
+}
+
+.hiw-compiler-pane {
+  border-right: 1px solid rgba(255, 255, 255, 0.14);
+  display: flex;
+  flex-direction: column;
+}
+
+.hiw-compiler-pane:last-child {
+  border-right: none;
+}
+
+.hiw-compiler-head {
+  padding: 12px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  font-family: var(--mf-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  color: #a3a3a3;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hiw-compiler-body {
+  padding: 20px;
+  font-family: var(--mf-mono);
+  font-size: 0.75rem;
+  line-height: 1.65;
+  overflow-x: auto;
+  flex: 1;
+}
+
+/* 2D Adjacency & Resolution Matrix (Stage 03 Dark) */
+.hiw-matrix-layout {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  margin-top: 32px;
+}
+
+.hiw-matrix-row-btn {
+  display: grid;
+  grid-template-columns: 54px 1.2fr 90px 110px;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 0;
+  border-left: 0;
+  border-right: 0;
+  background: transparent;
+  color: #d4d4d4;
+  font-family: var(--mf-mono);
+  font-size: 0.75rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.hiw-matrix-row-btn:last-child {
+  border-bottom: none;
+}
+
+.hiw-matrix-row-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+
+.hiw-matrix-row-btn.active {
+  background: #ffffff;
+  color: #0a0a0a !important;
+}
+
+.hiw-matrix-row-btn.active * {
+  color: #0a0a0a !important;
+}
+
+/* Stage 04 — Swiss Mathematical Formula Poster */
+.hiw-equation-poster {
+  margin-top: 32px;
+  padding: clamp(28px, 4vw, 48px);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.02);
+  position: relative;
+}
+
+.hiw-equation-display {
+  font-family: var(--mf-font);
+  font-size: clamp(1.5rem, 3.4vw, 3.1rem);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 1.15;
+  color: #ffffff;
+  padding: 20px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  margin: 16px 0 28px;
+}
+
+/* Stage 05 — Naive Splitter vs AST-Envelope Visual Diff */
+.hiw-diff-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid var(--mf-ink);
+  margin-top: 32px;
+}
+
+.hiw-diff-col {
+  padding: clamp(22px, 3vw, 34px);
+}
+
+.hiw-diff-col + .hiw-diff-col {
+  border-left: 1px solid var(--mf-ink);
+  background: var(--mf-soft);
+}
+
+@media (max-width: 1024px) {
+  .hiw-hero-deck,
+  .hiw-ruler-bar,
+  .hiw-ruler-readout,
+  .hiw-conduit-row,
+  .hiw-schematic-strip,
+  .hiw-compiler-triptych,
+  .hiw-matrix-layout,
+  .hiw-diff-grid {
+    grid-template-columns: 1fr;
+  }
+  .hiw-tier-2,
+  .hiw-tier-3 {
+    text-align: left;
+  }
+  .hiw-time-rail {
+    border-right: none;
+    border-bottom: 1px solid var(--mf-line);
+    padding: 24px 0;
+    flex-direction: row;
+    align-items: center;
+  }
+  .hiw-crosshair {
+    display: none;
+  }
+  .hiw-stage-canvas {
+    padding-left: 0;
+  }
+  .hiw-diff-col + .hiw-diff-col {
+    border-left: none;
+    border-top: 1px solid var(--mf-ink);
+  }
+}
+
+@media (max-width: 640px) {
+  .hiw-matrix-row-btn {
+    grid-template-columns: 1fr;
+  }
+}

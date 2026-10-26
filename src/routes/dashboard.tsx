@@ -5,6 +5,11 @@ import { StudioWorkspace } from "@/components/studio/studio-workspace";
 import { StatsSection, type StatMetric } from "@/components/ui/stats-section";
 import { CurvyShowcase } from "@/components/ui/curvy-showcase";
 import { ActivityBadge } from "@/components/ui/activity-badge";
+import {
+  MotionOverlayMenu,
+  type MotionMenuLink,
+  type MotionSecondaryLink,
+} from "@/components/ui/motion-overlay-menu";
 import { repoHistory, type RepoHistoryEntry } from "@/lib/repo-history";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
@@ -150,8 +155,227 @@ function DashboardPage() {
     [history.length, done, totalFiles],
   );
 
+  const menuLinks: MotionMenuLink[] = useMemo(
+    () => [
+      { label: "Overview", to: "/dashboard", badge: "Dashboard" },
+      { label: "Features", to: "/features" },
+      { label: "How it works", to: "/how-it-works" },
+      { label: "Home", to: "/" },
+    ],
+    [],
+  );
+
+  const secondaryLinks: MotionSecondaryLink[] = useMemo(
+    () => [
+      {
+        label: "GitHub PAT Token",
+        onClick: () => setShowTokenModal(true),
+      },
+      {
+        label: "Features",
+        to: "/features",
+      },
+      {
+        label: "How it works",
+        to: "/how-it-works",
+      },
+      ...(isAuthenticated
+        ? [
+            {
+              label: `Sign out (@${user?.username || "user"})`,
+              onClick: logout,
+            },
+          ]
+        : [
+            {
+              label: "Connect GitHub ↗",
+              onClick: loginWithGitHub,
+            },
+          ]),
+    ],
+    [isAuthenticated, user?.username, logout, loginWithGitHub],
+  );
+
+  const topBarActions = (
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      {/* Backend health status pill with ActivityBadge */}
+      <button
+        type="button"
+        onClick={checkHealth}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 7,
+          background: "rgba(0, 0, 0, 0.04)",
+          border: "1px solid rgba(0, 0, 0, 0.08)",
+          borderRadius: 999,
+          padding: "6px 12px 6px 10px",
+          fontFamily: "var(--mf-mono, monospace)",
+          fontSize: "0.75rem",
+          color: "var(--mf-ink, #0a0a0a)",
+          cursor: "pointer",
+          transition: "all 0.2s ease",
+        }}
+        title="Click to check backend status"
+      >
+        <ActivityBadge
+          preset={health === "ok" ? "green" : health === "down" ? "red" : "orange"}
+          animation="circle"
+          scaleAmount={2.2}
+          rings={2}
+          minOpacity={0.7}
+          size={7}
+          transition={{ duration: 1.1, ease: "easeOut", delay: 0.2 }}
+        />
+        <span style={{ fontWeight: 500 }}>
+          {health === "idle"
+            ? "Checking..."
+            : health === "ok"
+              ? "Backend online"
+              : "Backend offline"}
+        </span>
+      </button>
+
+      {/* GitHub Authentication / User status */}
+      {isAuthenticated && user ? (
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            background: "rgba(0, 0, 0, 0.04)",
+            border: "1px solid rgba(0, 0, 0, 0.08)",
+            borderRadius: 999,
+            padding: "4px 10px 4px 6px",
+          }}
+        >
+          {user.avatarUrl ? (
+            <img
+              src={user.avatarUrl}
+              alt={user.username}
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: "50%",
+                objectFit: "cover",
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: "50%",
+                background: "#0a0a0a",
+                color: "#ffffff",
+                display: "grid",
+                placeItems: "center",
+                fontSize: "0.6875rem",
+                fontWeight: 600,
+              }}
+            >
+              {user.username.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <span
+            style={{
+              fontFamily: "var(--mf-mono, monospace)",
+              fontSize: "0.75rem",
+              fontWeight: 500,
+              color: "var(--mf-ink, #0a0a0a)",
+              maxWidth: 100,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            @{user.username}
+          </span>
+          <button
+            type="button"
+            onClick={logout}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "rgba(0, 0, 0, 0.45)",
+              fontSize: "0.6875rem",
+              cursor: "pointer",
+              padding: "0 2px",
+              fontFamily: "var(--mf-mono, monospace)",
+            }}
+            title="Sign out"
+          >
+            Sign out
+          </button>
+        </div>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <button
+            type="button"
+            onClick={loginWithGitHub}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              background: "var(--mf-ink, #0a0a0a)",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: 999,
+              padding: "6px 14px",
+              fontSize: "0.75rem",
+              fontWeight: 500,
+              cursor: "pointer",
+              transition: "transform 0.15s ease",
+            }}
+            title="Connect GitHub for private repo access & higher rate limits"
+          >
+            <span>Connect GitHub</span>
+            <span style={{ fontSize: "0.75rem" }}>↗</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowTokenModal(true)}
+            style={{
+              background: "transparent",
+              border: "1px solid rgba(0, 0, 0, 0.12)",
+              borderRadius: 999,
+              padding: "5px 10px",
+              fontFamily: "var(--mf-mono, monospace)",
+              fontSize: "0.6875rem",
+              color: "var(--mf-ink-2, #333)",
+              cursor: "pointer",
+            }}
+            title="Connect with GitHub Personal Access Token"
+          >
+            PAT
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
+  const overlayNote = (
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <ActivityBadge
+        preset={health === "ok" ? "green" : health === "down" ? "red" : "orange"}
+        animation="circle"
+        scaleAmount={2.2}
+        rings={2}
+        minOpacity={0.7}
+        size={7}
+      />
+      <span>
+        {health === "ok"
+          ? "DevLens AI Engine Online · AST Parser & pgvector Ready"
+          : health === "down"
+            ? "DevLens AI Engine Offline · Retrying connection..."
+            : "Checking DevLens AI Engine Status..."}
+      </span>
+    </div>
+  );
+
   return (
-    <div className="mf-root">
+    <div className="mf-root mf-dashboard-shell">
       {/* GitHub Personal Access Token Modal */}
       <AnimatePresence>
         {showTokenModal && (
@@ -283,200 +507,30 @@ function DashboardPage() {
         )}
       </AnimatePresence>
 
-      <div className="mf-app">
-        <aside className="mf-side">
-          <Link to="/" className="mf-logo">
-            <span className="mf-logo-mark" /> DevLens
-            <span className="mf-muted" style={{ fontWeight: 400 }}>
-              .ai
+      {/* Floating Top Navbar (Framer MotionOverlayMenu) */}
+      <div className="mf-dashboard-nav-wrap">
+        <MotionOverlayMenu
+          links={menuLinks}
+          secondary={secondaryLinks}
+          note={overlayNote}
+          actions={topBarActions}
+          brand={
+            <span style={{ display: "inline-flex", alignItems: "baseline", gap: 3 }}>
+              <span>DevLens</span>
+              <span style={{ fontWeight: 400, opacity: 0.6, fontSize: "0.85em" }}>.ai</span>
             </span>
-          </Link>
-          <nav style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <Link to="/dashboard" className="mf-side-link" data-active="true">
-              Overview
-            </Link>
-            <Link to="/features" className="mf-side-link">
-              Features
-            </Link>
-            <Link to="/how-it-works" className="mf-side-link">
-              How it works
-            </Link>
-            <Link to="/" className="mf-side-link">
-              Back to site ↗
-            </Link>
-          </nav>
-          <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
-            <button
-              type="button"
-              className="mf-btn ghost sm"
-              onClick={checkHealth}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-              }}
-              title="Click to check backend status"
-            >
-              <ActivityBadge
-                preset={health === "ok" ? "green" : health === "down" ? "red" : "orange"}
-                animation="circle"
-                scaleAmount={2.4}
-                rings={2}
-                minOpacity={0.7}
-                size={8}
-                transition={{ duration: 1.1, ease: "easeOut", delay: 0.2 }}
-                label={
-                  health === "idle"
-                    ? "Checking backend"
-                    : health === "ok"
-                      ? "Backend online"
-                      : "Backend offline"
-                }
-              />
-              <span>
-                {health === "idle"
-                  ? "Checking backend..."
-                  : health === "ok"
-                    ? "Backend online"
-                    : "Backend offline"}
-              </span>
-            </button>
+          }
+          brandLink="/"
+          headerColor="var(--mf-ink, #0a0a0a)"
+          barBackground="rgba(255, 255, 255, 0.78)"
+          barBorder="rgba(0, 0, 0, 0.08)"
+          barRadius="999px"
+          barBlur={18}
+          barShadow={true}
+        />
+      </div>
 
-            {isAuthenticated && user ? (
-              <div
-                style={{
-                  background: "rgba(0, 0, 0, 0.04)",
-                  border: "1px solid rgba(0, 0, 0, 0.08)",
-                  borderRadius: 10,
-                  padding: "10px 12px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 8,
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  {user.avatarUrl ? (
-                    <img
-                      src={user.avatarUrl}
-                      alt={user.username}
-                      style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: "50%",
-                        border: "1px solid rgba(0,0,0,0.1)",
-                      }}
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: "50%",
-                        background: "#0a0a0a",
-                        color: "#ffffff",
-                        display: "grid",
-                        placeItems: "center",
-                        fontSize: "0.75rem",
-                        fontWeight: 600,
-                      }}
-                    >
-                      {user.username.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  <div style={{ overflow: "hidden" }}>
-                    <div
-                      style={{
-                        fontSize: "0.8125rem",
-                        fontWeight: 500,
-                        lineHeight: 1.2,
-                        textOverflow: "ellipsis",
-                        overflow: "hidden",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {user.name || user.username}
-                    </div>
-                    <div
-                      style={{
-                        fontFamily: "var(--mf-mono, monospace)",
-                        fontSize: "0.6875rem",
-                        color: "rgba(0,0,0,0.5)",
-                      }}
-                    >
-                      @{user.username}
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    paddingTop: 4,
-                    borderTop: "1px solid rgba(0,0,0,0.06)",
-                  }}
-                >
-                  <span
-                    style={{
-                      fontFamily: "var(--mf-mono, monospace)",
-                      fontSize: "0.625rem",
-                      color: "#1a8838",
-                    }}
-                  >
-                    ● GitHub linked
-                  </span>
-                  <button
-                    type="button"
-                    onClick={logout}
-                    style={{
-                      background: "transparent",
-                      border: "none",
-                      color: "rgba(0,0,0,0.4)",
-                      fontFamily: "var(--mf-mono, monospace)",
-                      fontSize: "0.6875rem",
-                      cursor: "pointer",
-                      padding: 0,
-                    }}
-                  >
-                    Sign out
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <button
-                  type="button"
-                  className="mf-btn sm"
-                  onClick={loginWithGitHub}
-                  title="Connect GitHub for private repo access & higher rate limits"
-                >
-                  Connect GitHub <span className="mf-arrow">↗</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowTokenModal(true)}
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    fontFamily: "var(--mf-mono, monospace)",
-                    fontSize: "0.6875rem",
-                    color: "var(--mf-ink-3)",
-                    cursor: "pointer",
-                    textDecoration: "underline",
-                    padding: "2px 0",
-                    textAlign: "center",
-                  }}
-                >
-                  Or connect with token (PAT)
-                </button>
-              </div>
-            )}
-          </div>
-        </aside>
-
-        <main className="mf-main">
+      <main className="mf-dashboard-main">
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -697,7 +751,6 @@ function DashboardPage() {
             />
           )}
         </main>
-      </div>
     </div>
   );
 }
