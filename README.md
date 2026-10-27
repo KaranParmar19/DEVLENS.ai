@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/Stack-FastAPI%20%7C%20React%20%7C%20pgvector-black" alt="Tech Stack" />
 
   <h1>🌌 DevLens AI</h1>
-
+  <h2>Production Build Coming Soon...</h2>
   <p><strong>The Intelligent Cognitive Layer for Software Codebases</strong></p>
   <p>Paste any GitHub repo URL → Get an interactive architecture map, smart Q&A, and auto-generated onboarding docs.<br/>Powered by Claude Sonnet, GPT-4o, and pgvector RAG.</p>
 </div>
