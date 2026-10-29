@@ -81,7 +81,19 @@ html, body {
 .mf-lead { font-size: clamp(1.0625rem, 1.5vw, 1.375rem); line-height: 1.4; letter-spacing: -0.015em; color: var(--mf-ink-2); max-width: 36em; }
 .mf-body { font-size: 0.9375rem; line-height: 1.55; color: var(--mf-ink-2); letter-spacing: -0.005em; }
 .mf-mono { font-family: var(--mf-mono); font-size: 0.75rem; letter-spacing: 0.04em; text-transform: uppercase; }
-.mf-serif-i { font-style: italic; font-weight: 400; letter-spacing: -0.04em; }
+.mf-serif-i {
+  font-family: "Newsreader", "Instrument Serif", "Georgia", "Times New Roman", serif;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.025em;
+}
+.mf-scribble {
+  font-family: "Caveat", "Newsreader", cursive, sans-serif;
+  font-size: clamp(1.25rem, 1.8vw, 1.55rem);
+  line-height: 1.42;
+  letter-spacing: -0.01em;
+  color: var(--mf-ink);
+}
 .mf-muted { color: var(--mf-ink-3); }
 
 /* ── Pill / buttons ───────────────────────────────────────────────── */
@@ -1189,6 +1201,10 @@ button.mf-btn.sm {
   color: #ffffff;
   background: rgba(255, 255, 255, 0.05);
   cursor: pointer;
+  position: relative;
+  z-index: 5;
+  user-select: none;
+  -webkit-user-select: none;
   transition: all 0.2s ease;
 }
 

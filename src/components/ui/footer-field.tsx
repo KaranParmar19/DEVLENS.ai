@@ -288,11 +288,41 @@ export function FooterField({
     };
   }, [active, letters.length]);
 
-  const scrollToTop = () => {
-    if ((window as any).lenisInstance) {
-      (window as any).lenisInstance.scrollTo(0);
-    } else if (typeof window !== "undefined") {
-      window.scrollTo({ top: 0, behavior: "smooth" });
+  const scrollToTop = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    try {
+      const lenis = (window as any).lenisInstance;
+      if (lenis && typeof lenis.scrollTo === "function") {
+        lenis.scrollTo(0, { immediate: false });
+      }
+    } catch (err) {
+      console.warn("Lenis scrollTo error:", err);
+    }
+
+    if (typeof window !== "undefined") {
+      try {
+        window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+      } catch {
+        window.scrollTo(0, 0);
+      }
+      if (document.documentElement) {
+        try {
+          document.documentElement.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+        } catch {
+          document.documentElement.scrollTop = 0;
+        }
+      }
+      if (document.body) {
+        try {
+          document.body.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+        } catch {
+          document.body.scrollTop = 0;
+        }
+      }
     }
   };
 

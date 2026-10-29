@@ -540,7 +540,7 @@ export function HowItWorksPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.14 }}
             >
-              <p className="mf-lead" style={{ margin: 0 }}>
+              <p className="mf-lead mf-scribble mf-serif-i" style={{ margin: 0 }}>
                 New to a codebase? Move your mouse over the box below. DevLens works like a magic magnifying glass—turning hundreds of confusing files into a clean visual map anyone can understand.
               </p>
             </motion.div>

@@ -696,26 +696,14 @@ function Numeral4({ scale, color }: { scale: number; color: string }) {
     <svg
       aria-hidden="true"
       width={170 * scale}
-      height={200 * scale}
-      viewBox="0 0 170 200"
+      height={185 * scale}
+      viewBox="0 0 170 185"
       style={{ display: "block", flexShrink: 0 }}
     >
-      {/* Exact architectural geometric 4 matching project typography */}
       <path
         fill={color}
         fillRule="evenodd"
-        d="M 5.8 0 L 46.4 0 L 46.4 123.1 L 90.8 123.1 L 90.8 5.8 L 119.8 5.8 L 125.6 11.5 L 125.6 115.4 L 168.1 115.4 L 168.1 136.5 L 125.6 144.2 L 125.6 198.1 L 85.0 198.1 L 85.0 151.9 L 1.9 151.9 L 0 148.1 L 0 5.8 Z"
-      />
-      {/* Subtle 3D architectural top bevel facets */}
-      <path
-        fill="currentColor"
-        opacity="0.18"
-        d="M 0 5.8 L 5.8 0 L 46.4 0 L 40.6 5.8 Z"
-      />
-      <path
-        fill="currentColor"
-        opacity="0.32"
-        d="M 90.8 5.8 L 119.8 5.8 L 125.6 11.5 L 96.6 11.5 Z"
+        d="M100 0H160V108H170V160H160V185H100V160H0V118Z M100 46V112H42Z"
       />
     </svg>
   );
@@ -931,7 +919,7 @@ export function Hoopshots404(rawProps: Hoopshots404Props = {}) {
     zx: 546,
     zy: 40,
     zw: 187,
-    zh: 200,
+    zh: 205,
   });
 
   const [results, setResults] = useState<("made" | "missed")[]>([]);
@@ -1759,7 +1747,7 @@ export function Hoopshots404(rawProps: Hoopshots404Props = {}) {
             style={{
               position: "relative",
               width: 187 * ns,
-              height: 200 * ns,
+              height: 205 * ns,
               borderRadius: 187 * ns * 0.42,
               background: numeralColor,
               flexShrink: 0,
