@@ -541,7 +541,10 @@ export function HowItWorksPage() {
               transition={{ duration: 0.5, delay: 0.14 }}
             >
               <p className="mf-lead mf-scribble mf-serif-i" style={{ margin: 0 }}>
-                New to a codebase? Move your mouse over the box below. DevLens works like a magic magnifying glass—turning hundreds of confusing files into a clean visual map anyone can understand.
+                <span className="hwc-scribble-q">New to a codebase?</span>
+                <span className="hwc-scribble-a">
+                  Move your mouse over the box below—DevLens works like a magic magnifying glass, turning hundreds of confusing files into a clean visual map anyone can understand.
+                </span>
               </p>
             </motion.div>
           </div>

@@ -89,10 +89,21 @@ html, body {
 }
 .mf-scribble {
   font-family: "Caveat", "Newsreader", cursive, sans-serif;
-  font-size: clamp(1.25rem, 1.8vw, 1.55rem);
-  line-height: 1.42;
+  font-size: clamp(1.4rem, 2.2vw, 1.95rem);
+  font-weight: 500;
+  line-height: 1.35;
   letter-spacing: -0.01em;
   color: var(--mf-ink);
+  max-width: 100% !important;
+}
+.hwc-scribble-q {
+  font-weight: 700;
+  color: var(--mf-ink);
+  margin-right: 8px;
+}
+.hwc-scribble-a {
+  font-weight: 500;
+  color: var(--mf-ink-2);
 }
 .mf-muted { color: var(--mf-ink-3); }
 
@@ -2215,11 +2226,12 @@ button.mf-btn.sm {
    ═══════════════════════════════════════════════════════════════════════ */
 
 .hwc-hero-split {
-  display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.85fr);
-  gap: clamp(28px, 4.5vw, 72px);
-  align-items: end;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: clamp(14px, 2vw, 22px);
   margin-top: clamp(24px, 3.5vw, 44px);
+  max-width: 1360px;
 }
 
 .hwc-hero-mega {
@@ -2793,7 +2805,6 @@ button.mf-btn.sm {
 
 /* ── Responsive ───────────────────────────────────────────────────────── */
 @media (max-width: 1024px) {
-  .hwc-hero-split,
   .hwc-theatre,
   .hwc-promise-grid,
   .hwc-finale {
