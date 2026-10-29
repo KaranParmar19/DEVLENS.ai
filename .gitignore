@@ -49,5 +49,28 @@ backend/.coverage
 backend/htmlcov/
 backend/*.egg-info/
 
+# Scratch & temporary assets
+*.mp4
+reel_page.html
+embed.html
+crop_details.py
+download_video.py
+enhance_logo.py
+find_video.py
+get_embed.py
+get_reel.py
+inspect_scripts.py
+center.jpg
+inset.jpg
+left_box.jpg
+logo.jpg
+logo_close.jpg
+logo_contrast.png
+logo_large.png
+screen.jpg
+thumb.jpg
+top_right.jpg
+top_right_bar.jpg
+
 # Scratch
 scratch/
