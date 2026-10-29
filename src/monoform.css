@@ -1732,11 +1732,13 @@ button.mf-btn.sm {
 
 /* Giant Outline / Editorial Index Numeral */
 .feat-giant-num {
-  font-family: var(--mf-font);
+  font-family: var(--mf-mono, "IBM Plex Mono", monospace);
   font-size: clamp(4.75rem, 10.5vw, 9.5rem);
-  font-weight: 600;
+  font-weight: 700;
   line-height: 0.8;
-  letter-spacing: -0.065em;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: 'tnum' 1, 'zero' 1;
   color: transparent;
   -webkit-text-stroke: 1.5px var(--mf-line);
   user-select: none;
