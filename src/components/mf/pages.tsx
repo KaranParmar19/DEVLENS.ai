@@ -281,64 +281,10 @@ INVARIANT_03: Worker sandboxes must purge cloned disk state within 30s of job co
   },
 ];
 
-const STAGE_TELEMETRY = [
-  {
-    step: "01",
-    label: "STAGE 01 // AST FORCE GRAPH",
-    title: "Instant Spatial Multi-Graph Projection",
-    metric: "410ms Cold Parse",
-    sub: "Barnes-Hut quadtree force simulation with WebGL instanced buffers. Computes eigenvector centrality and circular coupling across entire codebases.",
-    code: "fn build_graph(cst: &Tree) -> Multigraph {\n  cst.walk_symbols(|sym| link_edges(sym, PageRank::default()))\n}",
-    benchmark: "14+ Grammars · < 8.0s Total",
-    target: "feat-01",
-  },
-  {
-    step: "02",
-    label: "STAGE 02 // CODE FLOW TRACER",
-    title: "Multi-Hop Dynamic Execution Tracing",
-    metric: "14 Hops Traversed",
-    sub: "Follows execution paths from HTTP gateway ingress down to database mutation. Maps synchronous function calls, event queues, and RPCs.",
-    code: "export const traceCallHops = async (entry: Route) => {\n  return resolveCallerCalleeChain(entry, { maxHops: 32 });\n};",
-    benchmark: "100% Deterministic · Zero Hallucination",
-    target: "feat-02",
-  },
-  {
-    step: "03",
-    label: "STAGE 03 // DRIFT TIMELINE",
-    title: "Commit-by-Commit Structural Blast Radius",
-    metric: "90-Day Diff Index",
-    sub: "Calculates syntactic churn and structural drift across git branches. Instantly isolates breaking changes and downstream ripple effects.",
-    code: "W(v) = 0.45 * FanIn(v) + 0.35 * Cyclomatic(v) + 0.20 * Churn(v)",
-    benchmark: "Tarjan SCC · Cycle Free",
-    target: "feat-03",
-  },
-  {
-    step: "04",
-    label: "STAGE 04 // ASK DEVLENS",
-    title: "Line-Cited Multi-Graph Contextual AI",
-    metric: "Exact Line Citations",
-    sub: "Combines 768-d pgvector HNSW semantic embeddings with deterministic AST multi-graph caller/callee traversals for verified explanations.",
-    code: "SELECT chunk, file_path, line_start FROM chunks\nORDER BY embedding <=> query_vec LIMIT 8;",
-    benchmark: "Ground Truth · Zero Hallucination",
-    target: "feat-04",
-  },
-  {
-    step: "05",
-    label: "STAGE 05 // ONBOARDING DOSSIER",
-    title: "Automated Domain Architecture Dossiers",
-    metric: "Auto-Wiki Ready",
-    sub: "Generates comprehensive onboarding guides, architectural component diagrams (Mermaid), and core invariant summaries for new engineers.",
-    code: "dossier.export({ format: 'markdown', diagrams: 'mermaid', inlineAst: true });",
-    benchmark: "Live Sync · Export Ready",
-    target: "feat-05",
-  },
-];
-
 /* ═══ FEATURES PAGE COMPONENT ═══════════════════════════════════════ */
 
 export function FeaturesPage() {
   const navigate = useNavigate();
-  const [activeStep, setActiveStep] = useState(0);
   const [selectedNodeId, setSelectedNodeId] = useState(2);
   const [activeHop, setActiveHop] = useState(2);
   const [activeCommit, setActiveCommit] = useState(0);
@@ -352,7 +298,6 @@ export function FeaturesPage() {
   const currentCommit = DRIFT_COMMITS[activeCommit] ?? DRIFT_COMMITS[0];
   const currentCopilot = COPILOT_DEMOS[activePrompt] ?? COPILOT_DEMOS[0];
   const currentDossier = DOSSIER_TABS[activeDossier] ?? DOSSIER_TABS[0];
-  const currentTelemetry = STAGE_TELEMETRY[activeStep] ?? STAGE_TELEMETRY[0];
 
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
@@ -436,7 +381,7 @@ export function FeaturesPage() {
             </motion.div>
           </div>
 
-          {/* Cascading Process Flow with Interactive Stage Telemetry */}
+          {/* Cascading Process Flow (Framer AnimatedPath Design matching Image 1) */}
           <motion.div
             className="feat-cascade-wrap"
             initial={{ opacity: 0, y: 20 }}
@@ -457,21 +402,18 @@ export function FeaturesPage() {
                 speed={130}
                 trailLength={0.28}
                 baseOpacity={0.16}
-                activePointIndex={activeStep}
               />
 
               {/* Positioned Step Cards matching Image 1 */}
-              {PROCESS_STEPS.map((step, idx) => (
+              {PROCESS_STEPS.map((step) => (
                 <button
                   key={step.id}
                   type="button"
                   className="feat-cascade-card"
-                  data-active={activeStep === idx}
                   style={{
                     left: `${(step.x / 1180) * 100}%`,
                     top: `${(step.y / 480) * 100}%`,
                   }}
-                  onMouseEnter={() => setActiveStep(idx)}
                   onClick={() => scrollToSection(step.id)}
                   title={`Jump to ${step.title}`}
                 >
@@ -481,53 +423,6 @@ export function FeaturesPage() {
                   <p className="feat-cascade-desc">{step.desc}</p>
                 </button>
               ))}
-
-              {/* Interactive Telemetry Console filling the lower-left cascade void */}
-              <div className="feat-cascade-telemetry">
-                <div className="feat-telemetry-top">
-                  <div className="feat-telemetry-pill">
-                    <span className="mf-dot live" />
-                    <span>{currentTelemetry.label}</span>
-                  </div>
-
-                  <div className="feat-telemetry-tabs">
-                    {STAGE_TELEMETRY.map((item, i) => (
-                      <button
-                        key={item.step}
-                        type="button"
-                        className="feat-telemetry-tab"
-                        data-active={activeStep === i}
-                        onClick={() => setActiveStep(i)}
-                        title={`Inspect ${item.step}`}
-                      >
-                        {item.step}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="feat-telemetry-body">
-                  <h4 className="feat-telemetry-heading">{currentTelemetry.title}</h4>
-                  <p className="feat-telemetry-sub">{currentTelemetry.sub}</p>
-                  <pre className="feat-telemetry-code">
-                    <code>{currentTelemetry.code}</code>
-                  </pre>
-                </div>
-
-                <div className="feat-telemetry-footer">
-                  <span className="feat-telemetry-benchmark">
-                    <span>⚡</span> {currentTelemetry.benchmark}
-                  </span>
-                  <button
-                    type="button"
-                    className="feat-telemetry-btn"
-                    onClick={() => scrollToSection(currentTelemetry.target)}
-                  >
-                    <span>Explore deep dive</span>
-                    <span className="mf-arrow">↘</span>
-                  </button>
-                </div>
-              </div>
             </div>
 
             {/* Mobile Responsive List (< 900px) */}
