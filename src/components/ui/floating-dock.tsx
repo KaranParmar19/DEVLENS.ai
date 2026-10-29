@@ -5,7 +5,6 @@ import {
   House,
   Layers,
   Grid2x2,
-  LayoutDashboard,
   UserRound,
   LogOut,
 } from "lucide-react";
@@ -133,13 +132,6 @@ export function FloatingDock() {
             ),
             onClick: loginWithGitHub,
             title: "Connect GitHub Account",
-          },
-          {
-            id: "dashboard",
-            label: "Dashboard ↗",
-            to: "/dashboard",
-            icon: <LayoutDashboard size={18} strokeWidth={1.9} />,
-            title: "Launch DevLens Workspace",
           },
         ]),
   ];

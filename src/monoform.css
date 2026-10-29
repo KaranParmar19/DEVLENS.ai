@@ -197,6 +197,29 @@ button.mf-btn.sm {
 }
 
 /* ── Floating Dock Navigator (Framer Native Feature) ─────────────── */
+.mf-top-venom-wrap {
+  position: fixed;
+  top: 14px;
+  right: 24px;
+  width: 176px;
+  height: 64px;
+  z-index: 101;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.mf-top-venom-wrap .venom-hit {
+  pointer-events: auto;
+}
+
+@media (max-width: 640px) {
+  .mf-top-venom-wrap {
+    display: none;
+  }
+}
+
 .mf-floating-dock-wrap {
   position: fixed;
   top: 24px;
