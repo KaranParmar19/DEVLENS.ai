@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { FloatingDock } from "@/components/ui/floating-dock";
 import { FooterField } from "@/components/ui/footer-field";
-import { VenomButton } from "@/components/ui/venom-button";
 
 /* ── Reveal on scroll ─────────────────────────────────────────────── */
 export function Reveal({ children, delay = 0, className = "", as: Tag = "div" }: {
@@ -41,30 +40,12 @@ export const NAV = [
   { to: "/", label: "Home" },
   { to: "/features", label: "Features" },
   { to: "/how-it-works", label: "How it works" },
+  { to: "/dashboard", label: "Dashboard" },
 ] as const;
 
 /* ── Navbar ───────────────────────────────────────────────────────── */
 export function SiteNav() {
-  return (
-    <>
-      <FloatingDock />
-      <div className="mf-top-venom-wrap" title="Launch DevLens Workspace">
-        <VenomButton
-          text="Dashboard"
-          link="/dashboard"
-          buttonHeight={46}
-          sidePadding={24}
-          font={{
-            fontFamily: "Geist, Inter, system-ui, -apple-system, sans-serif",
-            fontSize: "15px",
-            fontWeight: 700,
-          }}
-          customCursor={false}
-          quality="balanced"
-        />
-      </div>
-    </>
-  );
+  return <FloatingDock />;
 }
 
 /* ── Footer ───────────────────────────────────────────────────────── */

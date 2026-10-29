@@ -5,6 +5,7 @@ import {
   House,
   Layers,
   Grid2x2,
+  LayoutDashboard,
   UserRound,
   LogOut,
 } from "lucide-react";
@@ -91,6 +92,13 @@ export function FloatingDock() {
       icon: <Grid2x2 size={18} strokeWidth={1.9} />,
       title: "How DevLens Maps Codebases",
     },
+    {
+      id: "dashboard",
+      label: "Dashboard",
+      to: "/dashboard",
+      icon: <LayoutDashboard size={18} strokeWidth={1.9} />,
+      title: "DevLens Interactive Studio & Workspace",
+    },
   ];
 
   // Action & Auth items
@@ -98,7 +106,7 @@ export function FloatingDock() {
     ...(isAuthenticated && user
       ? [
           {
-            id: "dashboard",
+            id: "account",
             label: `@${user.username || "user"}`,
             to: "/dashboard",
             icon: user.avatarUrl ? (
