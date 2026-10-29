@@ -2195,1432 +2195,586 @@ button.mf-btn.sm {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   HOW IT WORKS PAGE — EDITORIAL & INTERACTIVE PIPELINE STUDIO (hiw2-*)
+   HOW IT WORKS PAGE — CLEAN, KINETIC, VISUAL-FIRST EXPERIENCE (hwx-*)
    ═══════════════════════════════════════════════════════════════════════ */
 
-.hiw2-hero {
-  padding-bottom: clamp(64px, 8vw, 120px);
+.hwx-hero {
+  padding-bottom: clamp(64px, 8vw, 112px);
 }
 
-.hiw2-eyebrow-row {
+.hwx-hero-center {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-  padding-bottom: 24px;
-  border-bottom: 1px solid var(--mf-line);
+  text-align: center;
+  max-width: 920px;
+  margin: 0 auto;
 }
 
-.hiw2-eyebrow-meta {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  font-size: 0.68rem;
-  color: var(--mf-ink-3);
-}
-
-.hiw2-hero-head {
-  display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.9fr);
-  gap: clamp(28px, 4.5vw, 72px);
-  align-items: end;
-  margin-top: clamp(28px, 4vw, 52px);
-}
-
-.hiw2-mega {
-  font-size: clamp(2.9rem, 6.6vw, 6.2rem);
-  line-height: 0.94;
+.hwx-hero-title {
+  margin: clamp(22px, 3vw, 34px) 0 0;
+  font-size: clamp(2.8rem, 6.8vw, 6.2rem);
+  line-height: 0.96;
   letter-spacing: -0.055em;
-  margin: 0;
 }
 
-.hiw2-hero-aside {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+.hwx-hero-sub {
+  margin: clamp(20px, 2.5vw, 28px) auto 0;
+  max-width: 48ch;
+  color: var(--mf-ink-2);
 }
 
-.hiw2-hero-QuickBar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.hiw2-live-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #10b981;
-  box-shadow: 0 0 10px #10b981;
-  display: inline-block;
-}
-
-/* ── Interactive Pipeline Flight Deck ─────────────────────────────────── */
-.hiw2-deck {
-  margin-top: clamp(40px, 5.5vw, 72px);
-  border-radius: 24px;
-  border: 1px solid var(--mf-ink);
-  background: #0a0a0a;
-  color: #e5e5e5;
-  overflow: hidden;
-  box-shadow: 0 32px 80px -24px rgba(0, 0, 0, 0.28);
-}
-
-.hiw2-deck-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-  padding: 14px 22px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  background: #111111;
-}
-
-.hiw2-deck-dots {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.hiw2-deck-dots > span {
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-.hiw2-deck-title {
-  margin-left: 10px;
-  font-size: 0.72rem;
-  color: #a3a3a3;
-  text-transform: none;
-}
-
-.hiw2-deck-controls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.hiw2-repo-pills {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.hiw2-repo-pill {
-  height: 28px;
-  padding: 0 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.04);
-  color: #a3a3a3;
-  font: 500 0.68rem var(--mf-mono);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.hiw2-repo-pill:hover {
-  border-color: rgba(255, 255, 255, 0.4);
-  color: #ffffff;
-}
-
-.hiw2-repo-pill[data-active="true"] {
-  background: #ffffff;
-  color: #0a0a0a;
-  border-color: #ffffff;
-}
-
-.hiw2-play-toggle {
-  height: 28px;
-  padding: 0 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(16, 185, 129, 0.45);
-  background: rgba(16, 185, 129, 0.12);
-  color: #10b981;
-  font-size: 0.66rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.hiw2-play-toggle:hover {
-  background: #10b981;
-  color: #0a0a0a;
-}
-
-/* 5-Stage Circuit Track */
-.hiw2-circuit {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  background: #0d0d0d;
-}
-
-.hiw2-circuit-node {
-  padding: 18px 20px;
-  border: 0;
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
-  background: transparent;
-  color: #a3a3a3;
-  text-align: left;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  transition: background 0.22s ease, color 0.22s ease;
-}
-
-.hiw2-circuit-node:last-child {
-  border-right: 0;
-}
-
-.hiw2-circuit-node:hover {
-  background: rgba(255, 255, 255, 0.04);
-  color: #ffffff;
-}
-
-.hiw2-circuit-node[data-active="true"] {
-  background: rgba(16, 185, 129, 0.09);
-  color: #ffffff;
-}
-
-.hiw2-circuit-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.66rem;
-}
-
-.hiw2-circuit-node[data-active="true"] .hiw2-circuit-num {
-  color: #10b981;
-  font-weight: 600;
-}
-
-.hiw2-circuit-delta {
-  color: #d4d4d4;
-}
-
-.hiw2-circuit-name {
-  font-size: 1.02rem;
-  font-weight: 500;
-  letter-spacing: -0.02em;
-  color: #ffffff;
-}
-
-.hiw2-circuit-window {
-  font-size: 0.62rem;
-  color: #737373;
-}
-
-.hiw2-circuit-bar {
-  height: 3px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  overflow: hidden;
-  margin-top: 4px;
-}
-
-.hiw2-circuit-fill {
-  display: block;
-  height: 100%;
-  background: #10b981;
-  transition: width 0.35s ease;
-}
-
-/* 3-Column Deck Body */
-.hiw2-deck-body {
-  display: grid;
-  grid-template-columns: 1.05fr 1.25fr 0.95fr;
-}
-
-.hiw2-deck-col {
-  padding: clamp(22px, 2.6vw, 32px);
-  border-right: 1px solid rgba(255, 255, 255, 0.12);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 18px;
-  min-width: 0;
-}
-
-.hiw2-deck-col:last-child {
-  border-right: 0;
-}
-
-.hiw2-deck-col--terminal {
-  background: #060606;
-}
-
-.hiw2-pane-label {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.65rem;
-  color: #8a8a8a;
-  padding-bottom: 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.hiw2-deck-stage-title {
-  margin: 0;
-  font-size: clamp(1.35rem, 2vw, 1.75rem);
-  font-weight: 500;
-  letter-spacing: -0.03em;
-  color: #ffffff;
-}
-
-.hiw2-deck-stage-desc {
-  margin: 0;
-  font-size: 0.88rem;
-  line-height: 1.6;
-  color: #b3b3b3;
-}
-
-.hiw2-io-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.hiw2-io-item {
-  display: grid;
-  grid-template-columns: 64px minmax(0, 1fr);
-  align-items: baseline;
-  gap: 10px;
-  padding: 8px 12px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  font-size: 0.74rem;
-}
-
-.hiw2-io-item span {
-  font-size: 0.62rem;
-  color: #8a8a8a;
-}
-
-.hiw2-io-item code {
-  font-family: var(--mf-mono);
-  font-size: 0.72rem;
-  color: #e5e5e5;
-  word-break: break-word;
-}
-
-.hiw2-terminal-lines {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  font-size: 0.74rem;
-  line-height: 1.6;
-  color: #d4d4d4;
-  text-transform: none;
-}
-
-.hiw2-terminal-line {
-  display: flex;
-  gap: 10px;
-  align-items: baseline;
-  word-break: break-word;
-}
-
-.hiw2-term-prompt {
-  color: #10b981;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-.hiw2-cursor {
-  display: inline-block;
-  width: 7px;
-  height: 13px;
-  background: #10b981;
-  margin-left: 6px;
-  vertical-align: -2px;
-}
-
-.hiw2-ws-box {
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: rgba(16, 185, 129, 0.06);
-  border: 1px solid rgba(16, 185, 129, 0.28);
-  text-transform: none;
-}
-
-.hiw2-ws-head {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.62rem;
-  color: #a3a3a3;
-  margin-bottom: 6px;
-}
-
-.hiw2-ws-box code {
-  display: block;
-  font-size: 0.68rem;
-  color: #a7f3d0;
-  word-break: break-all;
-}
-
-.hiw2-metric-hero {
-  padding: 14px 16px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.hiw2-metric-big {
-  font-size: clamp(1.5rem, 2.3vw, 2.1rem);
-  font-weight: 500;
-  letter-spacing: -0.04em;
-  color: #ffffff;
-}
-
-.hiw2-metric-hero p {
-  margin: 6px 0 0;
-  font-size: 0.8rem;
-  line-height: 1.45;
-  color: #a3a3a3;
-}
-
-.hiw2-artifact-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.hiw2-artifact-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  font-size: 0.78rem;
-}
-
-.hiw2-artifact-row:last-child {
-  border-bottom: 0;
-}
-
-.hiw2-artifact-label {
-  color: #a3a3a3;
-}
-
-.hiw2-artifact-val {
-  font-size: 0.72rem;
-  color: #ffffff;
-  text-transform: none;
-}
-
-.hiw2-artifact-val[data-accent="green"] {
-  color: #10b981;
-}
-
-.hiw2-artifact-val[data-accent="amber"] {
-  color: #f59e0b;
-}
-
-.hiw2-artifact-val[data-accent="red"] {
-  color: #f87171;
-}
-
-/* ── Section Phase Intro ──────────────────────────────────────────────── */
-.hiw2-phase-intro {
-  display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.85fr);
-  gap: clamp(24px, 4vw, 64px);
-  align-items: end;
-  margin-bottom: clamp(40px, 5vw, 68px);
-}
-
-.hiw2-phase-intro .mf-h1,
-.hiw2-phase-intro .mf-lead {
-  margin: 0;
-}
-
-/* ── Phase I: Dark Compiler & Sandbox Studio (Stages 01 & 02) ─────────── */
-.hiw2-bento-dark {
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
-}
-
-.hiw2-card-dark {
-  padding: clamp(24px, 3.5vw, 42px);
-  border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.03);
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
-}
-
-.hiw2-card-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.hiw2-stage-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.68rem;
-  color: #10b981;
-  margin-bottom: 8px;
-}
-
-.hiw2-stage-badge .sep {
-  color: #737373;
-}
-
-.hiw2-card-h3 {
-  margin: 0;
-  font-size: clamp(1.45rem, 2.4vw, 2.1rem);
-  font-weight: 500;
-  letter-spacing: -0.035em;
-  color: #ffffff;
-}
-
-.hiw2-card-h3 code {
-  font-family: var(--mf-mono);
-  font-size: 0.88em;
-  color: #10b981;
-}
-
-.hiw2-card-copy {
-  margin: 0;
-  font-size: 0.96rem;
-  line-height: 1.65;
-  color: #b3b3b3;
-  max-width: 68ch;
-}
-
-.hiw2-card-copy code {
-  font-family: var(--mf-mono);
-  font-size: 0.86em;
-  color: #e5e5e5;
-}
-
-.hiw2-pill-btn {
-  height: 36px;
-  padding: 0 16px;
-  border-radius: 999px;
-  border: 1px solid rgba(16, 185, 129, 0.45);
-  background: rgba(16, 185, 129, 0.12);
-  color: #10b981;
-  font-size: 0.7rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.hiw2-pill-btn:hover {
-  background: #10b981;
-  color: #0a0a0a;
-}
-
-/* Stage 01 File Tree Box */
-.hiw2-tree-box {
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: #070707;
-  overflow: hidden;
-}
-
-.hiw2-tree-header {
-  display: flex;
-  justify-content: space-between;
-  padding: 12px 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: 0.68rem;
-  color: #8a8a8a;
-  text-transform: none;
-}
-
-.hiw2-tree-list {
-  list-style: none;
-  margin: 0;
-  padding: 8px 0;
-}
-
-.hiw2-tree-item {
-  display: grid;
-  grid-template-columns: minmax(0, 1.4fr) 110px 180px;
-  align-items: center;
-  gap: 12px;
-  padding: 9px 18px;
-  font-size: 0.76rem;
-  text-transform: none;
-  transition: opacity 0.25s ease;
-}
-
-.hiw2-tree-item[data-stripped="true"] {
-  opacity: 0.38;
-}
-
-.hiw2-tree-item[data-stripped="true"] .hiw2-tree-path {
-  text-decoration: line-through;
-  text-decoration-color: #ef4444;
-}
-
-.hiw2-tree-path {
-  color: #e5e5e5;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.hiw2-tree-size {
-  color: #8a8a8a;
-  text-align: right;
-}
-
-.hiw2-tree-status {
-  text-align: right;
-  font-size: 0.66rem;
-  color: #f87171;
-}
-
-.hiw2-tree-status[data-keep="true"] {
-  color: #10b981;
-}
-
-.hiw2-tree-footer {
-  padding: 14px 18px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.hiw2-meter-track {
-  height: 6px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
-  overflow: hidden;
-}
-
-.hiw2-meter-fill {
-  display: block;
-  height: 100%;
-  background: #10b981;
-  transition: width 0.5s var(--mf-ease);
-}
-
-.hiw2-meter-meta {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 8px;
-  font-size: 0.66rem;
-  color: #a3a3a3;
-}
-
-.hiw2-mini-guarantees {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.hiw2-mini-guarantees > div {
-  padding: 16px 18px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.hiw2-mini-guarantees span {
-  font-size: 0.66rem;
-  color: #10b981;
-}
-
-.hiw2-mini-guarantees p {
-  margin: 8px 0 0;
-  font-size: 0.84rem;
-  line-height: 1.5;
-  color: #b3b3b3;
-}
-
-.hiw2-mini-guarantees code {
-  font-family: var(--mf-mono);
-  color: #ffffff;
-}
-
-/* Stage 02 Compiler Triptych */
-.hiw2-lang-tabs {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.hiw2-lang-tab {
-  height: 34px;
-  padding: 0 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: transparent;
-  color: #b3b3b3;
-  font-size: 0.7rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.hiw2-lang-tab:hover {
-  border-color: #ffffff;
-  color: #ffffff;
-}
-
-.hiw2-lang-tab[data-active="true"] {
-  background: #ffffff;
-  color: #0a0a0a;
-  border-color: #ffffff;
-}
-
-.hiw2-compiler-grid {
-  display: grid;
-  grid-template-columns: 1.15fr 1.1fr 0.95fr;
-  gap: 16px;
-}
-
-.hiw2-compiler-pane {
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: #070707;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  min-width: 0;
-}
-
-.hiw2-compiler-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  padding: 11px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03);
-  font-size: 0.64rem;
-  color: #8a8a8a;
-}
-
-.hiw2-code-lines {
-  display: flex;
-  flex-direction: column;
-  padding: 10px 0;
-  text-transform: none;
-}
-
-.hiw2-code-line {
-  display: grid;
-  grid-template-columns: 32px minmax(0, 1fr);
-  gap: 10px;
-  padding: 7px 14px;
-  border: 0;
-  background: transparent;
-  color: #d4d4d4;
-  font: 400 0.73rem/1.55 var(--mf-mono);
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.18s ease;
-}
-
-.hiw2-code-line:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.hiw2-code-line[data-active="true"] {
-  background: rgba(16, 185, 129, 0.14);
-  color: #ffffff;
-  border-left: 2px solid #10b981;
-}
-
-.hiw2-line-no {
-  color: #525252;
-  user-select: none;
-}
-
-.hiw2-line-code {
-  overflow-x: auto;
-  white-space: pre;
-}
-
-.hiw2-inspector-strip {
-  padding: 12px 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.02);
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  font-size: 0.66rem;
-  text-transform: none;
-}
-
-.hiw2-inspector-strip .lbl {
-  color: #737373;
-}
-
-.hiw2-sexpr {
-  margin: 0;
-  padding: 14px 16px;
-  font-size: 0.7rem;
-  line-height: 1.6;
-  color: #a7f3d0;
-  overflow-x: auto;
-  text-transform: none;
-  flex: 1;
-}
-
-.hiw2-sym-list {
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  flex: 1;
-}
-
-.hiw2-sym-card {
-  padding: 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03);
-  text-transform: none;
-}
-
-.hiw2-sym-top {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.62rem;
-  margin-bottom: 4px;
-}
-
-.hiw2-sym-kind {
-  color: #10b981;
-  font-weight: 600;
-}
-
-.hiw2-sym-comp {
-  color: #f59e0b;
-}
-
-.hiw2-sym-name {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: #ffffff;
-}
-
-.hiw2-sym-meta,
-.hiw2-sym-calls {
-  font-size: 0.68rem;
-  color: #a3a3a3;
-  margin-top: 3px;
-}
-
-/* ── Phase II: Light Architectural Blueprint Lab (Stages 03 & 04) ────── */
-.hiw2-blueprint-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: clamp(20px, 3vw, 32px);
-  align-items: stretch;
-}
-
-.hiw2-blueprint-card {
-  padding: clamp(24px, 3vw, 38px);
-  border-radius: 24px;
-  border: 1px solid var(--mf-ink);
-  background: var(--mf-bg);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 20px;
-}
-
-.hiw2-bp-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.hiw2-bp-tag {
-  font-size: 0.68rem;
-  color: var(--mf-ink-3);
-  margin-bottom: 6px;
-}
-
-.hiw2-bp-title {
-  margin: 0;
-  font-size: clamp(1.35rem, 2.1vw, 1.85rem);
-  font-weight: 500;
-  letter-spacing: -0.035em;
-  color: var(--mf-ink);
-}
-
-.hiw2-bp-pill {
-  padding: 6px 12px;
-  border-radius: 999px;
+/* ── Kinetic Visual Sculpture ─────────────────────────────────────────── */
+.hwx-sculpture {
+  margin-top: clamp(40px, 5vw, 68px);
+  border-radius: 32px;
   border: 1px solid var(--mf-line);
-  background: var(--mf-soft);
-  font-size: 0.64rem;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  padding: clamp(20px, 3vw, 36px);
+  box-shadow: 0 24px 60px -28px rgba(0, 0, 0, 0.08);
+}
+
+.hwx-sculpture-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 320px;
+}
+
+.hwx-dash-flow {
+  animation: hwx-dash 1.2s linear infinite;
+}
+
+@keyframes hwx-dash {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+.hwx-spin-slow {
+  transform-origin: center;
+  animation: hwx-spin 18s linear infinite;
+}
+
+@keyframes hwx-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.hwx-sculpture-caption {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-top: 18px;
+  margin-top: 12px;
+  border-top: 1px solid var(--mf-line);
+  font-size: 0.7rem;
+  color: var(--mf-ink-3);
+}
+
+/* ── 4-Step Curved Arched Journey ─────────────────────────────────────── */
+.hwx-journey-head {
+  max-width: 16em;
+  margin-bottom: clamp(32px, 4vw, 56px);
+}
+
+.hwx-arc-stage {
+  position: relative;
+  padding-top: 12px;
+}
+
+.hwx-arc-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-bottom: -88px;
+  pointer-events: none;
+}
+
+.hwx-arc-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(18px, 2.5vw, 32px);
+  position: relative;
+  z-index: 1;
+}
+
+.hwx-arc-card {
+  padding: 24px;
+  border-radius: 22px;
+  background: var(--mf-bg);
+  border: 1px solid var(--mf-line);
+  transition: transform 0.25s var(--mf-ease), border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.hwx-arc-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--mf-ink);
+  box-shadow: 0 20px 40px -24px rgba(0, 0, 0, 0.12);
+}
+
+.hwx-arc-title {
+  font-size: 1.3rem;
+  letter-spacing: -0.03em;
   color: var(--mf-ink);
 }
 
-.hiw2-bp-desc {
-  margin: 0;
+.hwx-arc-num {
+  color: var(--mf-ink-3);
+  font-weight: 500;
+  margin-right: 4px;
+}
+
+.hwx-arc-sub {
+  margin-top: 6px;
+  font-size: 0.64rem;
+  color: #059669;
+}
+
+.hwx-arc-desc {
+  margin: 12px 0 0;
   font-size: 0.92rem;
   line-height: 1.6;
   color: var(--mf-ink-2);
 }
 
-.hiw2-bp-desc code {
-  font-family: var(--mf-mono);
-  font-size: 0.86em;
+/* ── 3 Playful Visual Stories (Dark Section) ──────────────────────────── */
+.hwx-dark-intro {
+  max-width: 17em;
+  margin-bottom: clamp(40px, 5vw, 68px);
 }
 
-.hiw2-svg-frame {
-  border-radius: 16px;
-  border: 1px solid var(--mf-ink);
-  background: #0a0a0a;
-  overflow: hidden;
-}
-
-.hiw2-svg-bar {
-  display: flex;
-  justify-content: space-between;
-  padding: 10px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  font-size: 0.62rem;
-  color: #8a8a8a;
-}
-
-.hiw2-svg {
-  display: block;
-  width: 100%;
-  height: auto;
-  padding: 8px;
-}
-
-.hiw2-edge-selector {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.hiw2-edge-item {
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--mf-line);
-  background: transparent;
-  color: var(--mf-ink);
-  text-align: left;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.hiw2-edge-item:hover {
-  border-color: var(--mf-ink-3);
-}
-
-.hiw2-edge-item[data-active="true"] {
-  border-color: var(--mf-ink);
-  background: var(--mf-soft);
-}
-
-.hiw2-edge-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.6rem;
-  color: var(--mf-ink-3);
-  margin-bottom: 4px;
-}
-
-.hiw2-edge-badge[data-accent="green"] {
-  color: #059669;
-  font-weight: 600;
-}
-
-.hiw2-edge-badge[data-accent="red"] {
-  color: #dc2626;
-  font-weight: 600;
-}
-
-.hiw2-edge-raw {
-  font-size: 0.68rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-transform: none;
-}
-
-.hiw2-edge-readout {
-  padding: 14px 16px;
-  border-radius: 14px;
-  background: #0a0a0a;
-  color: #d4d4d4;
-}
-
-.hiw2-edge-readout p {
-  margin: 6px 0 0;
-  font-size: 0.82rem;
-  line-height: 1.5;
-  color: #b3b3b3;
-}
-
-/* Stage 04 Formula & Hotspot Simulator */
-.hiw2-formula-card {
-  padding: 18px 20px;
-  border-radius: 16px;
-  border: 1px solid var(--mf-line);
-  background: var(--mf-soft);
-}
-
-.hiw2-formula-label {
-  font-size: 0.62rem;
-  color: var(--mf-ink-3);
-}
-
-.hiw2-formula-math {
-  margin: 10px 0 12px;
-  font-size: clamp(1.05rem, 1.65vw, 1.4rem);
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  color: var(--mf-ink);
-}
-
-.hiw2-formula-math .c-cyc {
-  color: #059669;
-}
-
-.hiw2-formula-math .c-chu {
-  color: #d97706;
-}
-
-.hiw2-formula-legend {
-  display: flex;
-  gap: 14px;
-  flex-wrap: wrap;
-  font-size: 0.6rem;
-  color: var(--mf-ink-3);
-}
-
-.hiw2-formula-legend i {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
-  margin-right: 4px;
-}
-
-.hiw2-hotspot-list {
+.hwx-stories {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: clamp(24px, 3.5vw, 40px);
 }
 
-.hiw2-hotspot-row {
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid var(--mf-line);
-  background: transparent;
-  cursor: pointer;
-  text-align: left;
-  transition: all 0.2s ease;
+.hwx-story-card {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.15fr);
+  gap: clamp(24px, 4vw, 56px);
+  align-items: center;
+  padding: clamp(28px, 4vw, 48px);
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.03);
 }
 
-.hiw2-hotspot-row:hover {
-  border-color: var(--mf-ink-3);
-}
-
-.hiw2-hotspot-row[data-active="true"] {
-  border-color: var(--mf-ink);
-  background: var(--mf-soft);
-}
-
-.hiw2-hotspot-top {
+.hwx-story-copy {
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 8px;
-  font-size: 0.74rem;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.hiw2-hotspot-file {
-  text-transform: none;
+.hwx-story-idx {
+  font-size: 0.68rem;
+  color: #10b981;
+}
+
+.hwx-story-h3 {
+  margin: 0;
+  font-size: clamp(1.75rem, 3vw, 2.6rem);
   font-weight: 500;
-  color: var(--mf-ink);
-}
-
-.hiw2-hotspot-score {
-  font-weight: 600;
-  color: var(--mf-ink);
-}
-
-.hiw2-hotspot-bar {
-  display: flex;
-  height: 8px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.08);
-  overflow: hidden;
-}
-
-.hiw2-hotspot-bar span {
-  display: block;
-  height: 100%;
-}
-
-.hiw2-blast-readout {
-  padding: 16px 18px;
-  border-radius: 14px;
-  background: #0a0a0a;
-  color: #e5e5e5;
-}
-
-.hiw2-blast-header {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.66rem;
-  color: #a3a3a3;
-  padding-bottom: 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-}
-
-.hiw2-blast-metrics {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 12px;
-}
-
-.hiw2-blast-metrics strong {
-  display: block;
-  font-size: 0.82rem;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
   color: #ffffff;
-  text-transform: none;
 }
 
-.hiw2-blast-metrics span {
-  font-size: 0.6rem;
-  color: #8a8a8a;
+.hwx-story-copy p {
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.65;
+  color: #a3a3a3;
 }
 
-.hiw2-blast-note {
-  margin: 10px 0 0;
-  font-size: 0.8rem;
-  color: #b3b3b3;
-}
-
-/* ── Phase III: Stage 05 Dark Spotlight ───────────────────────────────── */
-.hiw2-stage5-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: clamp(20px, 3vw, 32px);
-}
-
-.hiw2-chunk-toggle {
+.hwx-toggle-pill {
   display: inline-flex;
-  padding: 3px;
+  align-self: flex-start;
+  padding: 4px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.04);
   gap: 4px;
+  margin-top: 6px;
 }
 
-.hiw2-chunk-toggle button {
-  height: 28px;
-  padding: 0 12px;
+.hwx-toggle-pill button {
+  height: 34px;
+  padding: 0 18px;
   border-radius: 999px;
   border: 0;
   background: transparent;
   color: #a3a3a3;
-  font: 600 0.64rem var(--mf-mono);
+  font: 500 0.82rem var(--mf-font);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.hiw2-chunk-toggle button[data-active="true"] {
+.hwx-toggle-pill button[data-active="true"] {
   background: #ffffff;
   color: #0a0a0a;
 }
 
-.hiw2-chunk-view {
-  border-radius: 16px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-}
-
-.hiw2-chunk-view--good {
-  background: rgba(16, 185, 129, 0.06);
-  border-color: rgba(16, 185, 129, 0.4);
-}
-
-.hiw2-chunk-view--bad {
-  background: rgba(239, 68, 68, 0.07);
-  border-color: rgba(239, 68, 68, 0.45);
-}
-
-.hiw2-chunk-banner {
-  display: flex;
-  justify-content: space-between;
-  padding: 10px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: 0.64rem;
-}
-
-.hiw2-chunk-view--good .hiw2-chunk-banner {
-  color: #10b981;
-}
-
-.hiw2-chunk-view--bad .hiw2-chunk-banner {
-  color: #f87171;
-}
-
-.hiw2-chunk-view pre {
-  margin: 0;
-  padding: 16px;
-  font-size: 0.72rem;
-  line-height: 1.6;
-  overflow-x: auto;
-  text-transform: none;
-  color: #e5e5e5;
-}
-
-.hiw2-chunk-metrics {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  border-radius: 14px;
+/* Story Stage Canvas */
+.hwx-story-stage {
+  position: relative;
+  height: 300px;
+  border-radius: 22px;
   border: 1px solid rgba(255, 255, 255, 0.12);
+  background: radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.1), rgba(10, 10, 10, 0.95) 70%);
   overflow: hidden;
+  display: grid;
+  place-items: center;
 }
 
-.hiw2-chunk-metrics > div {
-  padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.02);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.hwx-constellation-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
 
-.hiw2-chunk-metrics > div + div {
-  border-left: 1px solid rgba(255, 255, 255, 0.12);
-}
-
-.hiw2-chunk-metrics strong {
-  font-size: 1.35rem;
+.hwx-floating-node {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: rgba(20, 20, 20, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   color: #ffffff;
+  font-size: 0.86rem;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
 }
 
-.hiw2-chunk-metrics span {
-  font-size: 0.62rem;
-  color: #8a8a8a;
-}
-
-.hiw2-query-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.hiw2-query-btn {
-  padding: 12px 16px;
+.hwx-floating-node[data-mode="list"] {
+  width: 220px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.02);
+}
+
+.hwx-node-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Story 2: Ripple Stage */
+.hwx-ripple-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.hwx-ripple-tab {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
   color: #d4d4d4;
-  text-align: left;
+  font: 500 0.84rem var(--mf-font);
   cursor: pointer;
-  font-size: 0.88rem;
-  line-height: 1.45;
   transition: all 0.2s ease;
 }
 
-.hiw2-query-btn:hover {
+.hwx-ripple-tab:hover {
+  border-color: #ffffff;
+  color: #ffffff;
+}
+
+.hwx-ripple-tab[data-active="true"] {
+  background: #10b981;
+  border-color: #10b981;
+  color: #0a0a0a;
+}
+
+.hwx-ripple-rings {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.hwx-ripple-rings .ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px dashed rgba(16, 185, 129, 0.28);
+}
+
+.hwx-ripple-rings .r1 {
+  width: 130px;
+  height: 130px;
+}
+
+.hwx-ripple-rings .r2 {
+  width: 210px;
+  height: 210px;
+}
+
+.hwx-ripple-rings .r3 {
+  width: 280px;
+  height: 280px;
+}
+
+.hwx-ripple-center {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+  padding: 20px;
+}
+
+.hwx-ripple-core {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 24px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #0a0a0a;
+  box-shadow: 0 0 36px rgba(16, 185, 129, 0.35);
+}
+
+.hwx-ripple-core strong {
+  font-size: 1rem;
+}
+
+.hwx-ripple-core span {
+  font-size: 0.64rem;
+  color: #059669;
+}
+
+.hwx-ripple-satellites {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.hwx-sat-pill {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  color: #a7f3d0;
+  font-size: 0.78rem;
+}
+
+.hwx-ripple-caption {
+  margin: 0;
+  font-size: 0.84rem;
+  color: #a3a3a3;
+  max-width: 36ch;
+}
+
+/* Story 3: Conversational Guide */
+.hwx-q-pills {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.hwx-q-pill {
+  padding: 10px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.03);
+  color: #d4d4d4;
+  text-align: left;
+  font: 400 0.86rem var(--mf-font);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.hwx-q-pill:hover {
   border-color: rgba(255, 255, 255, 0.35);
   color: #ffffff;
 }
 
-.hiw2-query-btn[data-active="true"] {
+.hwx-q-pill[data-active="true"] {
   background: #ffffff;
   color: #0a0a0a;
   border-color: #ffffff;
   font-weight: 500;
 }
 
-.hiw2-trace-box {
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: #070707;
-  overflow: hidden;
+.hwx-chat-stage {
+  padding: 24px;
 }
 
-.hiw2-trace-steps {
-  padding: 12px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 0.68rem;
-  text-transform: none;
-}
-
-.hiw2-trace-step {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.hiw2-trace-step .k {
-  color: #8a8a8a;
-}
-
-.hiw2-trace-step .v {
-  color: #e5e5e5;
-}
-
-.hiw2-trace-answer {
-  padding: 16px;
-}
-
-.hiw2-trace-answer-head {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.64rem;
-  color: #8a8a8a;
-  margin-bottom: 8px;
-}
-
-.hiw2-trace-answer p {
-  margin: 0;
-  font-size: 0.88rem;
-  line-height: 1.65;
-  color: #d4d4d4;
-}
-
-/* ── Finale Launcher Box ──────────────────────────────────────────────── */
-.hiw2-finale-box {
-  padding: clamp(32px, 5vw, 64px);
-  border-radius: 28px;
-  border: 1px solid var(--mf-ink);
-  background: var(--mf-soft);
-  display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.85fr);
-  gap: clamp(28px, 4vw, 56px);
-  align-items: center;
-}
-
-.hiw2-finale-chips {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 16px;
-}
-
-.hiw2-finale-right {
+.hwx-chat-card {
+  width: 100%;
+  max-width: 440px;
   padding: 24px;
   border-radius: 20px;
-  background: #0a0a0a;
-  color: #e5e5e5;
-  border: 1px solid var(--mf-ink);
-}
-
-.hiw2-finale-summary-head {
-  display: flex;
-  justify-content: space-between;
-  padding-bottom: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  font-size: 0.68rem;
-  color: #a3a3a3;
-}
-
-.hiw2-finale-timeline {
-  list-style: none;
-  margin: 14px 0;
-  padding: 0;
+  background: rgba(20, 20, 20, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
 }
 
-.hiw2-finale-timeline li {
-  display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) 54px;
-  align-items: center;
-  font-size: 0.75rem;
-  text-transform: none;
-}
-
-.hiw2-finale-timeline .num {
-  color: #10b981;
-}
-
-.hiw2-finale-timeline .nm {
+.hwx-chat-bubble-q {
+  font-size: 0.95rem;
+  font-weight: 500;
   color: #ffffff;
 }
 
-.hiw2-finale-timeline .tm {
-  text-align: right;
-  color: #a3a3a3;
+.hwx-chat-bubble-a {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #bfbfbf;
 }
 
-.hiw2-finale-foot {
-  display: flex;
-  justify-content: space-between;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  font-size: 0.62rem;
+.hwx-chat-cite {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  font-size: 0.68rem;
   color: #10b981;
+  text-transform: none;
 }
 
-/* ── Responsive Breakpoints ───────────────────────────────────────────── */
-@media (max-width: 1080px) {
-  .hiw2-hero-head,
-  .hiw2-phase-intro,
-  .hiw2-deck-body,
-  .hiw2-compiler-grid,
-  .hiw2-blueprint-grid,
-  .hiw2-stage5-grid,
-  .hiw2-finale-box {
-    grid-template-columns: 1fr;
+.hwx-cite-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+}
+
+.hwx-cite-line {
+  color: #ffffff;
+}
+
+/* ── Section 03: Old Way vs DevLens Way ───────────────────────────────── */
+.hwx-compare-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(20px, 3vw, 32px);
+}
+
+.hwx-compare-card {
+  padding: clamp(28px, 4vw, 44px);
+  border-radius: 26px;
+  border: 1px solid var(--mf-line);
+}
+
+.hwx-compare-card--old {
+  background: var(--mf-soft);
+}
+
+.hwx-compare-card--new {
+  background: #0a0a0a;
+  color: #ffffff;
+  border-color: #0a0a0a;
+}
+
+.hwx-compare-tag {
+  font-size: 0.68rem;
+  color: var(--mf-ink-3);
+}
+
+.hwx-compare-card h3 {
+  margin: 12px 0 18px;
+  font-size: clamp(1.5rem, 2.5vw, 2.1rem);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+}
+
+.hwx-compare-card ul {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.hwx-compare-card--old ul {
+  color: var(--mf-ink-2);
+}
+
+.hwx-compare-card--new ul {
+  color: #d4d4d4;
+}
+
+/* ── Minimalist Finale CTA ────────────────────────────────────────────── */
+.hwx-cta-card {
+  margin-top: clamp(56px, 7vw, 96px);
+  padding: clamp(40px, 6vw, 76px) clamp(24px, 4vw, 48px);
+  border-radius: 32px;
+  border: 1px solid var(--mf-ink);
+  background: var(--mf-soft);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.hwx-cta-title {
+  margin: 18px 0 28px;
+}
+
+.hwx-cta-form {
+  width: 100%;
+  max-width: 560px;
+}
+
+.hwx-cta-presets {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────── */
+@media (max-width: 980px) {
+  .hwx-arc-svg {
+    display: none;
   }
 
-  .hiw2-circuit {
+  .hwx-arc-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .hiw2-deck-col {
-    border-right: 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  .hwx-arc-card {
+    margin-top: 0 !important;
   }
 
-  .hiw2-deck-col:last-child {
-    border-bottom: 0;
+  .hwx-story-card,
+  .hwx-compare-grid {
+    grid-template-columns: 1fr;
   }
 }
 
-@media (max-width: 720px) {
-  .hiw2-circuit,
-  .hiw2-mini-guarantees,
-  .hiw2-edge-selector,
-  .hiw2-blast-metrics,
-  .hiw2-chunk-metrics {
+@media (max-width: 640px) {
+  .hwx-arc-grid {
     grid-template-columns: 1fr;
-  }
-
-  .hiw2-tree-item {
-    grid-template-columns: 1fr auto;
-  }
-
-  .hiw2-tree-status {
-    grid-column: 1 / -1;
-    text-align: left;
   }
 }
