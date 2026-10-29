@@ -52,14 +52,14 @@ export function SiteNav() {
         <VenomButton
           text="Dashboard"
           link="/dashboard"
-          buttonHeight={40}
-          sidePadding={20}
+          buttonHeight={46}
+          sidePadding={24}
           font={{
-            fontFamily: "var(--mf-font, 'Geist', sans-serif)",
-            fontSize: "13.5px",
-            fontWeight: 600,
+            fontFamily: "Geist, Inter, system-ui, -apple-system, sans-serif",
+            fontSize: "15px",
+            fontWeight: 700,
           }}
-          customCursor={true}
+          customCursor={false}
           quality="balanced"
         />
       </div>

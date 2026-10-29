@@ -632,17 +632,9 @@ float buttonShadow(vec2 p) {
   return clamp(1.0 - lit, 0.0, 0.88);
 }
 
-// transparent floor: only the shadow is drawn, as black with alpha, so any background works
+// transparent floor: fully transparent outside the button so it merges seamlessly into any background
 float floorShadowAlpha(vec2 p) {
-  float sh = 1.0, ao = 1.0;
-  if (isNear(p)) { sh = softShadow(p, 0.0); ao = mix(occlusion(p, 0.0), 1.0, 0.55 * uLift); }
-  vec2 v = p / (uRes / uDpr);
-  float falloff = 1.0 - 0.08 * length(v - vec2(0.32, 0.22));
-  vec3 alb = vec3(0.86, 0.865, 0.875);
-  vec3 ref = alb * (vec3(1.0, 0.985, 0.96) * 1.3 * KEY.z + vec3(0.92, 0.95, 1.0) * 1.2) * falloff;
-  vec3 lit = alb * (vec3(1.0, 0.985, 0.96) * 1.3 * KEY.z * sh + vec3(0.92, 0.95, 1.0) * 1.2 * ao) * falloff;
-  lit *= 1.0 - buttonShadow(p) * vec3(0.96, 0.94, 0.9);
-  return clamp(1.0 - dot(lit, vec3(1.0)) / dot(ref, vec3(1.0)), 0.0, 0.9) * 0.75;
+  return 0.0;
 }
 
 vec3 aces(vec3 x) { return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0); }
@@ -1084,15 +1076,18 @@ function createVenom(wrap, canvas, hitEl, initial, hooks) {
   }
   let labelToken = 0;
   async function setLabelText(text, fontCss, size, token) {
+    const fontStr = fontCss.replace("{px}", LABEL_PX + "px");
     try {
-      await document.fonts?.load(
-        `${fontCss.replace("{px}", LABEL_PX + "px")}`,
-        text,
-      );
+      if (document.fonts?.load) {
+        await document.fonts.load(fontStr, text);
+      }
     } catch (e) {}
     if (destroyed || token !== labelToken) return;
     lctx.clearRect(0, 0, LABEL_W, LABEL_H);
-    lctx.font = fontCss.replace("{px}", LABEL_PX + "px");
+    lctx.font = fontStr;
+    if (!lctx.font || lctx.font.includes("10px")) {
+      lctx.font = `normal 700 ${LABEL_PX}px Geist, Inter, system-ui, -apple-system, sans-serif`;
+    }
     lctx.fillStyle = "white";
     lctx.textAlign = "center";
     lctx.textBaseline = "alphabetic";
@@ -1102,17 +1097,20 @@ function createVenom(wrap, canvas, hitEl, initial, hooks) {
       lctx.font = fontCss.replace("{px}", (LABEL_PX * maxW) / m.width + "px");
       m = lctx.measureText(text);
     }
+    const ascent = Number.isFinite(m.actualBoundingBoxAscent) ? m.actualBoundingBoxAscent : (LABEL_PX * 0.72);
+    const descent = Number.isFinite(m.actualBoundingBoxDescent) ? m.actualBoundingBoxDescent : (LABEL_PX * 0.18);
     lctx.fillText(
       text,
       LABEL_W / 2,
-      LABEL_H / 2 +
-        (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2,
+      LABEL_H / 2 + (ascent - descent) / 2,
     );
-    labelInkW = m.actualBoundingBoxLeft + m.actualBoundingBoxRight;
+    const leftBox = Number.isFinite(m.actualBoundingBoxLeft) ? m.actualBoundingBoxLeft : (m.width / 2);
+    const rightBox = Number.isFinite(m.actualBoundingBoxRight) ? m.actualBoundingBoxRight : (m.width / 2);
+    labelInkW = (leftBox + rightBox) || m.width || (text.length * LABEL_PX * 0.55);
     labelCss = size;
     try {
       labelFontOk =
-        document.fonts?.check(fontCss.replace("{px}", LABEL_PX + "px"), text) ??
+        document.fonts?.check(fontStr, text) ??
         true;
     } catch (e) {
       labelFontOk = true;
@@ -2234,7 +2232,7 @@ function createVenom(wrap, canvas, hitEl, initial, hooks) {
   function layoutButton() {
     btn.cx = viewW() / 2;
     btn.cy = viewH() / 2;
-    const sc = labelCss / LABEL_PX;
+    const sc = (labelCss || 16) / LABEL_PX;
     btn.hh = clamp(opts.buttonHeight, 36, 160) / 2;
     btn.hw = Math.max(
       btn.hh * 1.25,
@@ -2473,9 +2471,12 @@ function createVenom(wrap, canvas, hitEl, initial, hooks) {
   };
 } // ───────────────────────────── Framer component ─────────────────────────────
 function fontFamilyCss(font) {
-  let fam = font?.fontFamily || "system-ui";
-  if (!/["',]/.test(fam) && /\s/.test(fam)) fam = `"${fam}"`;
-  return `${fam}, system-ui, -apple-system, "Segoe UI", sans-serif`;
+  let fam = font?.fontFamily || "Geist, Inter, system-ui, sans-serif";
+  if (typeof fam === "string" && fam.includes("var(")) {
+    fam = fam.replace(/var\([^,]+,\s*/g, "").replace(/\)+/g, "").replace(/['"]/g, "");
+  }
+  if (!fam || !fam.trim()) fam = "Geist, Inter, system-ui, sans-serif";
+  return `${fam}, -apple-system, "Segoe UI", sans-serif`;
 }
 function fontToCss(font) {
   const weight = font?.fontWeight ?? 700;
@@ -2618,7 +2619,7 @@ function VenomButton(props) {
         position: 'relative',
         width: '100%',
         height: '100%',
-        overflow: 'hidden',
+        overflow: 'visible',
         ...style,
       }}
     >
@@ -2626,7 +2627,7 @@ function VenomButton(props) {
       <div
         ref={stageRef}
         aria-hidden="true"
-        style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
+        style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'visible' }}
       />
       <Tag
         ref={hitRef}
@@ -2646,7 +2647,7 @@ function VenomButton(props) {
           fontWeight: weight,
           fontSize: labelSize,
           lineHeight: 1,
-          cursor: 'inherit',
+          cursor: 'pointer',
           touchAction: 'none',
           WebkitTapHighlightColor: 'transparent',
           textDecoration: 'none',
@@ -2709,7 +2710,7 @@ VenomButton.defaultProps = {
   text: 'Dashboard',
   buttonHeight: 46,
   sidePadding: 24,
-  customCursor: true,
+  customCursor: false,
   quality: 'balanced',
   physics: DEFAULT_PHYSICS,
 };

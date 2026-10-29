@@ -645,7 +645,6 @@ export function HomePage() {
             transition={{ duration: 0.4 }}
           >
             <Pill live>Tree-sitter AST Graph + Cited Copilot</Pill>
-            <span className="mf-mono mf-muted">Map · Trace · Blast Radius · Ask</span>
           </motion.div>
 
           <motion.h1

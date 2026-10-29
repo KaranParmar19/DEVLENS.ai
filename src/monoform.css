@@ -199,10 +199,10 @@ button.mf-btn.sm {
 /* ── Floating Dock Navigator (Framer Native Feature) ─────────────── */
 .mf-top-venom-wrap {
   position: fixed;
-  top: 14px;
-  right: 24px;
-  width: 176px;
-  height: 64px;
+  top: 18px;
+  right: 28px;
+  width: 196px;
+  height: 68px;
   z-index: 101;
   display: flex;
   align-items: center;
@@ -210,8 +210,18 @@ button.mf-btn.sm {
   pointer-events: none;
 }
 
+.mf-top-venom-wrap canvas {
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.28)) drop-shadow(0 2px 6px rgba(0, 0, 0, 0.14));
+  transition: filter 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mf-top-venom-wrap:hover canvas {
+  filter: drop-shadow(0 14px 30px rgba(0, 0, 0, 0.38)) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.2));
+}
+
 .mf-top-venom-wrap .venom-hit {
   pointer-events: auto;
+  cursor: pointer;
 }
 
 @media (max-width: 640px) {
