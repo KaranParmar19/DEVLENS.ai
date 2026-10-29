@@ -3,28 +3,76 @@ import { useNavigate } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { Pill, Reveal, SiteLayout } from "./site-layout";
 import { MorphText } from "@/components/ui/morph-text";
-import { FAQSection } from "@/components/ui/faq-section";
+import { FAQSection, type FAQItemData } from "@/components/ui/faq-section";
 import { normalizeRepoUrl } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   CREATIVE INTERACTIVE DATA
+   BEGINNER-FRIENDLY INTERACTIVE DATA (PLAIN, SIMPLE ENGLISH)
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const TRY_REPOS = [
-  { label: "facebook/react", tag: "UI Core" },
-  { label: "vercel/next.js", tag: "Framework" },
-  { label: "fastapi/fastapi", tag: "Python" },
-  { label: "tailwindlabs/tailwindcss", tag: "Engine" },
+  { label: "facebook/react", tag: "Popular App" },
+  { label: "vercel/next.js", tag: "Web Starter" },
+  { label: "fastapi/fastapi", tag: "Python App" },
+  { label: "tailwindlabs/tailwindcss", tag: "Design Tool" },
 ];
 
-/* Nodes inside the Hero X-Ray Lens */
+/* Nodes inside the Hero Magic Lens */
 const LENS_ITEMS = [
-  { id: "n1", raw: "import { verify } from './jwt'", clean: "JWT Guard", cluster: "Security", x: 18, y: 26, color: "#10b981" },
-  { id: "n2", raw: "export async function login()", clean: "Auth Flow", cluster: "Security", x: 34, y: 62, color: "#10b981" },
-  { id: "n3", raw: "router.post('/api/v1/checkout')", clean: "API Gateway", cluster: "Ingress", x: 52, y: 28, color: "#3b82f6" },
-  { id: "n4", raw: "await stripe.paymentIntents.create()", clean: "Billing Core", cluster: "Payments", x: 56, y: 70, color: "#f59e0b" },
-  { id: "n5", raw: "db.query('SELECT * FROM users')", clean: "Postgres Store", cluster: "Data Layer", x: 82, y: 36, color: "#a855f7" },
-  { id: "n6", raw: "redis.setEx(sessionId, 3600)", clean: "Session Cache", cluster: "Data Layer", x: 78, y: 72, color: "#ec4899" },
+  {
+    id: "n1",
+    raw: "folder_1 / check_password_v2.js",
+    clean: "User Login",
+    cluster: "Checks passwords",
+    x: 18,
+    y: 26,
+    color: "#10b981",
+  },
+  {
+    id: "n2",
+    raw: "old_files / signup_helper_final.js",
+    clean: "Sign-Up Page",
+    cluster: "Welcomes new users",
+    x: 34,
+    y: 62,
+    color: "#10b981",
+  },
+  {
+    id: "n3",
+    raw: "core / main_routes_index.js",
+    clean: "Main Menu",
+    cluster: "Connects every page",
+    x: 52,
+    y: 28,
+    color: "#3b82f6",
+  },
+  {
+    id: "n4",
+    raw: "helpers / pay_button_stripe.js",
+    clean: "Checkout Box",
+    cluster: "Handles payments",
+    x: 56,
+    y: 70,
+    color: "#f59e0b",
+  },
+  {
+    id: "n5",
+    raw: "storage / save_user_list.js",
+    clean: "Saved Data",
+    cluster: "Stores user info",
+    x: 82,
+    y: 36,
+    color: "#a855f7",
+  },
+  {
+    id: "n6",
+    raw: "utils / keep_logged_in.js",
+    clean: "Quick Memory",
+    cluster: "Keeps you signed in",
+    x: 78,
+    y: 72,
+    color: "#ec4899",
+  },
 ];
 
 const LENS_EDGES: [number, number][] = [
@@ -53,49 +101,49 @@ const MORPH_PHASES: MorphPhase[] = [
     id: "drop",
     step: "01",
     timeRange: "0.0s — 1.2s",
-    progress: 18,
-    title: "Drop a link.",
-    italic: "Noise disappears.",
+    progress: 25,
+    title: "Paste a link.",
+    italic: "We clean the clutter.",
     caption:
-      "Paste any GitHub URL. DevLens instantly strips away heavy lockfiles, build folders, and clutter—keeping only pure source files.",
-    badge: "STEP 01 · INSTANT FETCH",
+      "Just copy and paste any GitHub project link. DevLens automatically skips junk files and extra clutter so you only see the files that actually matter.",
+    badge: "STEP 01 · PASTE YOUR LINK",
   },
   {
     id: "cluster",
     step: "02",
     timeRange: "1.2s — 3.6s",
-    progress: 46,
-    title: "Files snap into",
-    italic: "living neighborhoods.",
+    progress: 50,
+    title: "Files group into",
+    italic: "simple topics.",
     caption:
-      "Disconnected folders magnetically group themselves into visual domains—Auth, API, Billing, and Data—so you see the big picture immediately.",
-    badge: "STEP 02 · MAGNETIC CLUSTERING",
+      "Instead of a scary list of hundreds of files, DevLens neatly groups related parts together—like Login, Checkout, and Saved Data—just like a city map.",
+    badge: "STEP 02 · AUTO-ORGANIZE",
   },
   {
     id: "pulse",
     step: "03",
     timeRange: "3.6s — 5.6s",
-    progress: 74,
-    title: "Every connection",
-    italic: "lights up.",
+    progress: 75,
+    title: "See what connects",
+    italic: "to what.",
     caption:
-      "DevLens traces how functions call each other across files and highlights your most critical hubs before you touch a single line.",
-    badge: "STEP 03 · RIPPLE & FLOW",
+      "Lines appear between cards so you can see how the whole app works together—and which important files you shouldn't accidentally break.",
+    badge: "STEP 03 · SEE CONNECTIONS",
   },
   {
     id: "ask",
     step: "04",
     timeRange: "5.6s — 7.4s",
     progress: 100,
-    title: "Ask anything.",
-    italic: "Jump to the line.",
+    title: "Ask in plain English.",
+    italic: "Find the exact spot.",
     caption:
-      "Type a question in plain English and watch DevLens pinpoint the exact file and line number that answers it.",
-    badge: "STEP 04 · CITED ANSWERS",
+      "Stuck or curious? Ask a normal question like “How does login work?” and DevLens points you straight to the exact file and line.",
+    badge: "STEP 04 · ASK ANYTHING",
   },
 ];
 
-/* Coordinates of the 6 visual nodes across the 4 morph phases */
+/* Coordinates of the 5 friendly visual cards across the 4 steps */
 const MORPH_NODE_COORDS: {
   id: string;
   label: string;
@@ -105,8 +153,8 @@ const MORPH_NODE_COORDS: {
 }[] = [
   {
     id: "url",
-    label: "Entry Router",
-    file: "src/api/router.ts:14",
+    label: "Home Page",
+    file: "pages/home.js (Line 14)",
     color: "#3b82f6",
     pos: [
       { x: 16, y: 22, scale: 0.92 },
@@ -117,8 +165,8 @@ const MORPH_NODE_COORDS: {
   },
   {
     id: "auth",
-    label: "Auth Guard",
-    file: "src/auth/session.ts:24",
+    label: "Login Check",
+    file: "login/check.js (Line 24)",
     color: "#10b981",
     pos: [
       { x: 82, y: 20, scale: 0.92 },
@@ -129,8 +177,8 @@ const MORPH_NODE_COORDS: {
   },
   {
     id: "core",
-    label: "Core Engine",
-    file: "src/core/engine.ts:88",
+    label: "Main Brain",
+    file: "app/main.js (Line 88)",
     color: "#ffffff",
     pos: [
       { x: 48, y: 82, scale: 0.92 },
@@ -141,8 +189,8 @@ const MORPH_NODE_COORDS: {
   },
   {
     id: "billing",
-    label: "Checkout",
-    file: "src/billing/stripe.ts:41",
+    label: "Payment Box",
+    file: "shop/pay.js (Line 41)",
     color: "#f59e0b",
     pos: [
       { x: 20, y: 78, scale: 0.92 },
@@ -153,8 +201,8 @@ const MORPH_NODE_COORDS: {
   },
   {
     id: "db",
-    label: "User Store",
-    file: "src/db/users.ts:62",
+    label: "Saved Users",
+    file: "data/users.js (Line 62)",
     color: "#a855f7",
     pos: [
       { x: 84, y: 76, scale: 0.92 },
@@ -165,42 +213,141 @@ const MORPH_NODE_COORDS: {
   },
 ];
 
-/* "Pull the Thread" Interactive Chain Data */
+/* "Follow the Story" Beginner-Friendly Step Chains */
 const THREAD_CHAINS = [
   {
     id: "login",
-    trigger: "When a user clicks Sign In",
+    trigger: "When someone logs in",
     nodes: [
-      { step: "01", role: "UI Component", name: "LoginForm.tsx", line: "L42", note: "Captures credentials & dispatches POST" },
-      { step: "02", role: "API Route", name: "authController.ts", line: "L19", note: "Validates payload & rate-limits IP" },
-      { step: "03", role: "Security Gate", name: "verifyToken.ts", line: "L24", note: "Signs Ed25519 JWT session token" },
-      { step: "04", role: "Database", name: "sessionStore.ts", line: "L68", note: "Persists active session in Postgres" },
+      {
+        step: "01",
+        role: "On the Screen",
+        name: "Login Box",
+        line: "Line 12",
+        note: "Where a user types their email and password.",
+      },
+      {
+        step: "02",
+        role: "Quick Check",
+        name: "Password Checker",
+        line: "Line 24",
+        note: "Checks if the email and password match.",
+      },
+      {
+        step: "03",
+        role: "Stay Signed In",
+        name: "Welcome Pass",
+        line: "Line 40",
+        note: "Gives the browser a pass so they stay logged in.",
+      },
+      {
+        step: "04",
+        role: "Saved List",
+        name: "User Storage",
+        line: "Line 68",
+        note: "Saves their login time in the user list.",
+      },
     ],
   },
   {
     id: "payment",
-    trigger: "When an order is paid",
+    trigger: "When someone buys an item",
     nodes: [
-      { step: "01", role: "Webhook Ingress", name: "stripeWebhook.ts", line: "L15", note: "Verifies cryptographic Stripe signature" },
-      { step: "02", role: "Domain Service", name: "orderFulfill.ts", line: "L53", note: "Transitions order state to PAID" },
-      { step: "03", role: "Queue Worker", name: "receiptMailer.ts", line: "L31", note: "Dispatches PDF invoice email job" },
-      { step: "04", role: "Ledger Sink", name: "ledgerRepo.ts", line: "L94", note: "Commits immutable audit record" },
+      {
+        step: "01",
+        role: "Click Button",
+        name: "Buy Now Button",
+        line: "Line 15",
+        note: "Customer clicks Pay Now at checkout.",
+      },
+      {
+        step: "02",
+        role: "Charge Card",
+        name: "Payment Helper",
+        line: "Line 53",
+        note: "Safely processes the card payment.",
+      },
+      {
+        step: "03",
+        role: "Send Email",
+        name: "Receipt Sender",
+        line: "Line 31",
+        note: "Emails a receipt to the customer.",
+      },
+      {
+        step: "04",
+        role: "Save Order",
+        name: "Order History",
+        line: "Line 94",
+        note: "Adds the purchase to their account page.",
+      },
     ],
   },
   {
     id: "search",
-    trigger: "When someone asks Copilot",
+    trigger: "When you ask a question",
     nodes: [
-      { step: "01", role: "Prompt Input", name: "AskBar.tsx", line: "L28", note: "Captures question & @pinned file" },
-      { step: "02", role: "Vector Search", name: "pgvector.ts", line: "L61", note: "Finds closest AST function chunks" },
-      { step: "03", role: "Graph Hop", name: "neighborExpand.ts", line: "L39", note: "Pulls 1-hop callers & callees" },
-      { step: "04", role: "Cited Stream", name: "answerStream.ts", line: "L82", note: "Streams answer with exact file:line links" },
+      {
+        step: "01",
+        role: "Ask Anything",
+        name: "Question Box",
+        line: "Line 10",
+        note: "You type a normal question in plain English.",
+      },
+      {
+        step: "02",
+        role: "Smart Search",
+        name: "Map Scanner",
+        line: "Line 32",
+        note: "Finds the exact files related to your question.",
+      },
+      {
+        step: "03",
+        role: "Check Links",
+        name: "Connection Finder",
+        line: "Line 48",
+        note: "Sees what other pages connect to those files.",
+      },
+      {
+        step: "04",
+        role: "Plain Answer",
+        name: "Simple Guide",
+        line: "Line 75",
+        note: "Explains the answer clearly and links to the line.",
+      },
     ],
   },
 ];
 
+const BEGINNER_FAQS: FAQItemData[] = [
+  {
+    id: "01",
+    question: "Do I need to install anything to use DevLens?",
+    answer:
+      "Not at all. Everything runs right in your browser. Just copy a GitHub link, paste it in, and your visual map is ready in about 7 seconds.",
+  },
+  {
+    id: "02",
+    question: "I'm new to coding—will this help me understand a big project?",
+    answer:
+      "Yes! That is exactly why DevLens exists. Instead of opening hundreds of confusing folders, you get a clean visual map and a chat helper that explains how things work in plain English.",
+  },
+  {
+    id: "03",
+    question: "Does DevLens keep or save my code?",
+    answer:
+      "No. DevLens only reads your project long enough to draw your visual map, and then immediately clears the files from memory.",
+  },
+  {
+    id: "04",
+    question: "What programming languages work with DevLens?",
+    answer:
+      "All popular languages—including JavaScript, TypeScript, Python, Java, Go, Rust, Ruby, and PHP—work right out of the box.",
+  },
+];
+
 /* ═══════════════════════════════════════════════════════════════════════════
-   HERO INTERACTIVE X-RAY LENS COMPONENT
+   HERO INTERACTIVE MAGIC LENS COMPONENT
    ═══════════════════════════════════════════════════════════════════════════ */
 
 function InteractiveXRayLens() {
@@ -208,7 +355,7 @@ function InteractiveXRayLens() {
   const [lensPos, setLensPos] = useState<{ x: number; y: number }>({ x: 54, y: 50 });
   const [isHovering, setIsHovering] = useState(false);
 
-  // Subtle autonomous float when the user isn't hovering
+  // Gentle movement when the user isn't moving the mouse
   useEffect(() => {
     if (isHovering) return;
     let frame = 0;
@@ -242,17 +389,15 @@ function InteractiveXRayLens() {
       onPointerLeave={() => setIsHovering(false)}
       onPointerMove={handlePointerMove}
     >
-      {/* Top Floating Instruction Pill */}
+      {/* Top Friendly Instruction Pill */}
       <div className="hwc-xray-bar">
         <span className="mf-mono">
-          <span className="hwc-pulse-dot" /> MOVE CURSOR TO SCAN RAW CODE THROUGH THE DEVLENS X-RAY
+          <span className="hwc-pulse-dot" /> MOVE YOUR MOUSE HERE TO TURN MESSY FILES INTO A VISUAL MAP
         </span>
-        <span className="mf-mono hwc-xray-coords">
-          LENS // X:{Math.round(lensPos.x)}% Y:{Math.round(lensPos.y)}%
-        </span>
+        <span className="mf-mono hwc-xray-coords">MAGIC LENS ACTIVE</span>
       </div>
 
-      {/* LAYER 1: Raw Unstructured Code Background (Outside the Lens) */}
+      {/* LAYER 1: Confusing File Names (Outside the Lens) */}
       <div className="hwc-xray-raw-layer" aria-hidden="true">
         {LENS_ITEMS.map((item) => (
           <div
@@ -260,13 +405,13 @@ function InteractiveXRayLens() {
             className="hwc-raw-snippet mf-mono"
             style={{ left: `${item.x}%`, top: `${item.y}%` }}
           >
-            <div className="hwc-raw-file">unindexed_blob_{item.id}.ts</div>
+            <div className="hwc-raw-file">confusing file</div>
             <code>{item.raw}</code>
           </div>
         ))}
       </div>
 
-      {/* LAYER 2: Illuminated Architectural Graph (Clipped to the Moving X-Ray Lens!) */}
+      {/* LAYER 2: Friendly Visual Map (Inside the Moving Circle!) */}
       <div
         className="hwc-xray-clean-layer"
         style={{
@@ -309,7 +454,7 @@ function InteractiveXRayLens() {
         className="hwc-lens-ring"
         style={{ left: `${lensPos.x}%`, top: `${lensPos.y}%` }}
       >
-        <span className="hwc-lens-badge mf-mono">DEVLENS AST VIEW</span>
+        <span className="hwc-lens-badge mf-mono">DEVLENS VIEW</span>
       </div>
     </div>
   );
@@ -326,7 +471,7 @@ export function HowItWorksPage() {
   const [phaseIdx, setPhaseIdx] = useState<number>(2);
   const [autoCycle, setAutoCycle] = useState<boolean>(true);
 
-  // Interactive "Pull the Thread" state
+  // Interactive "Follow the Story" state
   const [chainIdx, setChainIdx] = useState<number>(0);
   const [activeHopIdx, setActiveHopIdx] = useState<number>(2);
 
@@ -356,7 +501,7 @@ export function HowItWorksPage() {
   return (
     <SiteLayout>
       {/* ═══════════════════════════════════════════════════════════════════
-          00 · EDITORIAL HERO + INTERACTIVE X-RAY LOUPE
+          00 · EDITORIAL HERO + INTERACTIVE MAGIC LENS
           ═══════════════════════════════════════════════════════════════════ */}
       <section className="mf-hero" data-theme="light" style={{ paddingBottom: "clamp(56px, 7vw, 96px)" }}>
         <div className="mf-hero-grid-bg" />
@@ -367,8 +512,8 @@ export function HowItWorksPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
           >
-            <Pill live>Interactive Architecture Lens · Ready in 7.4s</Pill>
-            <span className="mf-mono mf-muted">URL IN // LIVING MAP OUT</span>
+            <Pill live>How DevLens Works · Ready in 7 Seconds</Pill>
+            <span className="mf-mono mf-muted">PASTE A LINK // GET A VISUAL MAP</span>
           </motion.div>
 
           <div className="hwc-hero-split">
@@ -378,10 +523,10 @@ export function HowItWorksPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.06, ease: [0.16, 1, 0.3, 1] }}
             >
-              Turn raw code into{" "}
+              Turn messy code into{" "}
               <span className="mf-serif-i">
                 <MorphText
-                  words={["clarity.", "motion.", "insight.", "vision."]}
+                  words={["clarity.", "pictures.", "answers.", "stories."]}
                   morphTime={1.1}
                   holdTime={1.9}
                   strength={8}
@@ -396,12 +541,12 @@ export function HowItWorksPage() {
               transition={{ duration: 0.5, delay: 0.14 }}
             >
               <p className="mf-lead" style={{ margin: 0 }}>
-                Move your cursor across the canvas below. What looks like thousands of tangled lines of code becomes a living, connected map the moment you look through DevLens.
+                New to a codebase? Move your mouse over the box below. DevLens works like a magic magnifying glass—turning hundreds of confusing files into a clean visual map anyone can understand.
               </p>
             </motion.div>
           </div>
 
-          {/* Interactive X-Ray Code Loupe */}
+          {/* Interactive Magic Lens */}
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
@@ -413,18 +558,18 @@ export function HowItWorksPage() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          01 · DARK INTERACTIVE MORPH THEATRE (SCRUB FROM 0.0s TO 7.4s)
+          01 · DARK INTERACTIVE 4-STEP STORY (0.0s TO 7.4s)
           ═══════════════════════════════════════════════════════════════════ */}
       <section className="mf-section mf-dark" data-theme="dark">
         <div className="mf-wrap">
           <div className="mf-sec-bar">
-            <span className="idx">[01 / THE 7.4-SECOND TRANSFORMATION]</span>
-            <Pill>Interactive Time Scrubber</Pill>
-            <span className="tag">CLICK ANY STAGE OR SCRUB THROUGH TIME</span>
+            <span className="idx">[01 / 4 SIMPLE STEPS]</span>
+            <Pill>How It Works</Pill>
+            <span className="tag">CLICK ANY STEP TO WATCH</span>
           </div>
 
           <div className="hwc-theatre">
-            {/* Left: Dynamic Editorial Story + Scrubber Controls */}
+            {/* Left: Friendly Story + Step Buttons */}
             <div className="hwc-theatre-left">
               <div className="hwc-phase-pill mf-mono">{currentPhase.badge}</div>
 
@@ -447,7 +592,7 @@ export function HowItWorksPage() {
                 </motion.div>
               </AnimatePresence>
 
-              {/* Tactile Step Scrubber Pills */}
+              {/* Step Selector Pills */}
               <div className="hwc-scrubber-steps">
                 {MORPH_PHASES.map((ph, idx) => {
                   const active = idx === phaseIdx;
@@ -463,7 +608,7 @@ export function HowItWorksPage() {
                       }}
                     >
                       <div className="hwc-scrubber-top mf-mono">
-                        <span>{ph.step}</span>
+                        <span>STEP {ph.step}</span>
                         <span>{ph.timeRange}</span>
                       </div>
                       <div className="hwc-scrubber-name">{ph.title}</div>
@@ -480,21 +625,21 @@ export function HowItWorksPage() {
               </div>
             </div>
 
-            {/* Right: Live Physics Morph Canvas */}
+            {/* Right: Live Animated Visual Canvas */}
             <div className="hwc-theatre-canvas">
               <div className="hwc-canvas-chrome mf-mono">
-                <span>LIVE VISUALIZATION // STAGE {currentPhase.step} OF 04</span>
+                <span>LIVE PREVIEW // STEP {currentPhase.step} OF 04</span>
                 <button
                   type="button"
                   className="hwc-autoplay-btn mf-mono"
                   onClick={() => setAutoCycle((v) => !v)}
                 >
-                  {autoCycle ? "❚❚ PAUSE" : "▶ AUTO-CYCLE"}
+                  {autoCycle ? "❚❚ PAUSE" : "▶ AUTO-PLAY"}
                 </button>
               </div>
 
               <div className="hwc-morph-stage">
-                {/* Ambient Domain Rings in Phase 2+ */}
+                {/* Ambient Topic Circles in Step 2+ */}
                 {phaseIdx >= 1 && (
                   <div className="hwc-domain-halos" aria-hidden="true">
                     <div className="hwc-halo h1" />
@@ -502,7 +647,7 @@ export function HowItWorksPage() {
                   </div>
                 )}
 
-                {/* Synaptic Connection Lines in Phase 3 & 4 */}
+                {/* Connection Lines in Step 3 & 4 */}
                 {phaseIdx >= 2 && (
                   <svg className="hwc-morph-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
                     <line
@@ -541,7 +686,7 @@ export function HowItWorksPage() {
                   </svg>
                 )}
 
-                {/* Floating Magnetic Nodes */}
+                {/* Floating Visual Topic Cards */}
                 {MORPH_NODE_COORDS.map((node) => {
                   const target = node.pos[phaseIdx];
                   const isSpotlight = phaseIdx === 3 && node.id === "auth";
@@ -566,18 +711,18 @@ export function HowItWorksPage() {
                   );
                 })}
 
-                {/* Phase 01 Center Drop Badge */}
+                {/* Step 01 Center Link Pill */}
                 {phaseIdx === 0 && (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.85 }}
                     animate={{ opacity: 1, scale: 1 }}
                     className="hwc-center-pill mf-mono"
                   >
-                    git://github.com/vercel/next.js
+                    github.com/vercel/next.js
                   </motion.div>
                 )}
 
-                {/* Phase 04 Floating Copilot Citation Bubble */}
+                {/* Step 04 Friendly Answer Bubble */}
                 {phaseIdx === 3 && (
                   <motion.div
                     initial={{ opacity: 0, y: 12 }}
@@ -585,11 +730,11 @@ export function HowItWorksPage() {
                     className="hwc-copilot-toast"
                   >
                     <div className="mf-mono" style={{ fontSize: "0.64rem", color: "#10b981" }}>
-                      ✓ CITED ANSWER · 100% VERIFIED
+                      ✓ CLEAR ANSWER · EXACT FILE FOUND
                     </div>
                     <div style={{ fontSize: "0.86rem", color: "#fff", marginTop: 4 }}>
-                      “Session tokens are validated inside <code>Auth Guard</code> at{" "}
-                      <span style={{ color: "#10b981" }}>src/auth/session.ts:24</span>.”
+                      “Users sign in through the <code>Login Check</code> card inside{" "}
+                      <span style={{ color: "#10b981" }}>login/check.js (Line 24)</span>.”
                     </div>
                   </motion.div>
                 )}
@@ -600,22 +745,22 @@ export function HowItWorksPage() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          02 · "PULL THE THREAD" — INTERACTIVE EXECUTION CHAIN (LIGHT)
+          02 · "FOLLOW ANY ACTION" — STEP-BY-STEP STORY (LIGHT)
           ═══════════════════════════════════════════════════════════════════ */}
       <section className="mf-section" data-theme="light">
         <div className="mf-wrap">
           <div className="mf-sec-bar">
-            <span className="idx">[02 / PULL THE THREAD]</span>
-            <Pill>Interactive Call Chain</Pill>
-            <span className="tag">FOLLOW ANY FEATURE FROM UI TO DATABASE</span>
+            <span className="idx">[02 / FOLLOW ANY ACTION]</span>
+            <Pill>Step-by-Step Story</Pill>
+            <span className="tag">SEE HOW ONE CLICK TRAVELS THROUGH AN APP</span>
           </div>
 
           <div className="hwc-thread-head">
             <Reveal>
               <h2 className="mf-h1" style={{ maxWidth: "13em", margin: 0 }}>
-                Pull one thread.{" "}
+                Pick an everyday action.{" "}
                 <span className="mf-serif-i" style={{ fontWeight: 400 }}>
-                  Watch the whole path unfold.
+                  Watch how it works.
                 </span>
               </h2>
             </Reveal>
@@ -638,7 +783,7 @@ export function HowItWorksPage() {
             </div>
           </div>
 
-          {/* Interactive 4-Hop Chain Reaction */}
+          {/* Interactive 4-Step Story Cards */}
           <div className="hwc-chain-track">
             {currentChain.nodes.map((hop, idx) => {
               const isLit = idx <= activeHopIdx;
@@ -656,13 +801,13 @@ export function HowItWorksPage() {
                   transition={{ type: "spring", stiffness: 360, damping: 26 }}
                 >
                   <div className="hwc-hop-top mf-mono">
-                    <span>HOP {hop.step}</span>
+                    <span>STEP {hop.step}</span>
                     <span className="hwc-hop-role">{hop.role}</span>
                   </div>
                   <div className="hwc-hop-name">{hop.name}</div>
                   <p className="hwc-hop-note">{hop.note}</p>
                   <div className="hwc-hop-line mf-mono">
-                    <span>↳ JUMP TO SOURCE</span>
+                    <span>↳ EXACT SPOT</span>
                     <strong>{hop.line}</strong>
                   </div>
                 </motion.button>
@@ -670,16 +815,16 @@ export function HowItWorksPage() {
             })}
           </div>
 
-          {/* 2-Card Asymmetric Architectural Promises */}
+          {/* 2 Simple, Friendly Promise Cards */}
           <div className="hwc-promise-grid">
             <Reveal>
               <div className="hwc-promise-card hwc-promise-card--dark">
                 <span className="mf-mono" style={{ fontSize: "0.68rem", color: "#10b981" }}>
-                  ZERO DISK FOOTPRINT // PRIVACY BY DESIGN
+                  100% SAFE &amp; PRIVATE
                 </span>
-                <h3>Your code never lingers on a server.</h3>
+                <h3>Your code stays private and temporary.</h3>
                 <p>
-                  Repositories are analyzed in an ephemeral memory space that evaporates the moment your visual map is ready. No source files are stored on disk—ever.
+                  We only read your project long enough to draw your visual map, then immediately clear it from memory. Nothing is saved on our computers—ever.
                 </p>
               </div>
             </Reveal>
@@ -687,11 +832,11 @@ export function HowItWorksPage() {
             <Reveal delay={80}>
               <div className="hwc-promise-card hwc-promise-card--light">
                 <span className="mf-mono" style={{ fontSize: "0.68rem", color: "var(--mf-ink-3)" }}>
-                  DETERMINISTIC TRUTH // ZERO HALLUCINATION
+                  NO GUESSWORK
                 </span>
-                <h3>Every answer points to a real line of code.</h3>
+                <h3>Real answers, never made up.</h3>
                 <p>
-                  Because DevLens maps actual syntax trees before you ask a question, every explanation includes clickable file and line citations you can verify in one click.
+                  Every time DevLens explains how a feature works, it points you to the exact file and line number so you can see the real code for yourself.
                 </p>
               </div>
             </Reveal>
@@ -700,20 +845,20 @@ export function HowItWorksPage() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          03 · FAQ + SIGNATURE REPOSITORY LAUNCHER
+          03 · BEGINNER FAQ + ONE-CLICK PROJECT LAUNCHER
           ═══════════════════════════════════════════════════════════════════ */}
       <section className="mf-section" data-theme="light" style={{ paddingTop: 0 }}>
         <div className="mf-wrap">
           <Reveal>
-            <FAQSection />
+            <FAQSection items={BEGINNER_FAQS} />
           </Reveal>
 
           <Reveal>
             <div className="hwc-finale">
               <div>
-                <Pill live>Ready in Under 8 Seconds</Pill>
+                <Pill live>Ready in About 7 Seconds</Pill>
                 <h2 className="mf-h1" style={{ margin: "18px 0 0", fontSize: "clamp(2.2rem, 4.8vw, 4.2rem)" }}>
-                  Try it on a repository{" "}
+                  Try it on a project{" "}
                   <span className="mf-serif-i" style={{ fontWeight: 400 }}>
                     right now.
                   </span>
@@ -733,12 +878,12 @@ export function HowItWorksPage() {
                   <input
                     value={repoInput}
                     onChange={(e) => setRepoInput(e.target.value)}
-                    placeholder="owner/repo or full URL"
-                    aria-label="Repository URL"
+                    placeholder="owner/project or paste link"
+                    aria-label="GitHub project link"
                     spellCheck={false}
                   />
                   <button type="submit" className="mf-btn">
-                    Analyze <span className="mf-arrow">↗</span>
+                    Explore <span className="mf-arrow">↗</span>
                   </button>
                 </form>
 
