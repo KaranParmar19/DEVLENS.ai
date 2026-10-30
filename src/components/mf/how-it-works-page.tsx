@@ -88,6 +88,7 @@ const LENS_EDGES: [number, number][] = [
 interface MorphPhase {
   id: string;
   step: string;
+  stepLabel: string;
   timeRange: string;
   progress: number;
   title: string;
@@ -100,6 +101,7 @@ const MORPH_PHASES: MorphPhase[] = [
   {
     id: "drop",
     step: "01",
+    stepLabel: "Paste repository link",
     timeRange: "0.0s — 1.2s",
     progress: 25,
     title: "Paste a link.",
@@ -111,6 +113,7 @@ const MORPH_PHASES: MorphPhase[] = [
   {
     id: "cluster",
     step: "02",
+    stepLabel: "Files group into topics",
     timeRange: "1.2s — 3.6s",
     progress: 50,
     title: "Files group into",
@@ -122,6 +125,7 @@ const MORPH_PHASES: MorphPhase[] = [
   {
     id: "pulse",
     step: "03",
+    stepLabel: "See what connects",
     timeRange: "3.6s — 5.6s",
     progress: 75,
     title: "See what connects",
@@ -133,6 +137,7 @@ const MORPH_PHASES: MorphPhase[] = [
   {
     id: "ask",
     step: "04",
+    stepLabel: "Ask in plain English",
     timeRange: "5.6s — 7.4s",
     progress: 100,
     title: "Ask in plain English.",
@@ -143,7 +148,7 @@ const MORPH_PHASES: MorphPhase[] = [
   },
 ];
 
-/* Coordinates of the 5 friendly visual cards across the 4 steps */
+/* Coordinates of the 5 friendly visual cards across the 4 steps — perfectly centered in the stage */
 const MORPH_NODE_COORDS: {
   id: string;
   label: string;
@@ -157,10 +162,10 @@ const MORPH_NODE_COORDS: {
     file: "pages/home.js (Line 14)",
     color: "#3b82f6",
     pos: [
-      { x: 16, y: 22, scale: 0.92 },
-      { x: 24, y: 30, scale: 1 },
-      { x: 20, y: 50, scale: 1.05 },
-      { x: 20, y: 50, scale: 0.95 },
+      { x: 25, y: 26, scale: 0.95 },  // Step 1: Orbit top-left
+      { x: 27, y: 32, scale: 1 },     // Step 2: Left topic cluster top (centered at X: 27)
+      { x: 24, y: 50, scale: 1.05 },  // Step 3: Entry node (centered flow)
+      { x: 25, y: 58, scale: 0.95 },  // Step 4: Framing node
     ],
   },
   {
@@ -169,10 +174,10 @@ const MORPH_NODE_COORDS: {
     file: "login/check.js (Line 24)",
     color: "#10b981",
     pos: [
-      { x: 82, y: 20, scale: 0.92 },
-      { x: 28, y: 68, scale: 1 },
-      { x: 48, y: 32, scale: 1.12 },
-      { x: 50, y: 42, scale: 1.22 },
+      { x: 25, y: 74, scale: 0.95 },  // Step 1: Orbit bottom-left
+      { x: 27, y: 68, scale: 1 },     // Step 2: Left topic cluster bottom (centered at X: 27)
+      { x: 46, y: 28, scale: 1.12 },  // Step 3: Auth router
+      { x: 50, y: 32, scale: 1.2 },   // Step 4: SPOTLIGHTED CENTER
     ],
   },
   {
@@ -181,10 +186,10 @@ const MORPH_NODE_COORDS: {
     file: "app/main.js (Line 88)",
     color: "#ffffff",
     pos: [
-      { x: 48, y: 82, scale: 0.92 },
-      { x: 52, y: 48, scale: 1.08 },
-      { x: 50, y: 68, scale: 1.08 },
-      { x: 48, y: 76, scale: 0.95 },
+      { x: 50, y: 84, scale: 0.92 },  // Step 1: Orbit bottom-center
+      { x: 50, y: 50, scale: 1.08 },  // Step 2: EXACT CENTER HUB
+      { x: 50, y: 70, scale: 1.08 },  // Step 3: Core coordinator
+      { x: 25, y: 24, scale: 0.95 },  // Step 4: Framing node
     ],
   },
   {
@@ -193,10 +198,10 @@ const MORPH_NODE_COORDS: {
     file: "shop/pay.js (Line 41)",
     color: "#f59e0b",
     pos: [
-      { x: 20, y: 78, scale: 0.92 },
-      { x: 76, y: 32, scale: 1 },
-      { x: 78, y: 34, scale: 1 },
-      { x: 78, y: 34, scale: 0.92 },
+      { x: 75, y: 26, scale: 0.95 },  // Step 1: Orbit top-right
+      { x: 73, y: 32, scale: 1 },     // Step 2: Right topic cluster top (centered at X: 73)
+      { x: 74, y: 34, scale: 1 },     // Step 3: Downstream billing
+      { x: 75, y: 58, scale: 0.95 },  // Step 4: Framing node
     ],
   },
   {
@@ -205,10 +210,10 @@ const MORPH_NODE_COORDS: {
     file: "data/users.js (Line 62)",
     color: "#a855f7",
     pos: [
-      { x: 84, y: 76, scale: 0.92 },
-      { x: 74, y: 70, scale: 1 },
-      { x: 80, y: 68, scale: 1.04 },
-      { x: 80, y: 66, scale: 1.08 },
+      { x: 75, y: 74, scale: 0.95 },  // Step 1: Orbit bottom-right
+      { x: 73, y: 68, scale: 1 },     // Step 2: Right topic cluster bottom (centered at X: 73)
+      { x: 74, y: 70, scale: 1.04 },  // Step 3: Downstream database
+      { x: 75, y: 24, scale: 0.95 },  // Step 4: Framing node
     ],
   },
 ];
@@ -566,9 +571,9 @@ export function HowItWorksPage() {
       <section className="mf-section mf-dark" data-theme="dark">
         <div className="mf-wrap">
           <div className="mf-sec-bar">
-            <span className="idx">[01 / 4 SIMPLE STEPS]</span>
-            <Pill>How It Works</Pill>
-            <span className="tag">CLICK ANY STEP TO WATCH</span>
+            <span className="idx">[{currentPhase.step} / 04 SIMPLE STEPS]</span>
+            <Pill live>How It Works</Pill>
+            <span className="tag">STEP {currentPhase.step} OF 04 · CLICK TO WATCH</span>
           </div>
 
           <div className="hwc-theatre">
@@ -611,10 +616,10 @@ export function HowItWorksPage() {
                       }}
                     >
                       <div className="hwc-scrubber-top mf-mono">
-                        <span>STEP {ph.step}</span>
+                        <span>STEP {ph.step} / 04</span>
                         <span>{ph.timeRange}</span>
                       </div>
-                      <div className="hwc-scrubber-name">{ph.title}</div>
+                      <div className="hwc-scrubber-name">{ph.stepLabel}</div>
                       <div className="hwc-scrubber-bar">
                         <span
                           style={{
@@ -653,6 +658,7 @@ export function HowItWorksPage() {
                 {/* Connection Lines in Step 3 & 4 */}
                 {phaseIdx >= 2 && (
                   <svg className="hwc-morph-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+                    {/* Home Page -> Login Check */}
                     <line
                       x1={MORPH_NODE_COORDS[0].pos[phaseIdx].x}
                       y1={MORPH_NODE_COORDS[0].pos[phaseIdx].y}
@@ -662,29 +668,32 @@ export function HowItWorksPage() {
                       strokeWidth="0.6"
                       strokeDasharray="1.5 1.5"
                     />
+                    {/* Login Check -> Main Brain */}
                     <line
                       x1={MORPH_NODE_COORDS[1].pos[phaseIdx].x}
                       y1={MORPH_NODE_COORDS[1].pos[phaseIdx].y}
                       x2={MORPH_NODE_COORDS[2].pos[phaseIdx].x}
                       y2={MORPH_NODE_COORDS[2].pos[phaseIdx].y}
-                      stroke="rgba(255,255,255,0.35)"
+                      stroke="rgba(255,255,255,0.45)"
                       strokeWidth="0.5"
                     />
-                    <line
-                      x1={MORPH_NODE_COORDS[1].pos[phaseIdx].x}
-                      y1={MORPH_NODE_COORDS[1].pos[phaseIdx].y}
-                      x2={MORPH_NODE_COORDS[4].pos[phaseIdx].x}
-                      y2={MORPH_NODE_COORDS[4].pos[phaseIdx].y}
-                      stroke="#10b981"
-                      strokeWidth="0.6"
-                    />
+                    {/* Main Brain -> Payment Box */}
                     <line
                       x1={MORPH_NODE_COORDS[2].pos[phaseIdx].x}
                       y1={MORPH_NODE_COORDS[2].pos[phaseIdx].y}
                       x2={MORPH_NODE_COORDS[3].pos[phaseIdx].x}
                       y2={MORPH_NODE_COORDS[3].pos[phaseIdx].y}
-                      stroke="rgba(255,255,255,0.3)"
-                      strokeWidth="0.5"
+                      stroke="#f59e0b"
+                      strokeWidth="0.6"
+                    />
+                    {/* Main Brain -> Saved Users */}
+                    <line
+                      x1={MORPH_NODE_COORDS[2].pos[phaseIdx].x}
+                      y1={MORPH_NODE_COORDS[2].pos[phaseIdx].y}
+                      x2={MORPH_NODE_COORDS[4].pos[phaseIdx].x}
+                      y2={MORPH_NODE_COORDS[4].pos[phaseIdx].y}
+                      stroke="#a855f7"
+                      strokeWidth="0.6"
                     />
                   </svg>
                 )}
