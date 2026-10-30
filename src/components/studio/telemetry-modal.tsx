@@ -291,7 +291,8 @@ export function TelemetryModal({
   return (
     <motion.div
       data-lenis-prevent="true"
-      className="overflow-y-auto"
+      data-theme="light"
+      className="mf-root overflow-y-auto"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -301,12 +302,11 @@ export function TelemetryModal({
         inset: 0,
         zIndex: 100,
         backgroundColor: "#ffffff",
-        color: "#0a0a0a",
+        color: "var(--mf-ink, #0a0a0a)",
         overflowY: "auto",
         overflowX: "hidden",
         WebkitOverflowScrolling: "touch",
-        fontFamily:
-          "var(--mf-font, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif)",
+        fontFamily: "var(--mf-font)",
       }}
     >
       <style>{`
@@ -361,10 +361,9 @@ export function TelemetryModal({
           margin: "0 auto",
           display: "flex",
           flexDirection: "column",
-          justifyContent: "space-between",
-          padding: "clamp(24px, 3vw, 40px) clamp(24px, 4.5vw, 72px) 110px",
+          padding: "clamp(24px, 3vw, 40px) clamp(24px, 4.5vw, 72px) 100px",
           boxSizing: "border-box",
-          gap: 36,
+          gap: 40,
         }}
       >
         {/* ── 1. Top Full-Width System Header ─────────────────────────────── */}
@@ -383,28 +382,30 @@ export function TelemetryModal({
           <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <span
+                className="mf-mono"
                 style={{
-                  fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
                   fontSize: "0.6875rem",
-                  letterSpacing: "0.16em",
-                  textTransform: "uppercase",
-                  color: "#8a8a8a",
+                  letterSpacing: "0.14em",
+                  color: "var(--mf-ink-3, #7a7a7a)",
                   fontWeight: 500,
                 }}
               >
                 System Status
               </span>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-                <span
-                  style={{
-                    fontSize: "1.5rem",
-                    fontWeight: 600,
-                    letterSpacing: "-0.035em",
-                    color: "#0a0a0a",
-                  }}
-                >
-                  DevLens AI
-                </span>
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "baseline",
+                  gap: 2,
+                  fontFamily: "var(--mf-font)",
+                  fontSize: "1.5rem",
+                  fontWeight: 600,
+                  letterSpacing: "-0.035em",
+                  color: "var(--mf-ink, #0a0a0a)",
+                }}
+              >
+                <span>DevLens</span>
+                <span style={{ fontWeight: 400, opacity: 0.55, fontSize: "0.85em" }}>.ai</span>
               </div>
             </div>
 
@@ -418,17 +419,14 @@ export function TelemetryModal({
 
             {/* Target Repo Breadcrumb Pill */}
             <div
+              className="mf-pill"
               style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "6px 12px",
-                borderRadius: 6,
                 backgroundColor: "#fafafa",
-                border: "1px solid #eaeaea",
-                fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
+                borderColor: "#eaeaea",
+                color: "var(--mf-ink-2, #595959)",
+                textTransform: "none",
+                letterSpacing: "-0.01em",
                 fontSize: "0.75rem",
-                color: "#525252",
               }}
             >
               <FolderGit2 size={14} style={{ color: "#0a0a0a" }} />
@@ -441,7 +439,7 @@ export function TelemetryModal({
                   display: "inline-flex",
                   alignItems: "center",
                   gap: 4,
-                  color: "#737373",
+                  color: "var(--mf-ink-3, #7a7a7a)",
                 }}
               >
                 <GitBranch size={12} />
@@ -450,32 +448,25 @@ export function TelemetryModal({
             </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <span
+              className="mf-mono"
               style={{
-                fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
                 fontSize: "0.75rem",
-                color: "#737373",
+                color: "var(--mf-ink-3, #7a7a7a)",
                 fontVariantNumeric: "tabular-nums",
               }}
             >
               ELAPSED {formattedElapsed}
             </span>
 
-            <div
+            <span
+              className="mf-pill"
               style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "6px 12px",
-                borderRadius: 6,
                 backgroundColor: error ? "#fef2f2" : "#f5fdf9",
-                border: error ? "1px solid #fecaca" : "1px solid #d1fae5",
-                fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
-                fontSize: "0.72rem",
-                letterSpacing: "0.06em",
-                fontWeight: 600,
+                borderColor: error ? "#fecaca" : "#d1fae5",
                 color: error ? "#dc2626" : "#065f46",
+                fontWeight: 600,
               }}
             >
               <span
@@ -493,21 +484,16 @@ export function TelemetryModal({
                 }}
               />
               {error ? "HALTED" : "ACTIVE SESSION"}
-            </div>
+            </span>
 
             <button
               type="button"
               onClick={onCancel}
+              className="mf-pill"
               style={{
-                fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
-                fontSize: "0.72rem",
-                letterSpacing: "0.05em",
-                textTransform: "uppercase",
-                color: "#525252",
+                color: "var(--mf-ink-2, #595959)",
                 background: "#ffffff",
-                border: "1px solid #e5e5e5",
-                borderRadius: 6,
-                padding: "7px 14px",
+                borderColor: "#e5e5e5",
                 cursor: "pointer",
                 transition: "all 0.15s ease",
               }}
@@ -517,7 +503,7 @@ export function TelemetryModal({
                 e.currentTarget.style.background = "#fafafa";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.color = "#525252";
+                e.currentTarget.style.color = "var(--mf-ink-2, #595959)";
                 e.currentTarget.style.borderColor = "#e5e5e5";
                 e.currentTarget.style.background = "#ffffff";
               }}
@@ -551,35 +537,34 @@ export function TelemetryModal({
             >
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 <div
+                  className="mf-mono"
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 10,
-                    fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
                     fontSize: "0.75rem",
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    color: "#737373",
+                    letterSpacing: "0.06em",
+                    color: "var(--mf-ink-3, #7a7a7a)",
                   }}
                 >
                   <span style={{ color: "#0a0a0a", fontWeight: 600 }}>
-                    0{activePhaseIdx + 1} / 04
+                    [0{activePhaseIdx + 1} / 04]
                   </span>
-                  <span>—</span>
                   <span>{currentPhase.phaseLabel}</span>
                 </div>
 
                 <h2
+                  className="mf-h2"
                   style={{
                     margin: 0,
-                    fontSize: "clamp(2rem, 3.4vw, 2.85rem)",
-                    fontWeight: 600,
-                    color: "#0a0a0a",
-                    letterSpacing: "-0.035em",
-                    lineHeight: 1.08,
+                    fontSize: "clamp(2.15rem, 3.8vw, 3.25rem)",
+                    fontWeight: 500,
+                    color: "var(--mf-ink, #0a0a0a)",
+                    letterSpacing: "-0.04em",
+                    lineHeight: 1.04,
                   }}
                 >
-                  Analyzing Repository
+                  Analyzing <span className="mf-serif-i">repository.</span>
                 </h2>
 
                 <div
@@ -592,10 +577,11 @@ export function TelemetryModal({
                   }}
                 >
                   <p
+                    className="mf-body"
                     style={{
                       margin: 0,
                       fontSize: "1.05rem",
-                      color: "#737373",
+                      color: "var(--mf-ink-2, #595959)",
                       lineHeight: 1.5,
                     }}
                   >
@@ -610,15 +596,13 @@ export function TelemetryModal({
                     {topLanguages.map((lang) => (
                       <span
                         key={lang}
+                        className="mf-pill"
                         style={{
-                          fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
+                          padding: "3px 10px",
                           fontSize: "0.6875rem",
-                          padding: "3px 9px",
-                          borderRadius: 4,
                           backgroundColor: "#f5f5f5",
-                          border: "1px solid #eaeaea",
-                          color: "#525252",
-                          fontWeight: 500,
+                          borderColor: "#eaeaea",
+                          color: "var(--mf-ink-2, #595959)",
                         }}
                       >
                         {lang}
@@ -639,26 +623,27 @@ export function TelemetryModal({
               >
                 <div
                   style={{
-                    fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
-                    fontSize: "clamp(2.5rem, 4.5vw, 3.75rem)",
-                    fontWeight: 600,
-                    color: "#0a0a0a",
-                    letterSpacing: "-0.04em",
+                    fontFamily: "var(--mf-font)",
+                    fontSize: "clamp(2.75rem, 4.8vw, 4rem)",
+                    fontWeight: 500,
+                    color: "var(--mf-ink, #0a0a0a)",
+                    letterSpacing: "-0.045em",
                     lineHeight: 1,
                     fontVariantNumeric: "tabular-nums",
                   }}
                 >
                   {Math.round(progressPct)}
-                  <span style={{ fontSize: "0.5em", color: "#8a8a8a", marginLeft: 3 }}>%</span>
+                  <span style={{ fontSize: "0.5em", color: "var(--mf-ink-3, #7a7a7a)", marginLeft: 3 }}>
+                    %
+                  </span>
                 </div>
                 <span
+                  className="mf-mono"
                   style={{
-                    fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
                     fontSize: "0.75rem",
                     fontWeight: 600,
-                    letterSpacing: "0.06em",
-                    textTransform: "uppercase",
-                    color: "#0a0a0a",
+                    letterSpacing: "0.05em",
+                    color: "var(--mf-ink, #0a0a0a)",
                   }}
                 >
                   {currentPhase.actionLabel}
@@ -705,7 +690,7 @@ export function TelemetryModal({
                     justifyContent: "space-between",
                     gap: 14,
                     padding: "18px 20px",
-                    borderRadius: 8,
+                    borderRadius: 12,
                     border: isActive
                       ? "1.5px solid #0a0a0a"
                       : isDone
@@ -732,11 +717,11 @@ export function TelemetryModal({
                     }}
                   >
                     <span
+                      className="mf-mono"
                       style={{
-                        fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
                         fontSize: "0.6875rem",
-                        letterSpacing: "0.08em",
-                        color: isActive ? "#0a0a0a" : "#737373",
+                        letterSpacing: "0.06em",
+                        color: isActive ? "#0a0a0a" : "var(--mf-ink-3, #7a7a7a)",
                         fontWeight: 600,
                       }}
                     >
@@ -745,13 +730,12 @@ export function TelemetryModal({
 
                     <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                       <span
+                        className="mf-mono"
                         style={{
-                          fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
                           fontSize: "0.625rem",
-                          letterSpacing: "0.06em",
-                          textTransform: "uppercase",
-                          padding: "2px 6px",
-                          borderRadius: 4,
+                          letterSpacing: "0.05em",
+                          padding: "2px 7px",
+                          borderRadius: 999,
                           backgroundColor: isActive
                             ? "#0a0a0a"
                             : isDone
@@ -784,18 +768,20 @@ export function TelemetryModal({
                   <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                     <span
                       style={{
-                        fontSize: "1rem",
-                        fontWeight: 600,
-                        color: "#0a0a0a",
-                        letterSpacing: "-0.015em",
+                        fontFamily: "var(--mf-font)",
+                        fontSize: "1.05rem",
+                        fontWeight: 500,
+                        color: "var(--mf-ink, #0a0a0a)",
+                        letterSpacing: "-0.02em",
                       }}
                     >
                       {p.name}
                     </span>
                     <span
+                      className="mf-body"
                       style={{
                         fontSize: "0.8125rem",
-                        color: "#737373",
+                        color: "var(--mf-ink-3, #7a7a7a)",
                         lineHeight: 1.45,
                       }}
                     >
@@ -832,22 +818,22 @@ export function TelemetryModal({
                 }}
               >
                 <span
+                  className="mf-mono"
                   style={{
-                    fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
                     fontSize: "0.75rem",
                     fontWeight: 600,
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    color: "#0a0a0a",
+                    letterSpacing: "0.06em",
+                    color: "var(--mf-ink, #0a0a0a)",
                   }}
                 >
                   System Log // AST Telemetry
                 </span>
                 <span
+                  className="mf-mono"
                   style={{
-                    fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
-                    fontSize: "0.75rem",
-                    color: "#737373",
+                    fontSize: "0.72rem",
+                    color: "var(--mf-ink-3, #7a7a7a)",
+                    textTransform: "none",
                   }}
                 >
                   Streaming live...
@@ -861,7 +847,7 @@ export function TelemetryModal({
                 style={{
                   height: 210,
                   overflowY: "auto",
-                  fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
+                  fontFamily: "var(--mf-mono)",
                   fontSize: "0.8125rem",
                   display: "flex",
                   flexDirection: "column",
@@ -869,7 +855,7 @@ export function TelemetryModal({
                   padding: "16px 18px",
                   backgroundColor: "#fafafa",
                   border: "1px solid #eeeeee",
-                  borderRadius: 8,
+                  borderRadius: 12,
                 }}
               >
                 {logs.map((entry) => (
@@ -897,7 +883,7 @@ export function TelemetryModal({
                         fontSize: "0.65rem",
                         fontWeight: 600,
                         padding: "1px 6px",
-                        borderRadius: 3,
+                        borderRadius: 4,
                         backgroundColor: entry.isInfo ? "#0a0a0a" : "#eaeaea",
                         color: entry.isInfo ? "#ffffff" : "#525252",
                         flexShrink: 0,
@@ -923,6 +909,7 @@ export function TelemetryModal({
                             fontSize: "0.72rem",
                             color: "#0a0a0a",
                             fontWeight: 500,
+                            fontFamily: "var(--mf-mono)",
                           }}
                         >
                           {entry.codeBadge}
@@ -950,22 +937,22 @@ export function TelemetryModal({
                 }}
               >
                 <span
+                  className="mf-mono"
                   style={{
-                    fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
                     fontSize: "0.75rem",
                     fontWeight: 600,
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    color: "#0a0a0a",
+                    letterSpacing: "0.06em",
+                    color: "var(--mf-ink, #0a0a0a)",
                   }}
                 >
                   Technical Metrics
                 </span>
                 <span
+                  className="mf-mono"
                   style={{
-                    fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
-                    fontSize: "0.75rem",
-                    color: "#737373",
+                    fontSize: "0.72rem",
+                    color: "var(--mf-ink-3, #7a7a7a)",
+                    textTransform: "none",
                   }}
                 >
                   Real-time telemetry
@@ -980,7 +967,7 @@ export function TelemetryModal({
                   gap: 16,
                   backgroundColor: "#fafafa",
                   padding: "18px 20px",
-                  borderRadius: 8,
+                  borderRadius: 12,
                   border: "1px solid #eeeeee",
                   height: 210,
                   boxSizing: "border-box",
@@ -996,10 +983,12 @@ export function TelemetryModal({
                       fontSize: "0.875rem",
                     }}
                   >
-                    <span style={{ color: "#525252", fontWeight: 500 }}>Files Processed</span>
+                    <span style={{ color: "var(--mf-ink-2, #595959)", fontWeight: 500 }}>
+                      Files Processed
+                    </span>
                     <span
+                      className="mf-mono"
                       style={{
-                        fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
                         fontSize: "0.8125rem",
                         fontWeight: 600,
                         color: "#0a0a0a",
@@ -1040,10 +1029,12 @@ export function TelemetryModal({
                   }}
                 >
                   <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                    <span style={{ fontSize: "0.75rem", color: "#737373" }}>Repository Size</span>
+                    <span style={{ fontSize: "0.75rem", color: "var(--mf-ink-3, #7a7a7a)" }}>
+                      Repository Size
+                    </span>
                     <span
+                      className="mf-mono"
                       style={{
-                        fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
                         fontSize: "0.9375rem",
                         fontWeight: 600,
                         color: "#0a0a0a",
@@ -1054,17 +1045,19 @@ export function TelemetryModal({
                   </div>
 
                   <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-start" }}>
-                    <span style={{ fontSize: "0.75rem", color: "#737373" }}>Complexity Index</span>
+                    <span style={{ fontSize: "0.75rem", color: "var(--mf-ink-3, #7a7a7a)" }}>
+                      Complexity Index
+                    </span>
                     <span
+                      className="mf-mono"
                       style={{
-                        fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
                         fontSize: "0.72rem",
                         fontWeight: 600,
-                        padding: "2px 8px",
+                        padding: "2px 9px",
                         backgroundColor: "#0a0a0a",
                         color: "#ffffff",
-                        borderRadius: 4,
-                        letterSpacing: "0.06em",
+                        borderRadius: 999,
+                        letterSpacing: "0.05em",
                       }}
                     >
                       {complexityRating}
@@ -1087,10 +1080,11 @@ export function TelemetryModal({
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <Terminal size={14} style={{ color: "#0a0a0a", flexShrink: 0 }} />
                     <span
+                      className="mf-mono"
                       style={{
-                        fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
                         fontSize: "0.75rem",
-                        color: "#525252",
+                        color: "var(--mf-ink-2, #595959)",
+                        textTransform: "none",
                       }}
                     >
                       Worker node: <strong style={{ color: "#0a0a0a" }}>{workerNodeId}</strong>
@@ -1098,10 +1092,10 @@ export function TelemetryModal({
                   </div>
 
                   <span
+                    className="mf-mono"
                     style={{
-                      fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
                       fontSize: "0.6875rem",
-                      color: "#8a8a8a",
+                      color: "var(--mf-ink-3, #7a7a7a)",
                     }}
                   >
                     Tree-sitter AST
@@ -1120,7 +1114,7 @@ export function TelemetryModal({
                 exit={{ opacity: 0, y: 4 }}
                 style={{
                   padding: "16px 20px",
-                  borderRadius: 8,
+                  borderRadius: 12,
                   backgroundColor: "#fef2f2",
                   border: "1px solid #fecaca",
                   color: "#991b1b",
@@ -1133,14 +1127,13 @@ export function TelemetryModal({
               >
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                   <div
+                    className="mf-mono"
                     style={{
                       display: "flex",
                       alignItems: "center",
                       gap: 8,
-                      fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
                       fontSize: "0.75rem",
                       fontWeight: 600,
-                      textTransform: "uppercase",
                     }}
                   >
                     <AlertTriangle size={15} style={{ color: "#dc2626" }} />
@@ -1156,17 +1149,11 @@ export function TelemetryModal({
                     <button
                       type="button"
                       onClick={onRetry}
+                      className="mf-pill"
                       style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 6,
-                        padding: "8px 16px",
-                        borderRadius: 6,
                         backgroundColor: "#0a0a0a",
                         color: "#ffffff",
-                        border: "1px solid #0a0a0a",
-                        fontSize: "0.75rem",
-                        fontWeight: 500,
+                        borderColor: "#0a0a0a",
                         cursor: "pointer",
                       }}
                     >
@@ -1177,14 +1164,11 @@ export function TelemetryModal({
                   <button
                     type="button"
                     onClick={onCancel}
+                    className="mf-pill"
                     style={{
-                      padding: "8px 16px",
-                      borderRadius: 6,
                       backgroundColor: "#ffffff",
                       color: "#0a0a0a",
-                      border: "1px solid #d4d4d4",
-                      fontSize: "0.75rem",
-                      fontWeight: 500,
+                      borderColor: "#d4d4d4",
                       cursor: "pointer",
                     }}
                   >
@@ -1195,80 +1179,6 @@ export function TelemetryModal({
             )}
           </AnimatePresence>
         </main>
-
-        {/* ── 5. Full-Width Architectural Footer ──────────────────────────── */}
-        <footer
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            paddingTop: 18,
-            borderTop: "1px solid #eeeeee",
-            width: "100%",
-            gap: 16,
-            flexWrap: "wrap",
-          }}
-        >
-          <span
-            style={{
-              fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
-              fontSize: "0.6875rem",
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: "#8a8a8a",
-            }}
-          >
-            Ephemeral Worktree · Zero Code Retention
-          </span>
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 16,
-              opacity: 0.55,
-            }}
-          >
-            <div
-              style={{
-                width: 64,
-                height: 1,
-                background: "linear-gradient(90deg, transparent, #0a0a0a)",
-              }}
-            />
-            <span
-              style={{
-                fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
-                fontSize: "0.6875rem",
-                letterSpacing: "0.28em",
-                textTransform: "uppercase",
-                color: "#0a0a0a",
-                fontWeight: 500,
-              }}
-            >
-              DevLens AST Core v2.4
-            </span>
-            <div
-              style={{
-                width: 64,
-                height: 1,
-                background: "linear-gradient(270deg, transparent, #0a0a0a)",
-              }}
-            />
-          </div>
-
-          <span
-            style={{
-              fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
-              fontSize: "0.6875rem",
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: "#8a8a8a",
-            }}
-          >
-            Isolated Sandbox // AST Verified
-          </span>
-        </footer>
       </div>
     </motion.div>
   );
