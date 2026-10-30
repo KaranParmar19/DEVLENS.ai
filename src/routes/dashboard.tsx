@@ -85,7 +85,14 @@ function DashboardPage() {
   const repo = useMemo(() => (rawRepo ? normalizeRepoUrl(rawRepo) : undefined), [rawRepo]);
   const navigate = useNavigate({ from: Route.fullPath });
   const [inputRepo, setInputRepo] = useState("");
+  const [phIdx, setPhIdx] = useState(0);
   const [version, setVersion] = useState(0);
+
+  // Rotating placeholder in the command bar
+  useEffect(() => {
+    const id = setInterval(() => setPhIdx((i) => (i + 1) % QUICK.length), 2600);
+    return () => clearInterval(id);
+  }, []);
   const [health, setHealth] = useState<"idle" | "ok" | "down">("idle");
 
   // Developer Preview Loading Screen State
@@ -680,68 +687,53 @@ function DashboardPage() {
         />
       </div>
 
-      <main className="mf-dashboard-main">
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <div className="mf-hero-top" style={{ paddingBottom: 24 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <span className="mf-pill">
-                  <span className="mf-dot live" />
-                  Workspace
-                </span>
-                <button
-                  type="button"
-                  className="mf-pill"
-                  onClick={() => setPreviewLoading(true)}
-                  style={{
-                    background: "rgba(16, 185, 129, 0.1)",
-                    borderColor: "rgba(16, 185, 129, 0.4)",
-                    color: "#10b981",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
-                  title="Temporary developer button to inspect and fix the loading screen"
-                >
-                  ⚡ Preview Loading Screen
-                </button>
-              </div>
-              <span className="mf-mono mf-muted">
-                {new Date().toLocaleDateString(undefined, {
-                  weekday: "long",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </span>
-            </div>
+      <main className="mf-dashboard-main dx">
+        {/* ── Hero: command bar ─────────────────────────────────────── */}
+        <motion.section
+          className="dx-hero"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <div className="dx-hero-meta">
+            <span className="mf-pill">
+              <span className="mf-dot live" />
+              Workspace
+            </span>
+            <span className="mf-mono mf-muted">
+              {new Date().toLocaleDateString(undefined, {
+                weekday: "long",
+                month: "long",
+                day: "numeric",
+              })}
+            </span>
+          </div>
 
-            <h1 className="mf-h1" style={{ maxWidth: "10em" }}>
-              What are we <span className="mf-serif-i">mapping</span> today?
-            </h1>
-          </motion.div>
+          <h1 className="mf-h1 dx-title">
+            What are we <span className="mf-serif-i">mapping</span> today?
+          </h1>
+          <p className="dx-sub">
+            Paste any GitHub link. DevLens turns hundreds of files into one clear map — then lets
+            you ask it questions in plain English.
+          </p>
 
-          <motion.form
-            className="mf-ingest"
-            style={{ marginTop: 36, width: "min(100%, 680px)" }}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
+          <form
+            className="dx-command"
             onSubmit={(e) => {
               e.preventDefault();
               open(inputRepo);
             }}
           >
-            <span className="mf-mono mf-muted">github.com/</span>
+            <span className="dx-command-prefix">github.com/</span>
             <input
               value={inputRepo}
               onChange={(e) => setInputRepo(e.target.value)}
-              placeholder="owner/repo or full URL"
+              placeholder={`try ${QUICK[phIdx].label}`}
               aria-label="Repository"
               spellCheck={false}
               autoFocus
             />
+            <kbd className="mf-kbd dx-command-kbd">↵ Enter</kbd>
             <motion.button
               className="mf-btn"
               type="submit"
@@ -751,60 +743,68 @@ function DashboardPage() {
             >
               Analyze <span className="mf-arrow">↗</span>
             </motion.button>
-          </motion.form>
+          </form>
 
-          <motion.div
-            className="mf-chips"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.4, delay: 0.16 }}
-          >
-            <motion.button
+          <div className="dx-hero-foot">
+            <span className="mf-mono mf-muted">No sign-up needed for public repos</span>
+            <button
               type="button"
-              className="mf-pill mf-chip"
-              style={{
-                background: "rgba(16, 185, 129, 0.15)",
-                borderColor: "#10b981",
-                color: "#10b981",
-                fontWeight: 600,
-              }}
-              whileHover={{ y: -2, scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
-              transition={{ type: "spring", stiffness: 450, damping: 28 }}
+              className="dx-dev-btn"
               onClick={() => setPreviewLoading(true)}
               title="Temporary developer button to inspect and fix the loading screen"
             >
-              <span>⚡ Preview Loading Screen</span>
-            </motion.button>
+              ⚡ Preview loading screen
+            </button>
+          </div>
+        </motion.section>
 
-            {QUICK.map((q) => (
+        {/* ── Quick starts: numbered cards ─────────────────────────── */}
+        <motion.section
+          className="dx-block"
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <div className="dx-block-head">
+            <span className="mf-mono mf-muted">[ 01 ] Start with a famous codebase</span>
+            <span className="mf-mono mf-muted">Click any card</span>
+          </div>
+          <div className="dx-picks">
+            {QUICK.map((q, i) => (
               <motion.button
                 key={q.label}
                 type="button"
-                className="mf-pill mf-chip"
-                whileHover={{ y: -2, scale: 1.04 }}
-                whileTap={{ scale: 0.96 }}
-                transition={{ type: "spring", stiffness: 450, damping: 28 }}
+                className="dx-pick"
+                whileHover={{ y: -4 }}
+                whileTap={{ scale: 0.98 }}
+                transition={{ type: "spring", stiffness: 400, damping: 28 }}
                 onClick={() => open(q.label)}
               >
-                <span>{q.label}</span>
-                <span style={{ opacity: 0.5, fontSize: "0.625rem" }}>({q.tag})</span>
+                <span className="dx-pick-top">
+                  <span className="dx-pick-num">0{i + 1}</span>
+                  <span className="dx-pick-arrow">↗</span>
+                </span>
+                <span className="dx-pick-name">{q.label}</span>
+                <span className="dx-pick-tag">{q.tag}</span>
               </motion.button>
             ))}
-          </motion.div>
-
-          {/* Framer Stats Feature (Merged directly with page background) */}
-          <div style={{ marginTop: 44, marginBottom: 52 }}>
-            <StatsSection
-              stats={dashboardStats}
-              cardStyle={false}
-              divider={true}
-              duration={1.5}
-            />
           </div>
+        </motion.section>
 
-          <div className="mf-sec-head" style={{ marginTop: 72, marginBottom: 24 }}>
-            <h2 className="mf-h2">Recent repositories</h2>
+        {/* ── Pulse: stats band ─────────────────────────────────────── */}
+        <section className="dx-block">
+          <div className="dx-block-head">
+            <span className="mf-mono mf-muted">[ 02 ] Your workspace at a glance</span>
+          </div>
+          <div className="dx-pulse">
+            <StatsSection stats={dashboardStats} cardStyle={false} divider={true} duration={1.5} />
+          </div>
+        </section>
+
+        {/* ── Recent repositories (sliding showcase kept) ───────────── */}
+        <section className="dx-block">
+          <div className="dx-block-head">
+            <span className="mf-mono mf-muted">[ 03 ] Pick up where you left off</span>
             {history.length > 0 && (
               <button
                 type="button"
@@ -818,113 +818,21 @@ function DashboardPage() {
               </button>
             )}
           </div>
+          <h2 className="mf-h2 dx-h2">
+            Recent <span className="mf-serif-i">repositories.</span>
+          </h2>
 
           {history.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              style={{
-                border: "1px dashed var(--mf-line)",
-                borderRadius: 20,
-                padding: "36px 32px",
-                background: "rgba(0,0,0,0.01)",
-              }}
-            >
-              <div style={{ maxWidth: "34em", marginBottom: 24 }}>
-                <span className="mf-pill" style={{ marginBottom: 12 }}>
-                  Instant Quick-Start
-                </span>
-                <h3 className="mf-h3" style={{ fontSize: "1.375rem", margin: "8px 0" }}>
-                  No indexed repositories yet
-                </h3>
+            <div className="dx-empty">
+              <span className="dx-empty-icon">◎</span>
+              <div>
+                <h3 className="mf-h3">Nothing here yet</h3>
                 <p className="mf-body">
-                  Paste any public GitHub repository above, or click one of these curated codebases
-                  to explore full architecture graphs, code flows, and cited Q&amp;A:
+                  Analyze your first repository above. It will show up here so you can jump back in
+                  anytime.
                 </p>
               </div>
-
-              <div className="mf-grid c3">
-                {[
-                  {
-                    repo: "facebook/react",
-                    desc: "React Fiber reconciler, hooks pipeline, and synthetic event system.",
-                    lang: "TypeScript",
-                    files: "~1,800 files",
-                  },
-                  {
-                    repo: "fastapi/fastapi",
-                    desc: "Starlette async routing, dependency injection, and Pydantic validation.",
-                    lang: "Python",
-                    files: "~240 files",
-                  },
-                  {
-                    repo: "bottlepy/bottle",
-                    desc: "Single-file Python WSGI framework with routing, templates, and plugins.",
-                    lang: "Python",
-                    files: "1 module",
-                  },
-                ].map((demo) => (
-                  <motion.div
-                    key={demo.repo}
-                    whileHover={{ y: -4, borderColor: "var(--mf-ink)" }}
-                    transition={{ type: "spring", stiffness: 400, damping: 26 }}
-                    onClick={() => open(demo.repo)}
-                    style={{
-                      border: "1px solid var(--mf-line)",
-                      borderRadius: 14,
-                      padding: "20px",
-                      background: "#ffffff",
-                      cursor: "pointer",
-                      display: "flex",
-                      flexDirection: "column",
-                      justifyContent: "space-between",
-                      gap: 12,
-                    }}
-                  >
-                    <div>
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                        }}
-                      >
-                        <span
-                          className="mf-mono"
-                          style={{
-                            fontSize: "0.6875rem",
-                            color: LANG_COLORS[demo.lang] || "var(--mf-ink)",
-                          }}
-                        >
-                          ● {demo.lang}
-                        </span>
-                        <span className="mf-mono mf-muted" style={{ fontSize: "0.625rem" }}>
-                          {demo.files}
-                        </span>
-                      </div>
-                      <div style={{ fontWeight: 600, fontSize: "1rem", marginTop: 8 }}>
-                        {demo.repo}
-                      </div>
-                      <p
-                        className="mf-body"
-                        style={{ fontSize: "0.8125rem", marginTop: 6, lineHeight: 1.45 }}
-                      >
-                        {demo.desc}
-                      </p>
-                    </div>
-
-                    <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                      <span
-                        className="mf-mono"
-                        style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--mf-ink)" }}
-                      >
-                        Map codebase ↗
-                      </span>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
+            </div>
           ) : (
             <CurvyShowcase
               entries={history}
@@ -935,7 +843,31 @@ function DashboardPage() {
               }}
             />
           )}
-        </main>
+        </section>
+
+        {/* ── Simple 3-step strip ───────────────────────────────────── */}
+        <section className="dx-block">
+          <div className="dx-block-head">
+            <span className="mf-mono mf-muted">[ 04 ] How it works</span>
+            <Link to="/how-it-works" className="mf-mono dx-link">
+              See the full story ↗
+            </Link>
+          </div>
+          <div className="dx-steps">
+            {[
+              { n: "01", t: "Paste a link", d: "Any public GitHub repository works." },
+              { n: "02", t: "We draw the map", d: "Files group into simple topics you can click." },
+              { n: "03", t: "Ask anything", d: "Get plain-English answers with the exact file." },
+            ].map((s) => (
+              <div key={s.n} className="dx-step">
+                <span className="dx-step-n">{s.n}</span>
+                <span className="dx-step-t">{s.t}</span>
+                <span className="dx-step-d">{s.d}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      </main>
     </div>
   );
 }
