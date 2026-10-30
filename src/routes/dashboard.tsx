@@ -164,35 +164,34 @@ function DashboardPage() {
   if (previewLoading) {
     return (
       <div style={{ position: "relative", width: "100%", height: "100%" }}>
-        {/* Floating Developer Preview Control Bar */}
+        {/* Floating Developer Preview Control Bar (Bottom-docked so header stays clean) */}
         <div
           style={{
             position: "fixed",
-            top: 14,
+            bottom: 64,
             left: "50%",
             transform: "translateX(-50%)",
             zIndex: 150,
             display: "flex",
             alignItems: "center",
-            gap: 10,
-            background: "rgba(18, 18, 24, 0.94)",
-            border: "1px solid rgba(16, 185, 129, 0.5)",
+            gap: 8,
+            background: "rgba(10, 10, 10, 0.92)",
+            border: "1px solid rgba(10, 10, 10, 0.15)",
             backdropFilter: "blur(14px)",
             borderRadius: 999,
-            padding: "8px 18px",
-            boxShadow: "0 14px 40px rgba(0,0,0,0.7)",
+            padding: "7px 14px",
+            boxShadow: "0 16px 40px rgba(0, 0, 0, 0.16)",
             fontFamily: "var(--mf-mono, monospace)",
-            fontSize: "0.75rem",
+            fontSize: "0.7rem",
             color: "#ffffff",
             flexWrap: "wrap",
             maxWidth: "96vw",
           }}
         >
-          <span style={{ color: "#10b981", fontWeight: 700, letterSpacing: "0.06em" }}>
-            [⚡ LOADING SCREEN PREVIEW]
+          <span style={{ color: "#10b981", fontWeight: 600, letterSpacing: "0.05em" }}>
+            PREVIEW
           </span>
-          <span style={{ opacity: 0.6 }}>Progress:</span>
-          {[15, 45, 75, 95].map((pct) => (
+          {[15, 35, 55, 75, 95].map((pct) => (
             <button
               key={pct}
               type="button"
@@ -201,12 +200,12 @@ function DashboardPage() {
                 setPreviewProgress(pct);
               }}
               style={{
-                background: previewProgress === pct ? "#10b981" : "rgba(255,255,255,0.08)",
-                color: previewProgress === pct ? "#000000" : "#ffffff",
-                border: "1px solid rgba(255,255,255,0.18)",
+                background: previewProgress === pct ? "#ffffff" : "rgba(255,255,255,0.1)",
+                color: previewProgress === pct ? "#0a0a0a" : "#ffffff",
+                border: "none",
                 borderRadius: 999,
                 padding: "3px 9px",
-                fontSize: "0.7rem",
+                fontSize: "0.68rem",
                 cursor: "pointer",
                 fontWeight: 600,
               }}
@@ -218,17 +217,17 @@ function DashboardPage() {
             type="button"
             onClick={() => setPreviewAuto((v) => !v)}
             style={{
-              background: previewAuto ? "#10b981" : "rgba(255,255,255,0.08)",
+              background: previewAuto ? "#10b981" : "rgba(255,255,255,0.1)",
               color: previewAuto ? "#000000" : "#ffffff",
-              border: "1px solid rgba(255,255,255,0.18)",
+              border: "none",
               borderRadius: 999,
               padding: "3px 10px",
-              fontSize: "0.7rem",
+              fontSize: "0.68rem",
               cursor: "pointer",
               fontWeight: 600,
             }}
           >
-            {previewAuto ? "❚❚ Pause Loop" : "▶ Auto Loop"}
+            {previewAuto ? "❚❚ Pause" : "▶ Loop"}
           </button>
           <button
             type="button"
@@ -238,16 +237,16 @@ function DashboardPage() {
               )
             }
             style={{
-              background: previewError ? "#ef4444" : "rgba(255,255,255,0.08)",
+              background: previewError ? "#ef4444" : "rgba(255,255,255,0.1)",
               color: "#ffffff",
-              border: "1px solid rgba(255,255,255,0.18)",
+              border: "none",
               borderRadius: 999,
               padding: "3px 10px",
-              fontSize: "0.7rem",
+              fontSize: "0.68rem",
               cursor: "pointer",
             }}
           >
-            {previewError ? "Clear Error" : "Test Error Alert"}
+            {previewError ? "Clear Error" : "Error State"}
           </button>
           <button
             type="button"
@@ -260,14 +259,14 @@ function DashboardPage() {
               color: "#0a0a0a",
               border: "none",
               borderRadius: 999,
-              padding: "4px 12px",
-              fontSize: "0.72rem",
+              padding: "3px 11px",
+              fontSize: "0.68rem",
               fontWeight: 600,
               cursor: "pointer",
-              marginLeft: 8,
+              marginLeft: 4,
             }}
           >
-            ✕ Exit Preview
+            Exit ✕
           </button>
         </div>
 
