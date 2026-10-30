@@ -132,7 +132,8 @@ export function TelemetryModal({
 
   const workerNodeId = useMemo(() => {
     if (jobId) {
-      return `AST-WKR-${jobId.slice(0, 4).toUpperCase()}`;
+      const cleanId = jobId.replace(/^job_devlens_scan_/i, "").replace(/^job_/i, "");
+      return `AST-WKR-${cleanId.slice(0, 4).toUpperCase()}`;
     }
     return "AST-WKR-08";
   }, [jobId]);
@@ -205,7 +206,7 @@ export function TelemetryModal({
       const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 
       setLogs((prev) => [
-        ...prev.slice(-18), // keep recent entries
+        ...prev.slice(-18),
         {
           id: `dyn-${Date.now()}-${logCounter}`,
           time: timeStr,
@@ -228,6 +229,8 @@ export function TelemetryModal({
 
   return (
     <motion.div
+      data-lenis-prevent="true"
+      className="overflow-y-auto"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -238,35 +241,14 @@ export function TelemetryModal({
         zIndex: 100,
         backgroundColor: "#ffffff",
         color: "#0a0a0a",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "clamp(16px, 3.5vw, 48px)",
-        fontFamily: "var(--mf-font, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif)",
         overflowY: "auto",
+        overflowX: "hidden",
+        WebkitOverflowScrolling: "touch",
+        fontFamily:
+          "var(--mf-font, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif)",
       }}
     >
-      {/* ── Ambient Scanning Line ─────────────────────────────────────── */}
-      <div
-        aria-hidden="true"
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: 2,
-          background: "linear-gradient(90deg, transparent, rgba(10, 10, 10, 0.08), transparent)",
-          animation: "devlens-scan 3.5s linear infinite",
-          pointerEvents: "none",
-          zIndex: 1,
-        }}
-      />
-
       <style>{`
-        @keyframes devlens-scan {
-          0% { transform: translateY(0); }
-          100% { transform: translateY(100vh); }
-        }
         @keyframes devlens-pulse {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.35; }
@@ -286,136 +268,142 @@ export function TelemetryModal({
         }
       `}</style>
 
-      {/* ── Main Container (Merged Seamlessly with White Background) ────── */}
-      <main
+      {/* Scrollable Inner Wrapper that centers when tall and scrolls smoothly when needed */}
+      <div
         style={{
-          position: "relative",
-          zIndex: 2,
+          minHeight: "100%",
           width: "100%",
-          maxWidth: 900,
           display: "flex",
           flexDirection: "column",
-          gap: 24,
-          margin: "auto",
+          justifyContent: "center",
+          padding: "clamp(32px, 5vh, 64px) clamp(20px, 4vw, 48px) 120px",
+          boxSizing: "border-box",
         }}
       >
-        {/* ── Header Branding (Silent / Precise) ─────────────────────────── */}
-        <header
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-end",
-            paddingInline: 4,
-          }}
-        >
-          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-            <span
-              style={{
-                fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
-                fontSize: "0.6875rem",
-                letterSpacing: "0.15em",
-                textTransform: "uppercase",
-                color: "#737373",
-                fontWeight: 500,
-              }}
-            >
-              System Status
-            </span>
-            <h1
-              style={{
-                margin: 0,
-                fontSize: "clamp(1.5rem, 3vw, 2rem)",
-                fontWeight: 600,
-                letterSpacing: "-0.035em",
-                lineHeight: 1.1,
-                color: "#0a0a0a",
-              }}
-            >
-              DevLens AI
-            </h1>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
-                fontSize: "0.75rem",
-                letterSpacing: "0.05em",
-                fontWeight: 500,
-                color: error ? "#dc2626" : "#0a0a0a",
-              }}
-            >
-              <span
-                style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: "50%",
-                  backgroundColor: error ? "#ef4444" : "#10b981",
-                  boxShadow: error
-                    ? "0 0 8px rgba(239, 68, 68, 0.4)"
-                    : "0 0 8px rgba(16, 185, 129, 0.4)",
-                  animation: error ? "none" : "devlens-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
-                }}
-              />
-              {error ? "HALTED" : "ACTIVE SESSION"}
-            </div>
-
-            <button
-              type="button"
-              onClick={onCancel}
-              style={{
-                fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
-                fontSize: "0.6875rem",
-                letterSpacing: "0.04em",
-                textTransform: "uppercase",
-                color: "#525252",
-                background: "#ffffff",
-                border: "1px solid #e5e5e5",
-                borderRadius: 4,
-                padding: "5px 12px",
-                cursor: "pointer",
-                transition: "all 0.15s ease",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = "#0a0a0a";
-                e.currentTarget.style.borderColor = "#0a0a0a";
-                e.currentTarget.style.background = "#fafafa";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = "#525252";
-                e.currentTarget.style.borderColor = "#e5e5e5";
-                e.currentTarget.style.background = "#ffffff";
-              }}
-            >
-              Cancel ✕
-            </button>
-          </div>
-        </header>
-
-        {/* ── Central Analysis Surface ────────────────────────────────────── */}
-        <section
+        {/* ── Main Content Merged Directly into White Background (No Outer Box) ── */}
+        <main
           style={{
             position: "relative",
-            backgroundColor: "#ffffff",
-            border: "1px solid #e5e5e5",
-            borderRadius: 8,
-            boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.03), 0 20px 40px -20px rgba(0, 0, 0, 0.05)",
-            overflow: "hidden",
+            zIndex: 2,
+            width: "100%",
+            maxWidth: 880,
+            margin: "0 auto",
+            display: "flex",
+            flexDirection: "column",
+            gap: 36,
           }}
         >
+          {/* ── Top Header Branding ───────────────────────────────────────── */}
+          <header
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-end",
+              paddingBottom: 24,
+              borderBottom: "1px solid #eeeeee",
+              gap: 16,
+              flexWrap: "wrap",
+            }}
+          >
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <span
+                style={{
+                  fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
+                  fontSize: "0.6875rem",
+                  letterSpacing: "0.16em",
+                  textTransform: "uppercase",
+                  color: "#8a8a8a",
+                  fontWeight: 500,
+                }}
+              >
+                System Status
+              </span>
+              <h1
+                style={{
+                  margin: 0,
+                  fontSize: "clamp(1.65rem, 3vw, 2.15rem)",
+                  fontWeight: 600,
+                  letterSpacing: "-0.035em",
+                  lineHeight: 1.08,
+                  color: "#0a0a0a",
+                }}
+              >
+                DevLens AI
+              </h1>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
+                  fontSize: "0.75rem",
+                  letterSpacing: "0.06em",
+                  fontWeight: 500,
+                  color: error ? "#dc2626" : "#0a0a0a",
+                }}
+              >
+                <span
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    backgroundColor: error ? "#ef4444" : "#10b981",
+                    boxShadow: error
+                      ? "0 0 8px rgba(239, 68, 68, 0.4)"
+                      : "0 0 8px rgba(16, 185, 129, 0.4)",
+                    animation: error
+                      ? "none"
+                      : "devlens-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+                  }}
+                />
+                {error ? "HALTED" : "ACTIVE SESSION"}
+              </div>
+
+              <button
+                type="button"
+                onClick={onCancel}
+                style={{
+                  fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
+                  fontSize: "0.6875rem",
+                  letterSpacing: "0.05em",
+                  textTransform: "uppercase",
+                  color: "#525252",
+                  background: "#ffffff",
+                  border: "1px solid #e5e5e5",
+                  borderRadius: 6,
+                  padding: "6px 14px",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = "#0a0a0a";
+                  e.currentTarget.style.borderColor = "#0a0a0a";
+                  e.currentTarget.style.background = "#fafafa";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = "#525252";
+                  e.currentTarget.style.borderColor = "#e5e5e5";
+                  e.currentTarget.style.background = "#ffffff";
+                }}
+              >
+                Cancel ✕
+              </button>
+            </div>
+          </header>
+
+          {/* ── Seamless Analysis Workspace (Merged directly with background) ── */}
           <div
             style={{
-              padding: "clamp(20px, 3.5vw, 36px)",
               display: "flex",
               flexDirection: "column",
-              gap: 28,
+              gap: 32,
             }}
           >
             {/* 1. Progress Header */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <div
                 style={{
                   display: "flex",
@@ -428,10 +416,10 @@ export function TelemetryModal({
                 <h2
                   style={{
                     margin: 0,
-                    fontSize: "clamp(1.25rem, 2.4vw, 1.5rem)",
+                    fontSize: "clamp(1.35rem, 2.5vw, 1.65rem)",
                     fontWeight: 600,
                     color: "#0a0a0a",
-                    letterSpacing: "-0.02em",
+                    letterSpacing: "-0.025em",
                   }}
                 >
                   Analyzing Repository
@@ -440,7 +428,7 @@ export function TelemetryModal({
                 <div
                   style={{
                     fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
-                    fontSize: "0.875rem",
+                    fontSize: "0.9375rem",
                     fontWeight: 600,
                     color: "#0a0a0a",
                     letterSpacing: "0.05em",
@@ -451,23 +439,46 @@ export function TelemetryModal({
                 </div>
               </div>
 
-              <p
+              <div
                 style={{
-                  margin: 0,
-                  fontSize: "0.9375rem",
-                  color: "#737373",
-                  lineHeight: 1.5,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  flexWrap: "wrap",
                 }}
               >
-                Deconstructing{" "}
-                <span style={{ color: "#0a0a0a", fontWeight: 600 }}>
-                  {owner}/{repoName}
-                </span>{" "}
-                architecture...
-              </p>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "0.95rem",
+                    color: "#737373",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  Deconstructing{" "}
+                  <span style={{ color: "#0a0a0a", fontWeight: 600 }}>
+                    {owner}/{repoName}
+                  </span>{" "}
+                  architecture...
+                </p>
+
+                {topLanguages.length > 0 && (
+                  <span
+                    style={{
+                      fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
+                      fontSize: "0.6875rem",
+                      color: "#8a8a8a",
+                      letterSpacing: "0.03em",
+                    }}
+                  >
+                    {topLanguages.join(" · ")}
+                  </span>
+                )}
+              </div>
             </div>
 
-            {/* 2. Progress Visual */}
+            {/* 2. Progress Bar Visual */}
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <div
                 style={{
@@ -479,6 +490,8 @@ export function TelemetryModal({
                   letterSpacing: "0.05em",
                   textTransform: "uppercase",
                   color: "#737373",
+                  gap: 12,
+                  flexWrap: "wrap",
                 }}
               >
                 <span>{currentPhase.phaseLabel}</span>
@@ -487,11 +500,10 @@ export function TelemetryModal({
                 </span>
               </div>
 
-              {/* Progress Rail (Track + Fill) */}
               <div
                 style={{
                   height: 4,
-                  backgroundColor: "#f0f0f0",
+                  backgroundColor: "#efefef",
                   borderRadius: 9999,
                   position: "relative",
                   overflow: "hidden",
@@ -500,7 +512,7 @@ export function TelemetryModal({
                 <div
                   style={{
                     height: "100%",
-                    backgroundColor: error ? "#ef4444" : "#0a0a0a",
+                    backgroundColor: "#0a0a0a",
                     width: `${Math.min(100, Math.max(progressPct, 4))}%`,
                     borderRadius: 9999,
                     transition: "width 0.45s cubic-bezier(0.16, 1, 0.3, 1)",
@@ -514,7 +526,7 @@ export function TelemetryModal({
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                gap: 12,
+                gap: 14,
               }}
             >
               {PHASES.map((p, idx) => {
@@ -528,37 +540,26 @@ export function TelemetryModal({
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: 10,
-                      padding: "12px 14px",
-                      borderRadius: 4,
+                      gap: 12,
+                      padding: "14px 16px",
+                      borderRadius: 6,
                       border: isActive
                         ? "1px solid #0a0a0a"
                         : isDone
-                          ? "1px solid #e5e5e5"
-                          : "1px solid #f0f0f0",
+                          ? "1px solid #eaeaea"
+                          : "1px solid #f2f2f2",
                       backgroundColor: isActive
-                        ? "rgba(10, 10, 10, 0.02)"
+                        ? "#ffffff"
                         : isDone
                           ? "#fafafa"
-                          : "#fcfcfc",
+                          : "#ffffff",
+                      boxShadow: isActive ? "0 4px 14px rgba(0, 0, 0, 0.04)" : "none",
                       opacity: isPending ? 0.45 : 1,
                       position: "relative",
                       overflow: "hidden",
                       transition: "all 0.2s ease",
                     }}
                   >
-                    {isActive && (
-                      <div
-                        aria-hidden="true"
-                        style={{
-                          position: "absolute",
-                          inset: 0,
-                          backgroundColor: "rgba(10, 10, 10, 0.02)",
-                          animation: "devlens-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
-                        }}
-                      />
-                    )}
-
                     {/* Status Icon */}
                     {isDone ? (
                       <CheckCircle2
@@ -607,7 +608,7 @@ export function TelemetryModal({
                       </span>
                       <span
                         style={{
-                          fontSize: "0.8125rem",
+                          fontSize: "0.84375rem",
                           fontWeight: isActive ? 600 : 500,
                           color: isPending ? "#737373" : "#0a0a0a",
                           whiteSpace: "nowrap",
@@ -628,9 +629,9 @@ export function TelemetryModal({
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-                gap: 20,
-                borderTop: "1px solid #e5e5e5",
-                paddingTop: 24,
+                gap: 28,
+                borderTop: "1px solid #eeeeee",
+                paddingTop: 28,
               }}
             >
               {/* Left Column: System Log */}
@@ -639,7 +640,7 @@ export function TelemetryModal({
                   gridColumn: "span 2",
                   display: "flex",
                   flexDirection: "column",
-                  gap: 12,
+                  gap: 14,
                   minWidth: 0,
                 }}
                 className="col-span-1 md:col-span-2"
@@ -656,7 +657,7 @@ export function TelemetryModal({
                       fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
                       fontSize: "0.75rem",
                       fontWeight: 500,
-                      letterSpacing: "0.05em",
+                      letterSpacing: "0.06em",
                       textTransform: "uppercase",
                       color: "#737373",
                     }}
@@ -676,15 +677,16 @@ export function TelemetryModal({
 
                 <div
                   ref={logContainerRef}
-                  className="devlens-log-scroll"
+                  data-lenis-prevent="true"
+                  className="devlens-log-scroll overflow-y-auto"
                   style={{
-                    height: 160,
+                    height: 170,
                     overflowY: "auto",
                     fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
                     fontSize: "0.75rem",
                     display: "flex",
                     flexDirection: "column",
-                    gap: 6,
+                    gap: 8,
                     paddingRight: 8,
                   }}
                 >
@@ -695,7 +697,7 @@ export function TelemetryModal({
                         display: "flex",
                         alignItems: "baseline",
                         gap: 12,
-                        lineHeight: 1.5,
+                        lineHeight: 1.55,
                       }}
                     >
                       <span
@@ -709,7 +711,7 @@ export function TelemetryModal({
                       </span>
                       <span
                         style={{
-                          color: entry.isInfo ? "#0a0a0a" : "#262626",
+                          color: entry.isInfo ? "#0a0a0a" : "#333333",
                           fontWeight: entry.isInfo ? 600 : 400,
                         }}
                       >
@@ -718,7 +720,7 @@ export function TelemetryModal({
                           <code
                             style={{
                               backgroundColor: "#f5f5f5",
-                              border: "1px solid #e5e5e5",
+                              border: "1px solid #eaeaea",
                               padding: "1px 6px",
                               borderRadius: 3,
                               fontSize: "0.6875rem",
@@ -741,9 +743,9 @@ export function TelemetryModal({
                   flexDirection: "column",
                   gap: 14,
                   backgroundColor: "#fafafa",
-                  padding: 16,
-                  borderRadius: 4,
-                  border: "1px solid #e5e5e5",
+                  padding: 18,
+                  borderRadius: 6,
+                  border: "1px solid #eeeeee",
                 }}
               >
                 <span
@@ -751,7 +753,7 @@ export function TelemetryModal({
                     fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
                     fontSize: "0.75rem",
                     fontWeight: 500,
-                    letterSpacing: "0.05em",
+                    letterSpacing: "0.06em",
                     textTransform: "uppercase",
                     color: "#737373",
                   }}
@@ -802,7 +804,7 @@ export function TelemetryModal({
                   </div>
                 </div>
 
-                {/* Metric: Memory / Repo Size */}
+                {/* Metric: Repository Size */}
                 <div
                   style={{
                     display: "flex",
@@ -839,10 +841,10 @@ export function TelemetryModal({
                       fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
                       fontSize: "0.6875rem",
                       fontWeight: 600,
-                      padding: "2px 6px",
+                      padding: "2px 7px",
                       backgroundColor: "#0a0a0a",
                       color: "#ffffff",
-                      borderRadius: 2,
+                      borderRadius: 3,
                       letterSpacing: "0.05em",
                     }}
                   >
@@ -855,7 +857,7 @@ export function TelemetryModal({
                   style={{
                     marginTop: "auto",
                     paddingTop: 12,
-                    borderTop: "1px solid #e5e5e5",
+                    borderTop: "1px solid #eaeaea",
                     display: "flex",
                     alignItems: "center",
                     gap: 6,
@@ -883,8 +885,8 @@ export function TelemetryModal({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 4 }}
                   style={{
-                    padding: 16,
-                    borderRadius: 4,
+                    padding: "16px 20px",
+                    borderRadius: 6,
                     backgroundColor: "#fef2f2",
                     border: "1px solid #fecaca",
                     color: "#991b1b",
@@ -954,53 +956,53 @@ export function TelemetryModal({
               )}
             </AnimatePresence>
           </div>
-        </section>
 
-        {/* ── Footer Visual Hint ─────────────────────────────────────────── */}
-        <footer
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            paddingTop: 8,
-          }}
-        >
-          <div
+          {/* ── Footer Visual Hint ─────────────────────────────────────────── */}
+          <footer
             style={{
               display: "flex",
-              alignItems: "center",
-              gap: 20,
-              opacity: 0.45,
+              justifyContent: "center",
+              paddingTop: 12,
             }}
           >
             <div
               style={{
-                width: 96,
-                height: 1,
-                background: "linear-gradient(90deg, transparent, #0a0a0a)",
-              }}
-            />
-            <span
-              style={{
-                fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
-                fontSize: "0.6875rem",
-                letterSpacing: "0.3em",
-                textTransform: "uppercase",
-                color: "#0a0a0a",
-                fontWeight: 500,
+                display: "flex",
+                alignItems: "center",
+                gap: 20,
+                opacity: 0.4,
               }}
             >
-              DevLens AST Core v2.4
-            </span>
-            <div
-              style={{
-                width: 96,
-                height: 1,
-                background: "linear-gradient(270deg, transparent, #0a0a0a)",
-              }}
-            />
-          </div>
-        </footer>
-      </main>
+              <div
+                style={{
+                  width: 96,
+                  height: 1,
+                  background: "linear-gradient(90deg, transparent, #0a0a0a)",
+                }}
+              />
+              <span
+                style={{
+                  fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
+                  fontSize: "0.6875rem",
+                  letterSpacing: "0.3em",
+                  textTransform: "uppercase",
+                  color: "#0a0a0a",
+                  fontWeight: 500,
+                }}
+              >
+                DevLens AST Core v2.4
+              </span>
+              <div
+                style={{
+                  width: 96,
+                  height: 1,
+                  background: "linear-gradient(270deg, transparent, #0a0a0a)",
+                }}
+              />
+            </div>
+          </footer>
+        </main>
+      </div>
     </motion.div>
   );
 }
