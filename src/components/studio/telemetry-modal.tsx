@@ -1,6 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { CheckCircle2, Loader2, CircleDot, Terminal, AlertTriangle, RefreshCw } from "lucide-react";
+import {
+  CheckCircle2,
+  Loader2,
+  CircleDot,
+  Terminal,
+  AlertTriangle,
+  RefreshCw,
+  GitBranch,
+  FolderGit2,
+} from "lucide-react";
 import type { AnalysisStep } from "@/hooks/useAnalysis";
 
 interface TelemetryModalProps {
@@ -22,6 +31,7 @@ interface TelemetryModalProps {
 interface PhaseDefinition {
   stepNumber: number;
   name: string;
+  detail: string;
   phaseLabel: string;
   actionLabel: string;
 }
@@ -30,24 +40,28 @@ const PHASES: PhaseDefinition[] = [
   {
     stepNumber: 1,
     name: "Discovery",
+    detail: "Cloning worktree & indexing source file tree",
     phaseLabel: "Phase 1: Repository Discovery",
     actionLabel: "Indexing Files & Structure",
   },
   {
     stepNumber: 2,
     name: "AST Parsing",
+    detail: "Generating Tree-sitter syntax trees & symbol tables",
     phaseLabel: "Phase 2: Tree-sitter AST Parsing",
     actionLabel: "Generating Syntax Trees",
   },
   {
     stepNumber: 3,
     name: "Semantic Map",
+    detail: "Resolving cross-file imports, exports & call edges",
     phaseLabel: "Phase 3: Semantic Mapping",
     actionLabel: "Mapping Object Relations",
   },
   {
     stepNumber: 4,
     name: "Graph Logic",
+    detail: "Computing blast radius, coupling & cited dossier",
     phaseLabel: "Phase 4: Architecture Synthesis",
     actionLabel: "Computing Blast Radius",
   },
@@ -56,6 +70,7 @@ const PHASES: PhaseDefinition[] = [
 interface LogEntry {
   id: string;
   time: string;
+  tag: string;
   text: string;
   codeBadge?: string;
   isInfo?: boolean;
@@ -83,6 +98,25 @@ export function TelemetryModal({
     }
     return ["github", cleanRepo || "repository"];
   }, [cleanRepo]);
+
+  // Elapsed timer
+  const [elapsedMs, setElapsedMs] = useState(0);
+  const startRef = useRef<number>(Date.now());
+
+  useEffect(() => {
+    startRef.current = Date.now();
+    setElapsedMs(0);
+  }, [repoUrl]);
+
+  useEffect(() => {
+    if (error) return;
+    const id = setInterval(() => {
+      setElapsedMs(Date.now() - startRef.current);
+    }, 100);
+    return () => clearInterval(id);
+  }, [error]);
+
+  const formattedElapsed = (elapsedMs / 1000).toFixed(1).padStart(4, "0") + "s";
 
   // Determine current active phase (0..3)
   const activePhaseIdx = useMemo(() => {
@@ -119,9 +153,9 @@ export function TelemetryModal({
   }, [repoMeta]);
 
   const topLanguages = useMemo(() => {
-    if (!repoMeta?.languages) return ["TypeScript", "Rust"];
+    if (!repoMeta?.languages) return ["TypeScript", "JavaScript", "CSS"];
     const langs = Object.keys(repoMeta.languages);
-    return langs.length > 0 ? langs.slice(0, 3) : ["TypeScript"];
+    return langs.length > 0 ? langs.slice(0, 4) : ["TypeScript"];
   }, [repoMeta]);
 
   const complexityRating = useMemo(() => {
@@ -153,29 +187,34 @@ export function TelemetryModal({
       {
         id: "l-1",
         time: getTimestamp(12),
-        text: `Successfully indexed ${totalFiles.toLocaleString()} files across workspace.`,
+        tag: "INDEX",
+        text: `Successfully indexed ${totalFiles.toLocaleString()} source files across ephemeral worktree.`,
       },
       {
         id: "l-2",
         time: getTimestamp(9),
-        text: "Generating syntax trees for module",
+        tag: "AST",
+        text: "Generating Tree-sitter syntax trees for module",
         codeBadge: "/src/core/parser",
       },
       {
         id: "l-3",
         time: getTimestamp(6),
+        tag: "BIND",
         text: `Resolved cross-file symbol bindings across ${topLanguages.join(", ")}.`,
       },
       {
         id: "l-4",
         time: getTimestamp(3),
-        text: "INFO: Initializing semantic mapping of class hierarchies & imports.",
+        tag: "INFO",
+        text: "INFO: Initializing semantic mapping of class hierarchies & module imports.",
         isInfo: true,
       },
       {
         id: "l-5",
         time: getTimestamp(1),
-        text: "Extracting interface contracts from",
+        tag: "TYPES",
+        text: "Extracting exported interface contracts from",
         codeBadge: `@${owner}/types`,
       },
     ];
@@ -183,17 +222,38 @@ export function TelemetryModal({
     setLogs(initialLogs);
   }, [owner, totalFiles, topLanguages]);
 
-  // Periodic streaming logs to give the live AST parser experience
+  // Periodic streaming logs
   useEffect(() => {
     if (error || progressPct >= 100) return;
 
     const dynamicStreamTemplates = [
-      { text: "Analyzing deep dependency chains for", codeBadge: "/utils/graph-traversal.ts" },
-      { text: "Context window optimization: OK — chunking AST tokens." },
-      { text: "Evaluating cyclomatic complexity & fan-in across export tree." },
-      { text: "Building cross-reference index for sub-modules in", codeBadge: "/src/engine" },
-      { text: "INFO: AST syntax verification completed without fatal anomalies.", isInfo: true },
-      { text: "Synthesizing interactive architecture graph nodes & citations." },
+      {
+        tag: "GRAPH",
+        text: "Analyzing deep dependency chains for",
+        codeBadge: "/utils/graph-traversal.ts",
+      },
+      {
+        tag: "CACHE",
+        text: "Context window optimization: OK — chunking AST symbol tokens.",
+      },
+      {
+        tag: "METRIC",
+        text: "Evaluating cyclomatic complexity & fan-in across export tree.",
+      },
+      {
+        tag: "INDEX",
+        text: "Building cross-reference index for sub-modules in",
+        codeBadge: "/src/engine",
+      },
+      {
+        tag: "INFO",
+        text: "INFO: AST syntax verification completed without fatal anomalies.",
+        isInfo: true,
+      },
+      {
+        tag: "DOCS",
+        text: "Synthesizing interactive architecture graph nodes & line citations.",
+      },
     ];
 
     let logCounter = 0;
@@ -206,10 +266,11 @@ export function TelemetryModal({
       const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 
       setLogs((prev) => [
-        ...prev.slice(-18),
+        ...prev.slice(-20),
         {
           id: `dyn-${Date.now()}-${logCounter}`,
           time: timeStr,
+          tag: template.tag,
           text: template.text,
           codeBadge: template.codeBadge,
           isInfo: template.isInfo,
@@ -266,46 +327,61 @@ export function TelemetryModal({
         .devlens-log-scroll::-webkit-scrollbar-thumb:hover {
           background: #d4d4d4;
         }
+        .devlens-phase-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 18px;
+        }
+        .devlens-bottom-split {
+          display: grid;
+          grid-template-columns: 7fr 5fr;
+          gap: 36px;
+        }
+        @media (max-width: 1024px) {
+          .devlens-phase-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+          .devlens-bottom-split {
+            grid-template-columns: 1fr;
+          }
+        }
+        @media (max-width: 600px) {
+          .devlens-phase-grid {
+            grid-template-columns: 1fr;
+          }
+        }
       `}</style>
 
-      {/* Scrollable Inner Wrapper that centers when tall and scrolls smoothly when needed */}
+      {/* Full-Viewport Architectural Page Layout */}
       <div
         style={{
-          minHeight: "100%",
+          minHeight: "100vh",
           width: "100%",
+          maxWidth: 1480,
+          margin: "0 auto",
           display: "flex",
           flexDirection: "column",
-          justifyContent: "center",
-          padding: "clamp(32px, 5vh, 64px) clamp(20px, 4vw, 48px) 120px",
+          justifyContent: "space-between",
+          padding: "clamp(24px, 3vw, 40px) clamp(24px, 4.5vw, 72px) 110px",
           boxSizing: "border-box",
+          gap: 36,
         }}
       >
-        {/* ── Main Content Merged Directly into White Background (No Outer Box) ── */}
-        <main
+        {/* ── 1. Top Full-Width System Header ─────────────────────────────── */}
+        <header
           style={{
-            position: "relative",
-            zIndex: 2,
-            width: "100%",
-            maxWidth: 880,
-            margin: "0 auto",
             display: "flex",
-            flexDirection: "column",
-            gap: 36,
+            justifyContent: "space-between",
+            alignItems: "center",
+            paddingBottom: 20,
+            borderBottom: "1px solid #eaeaea",
+            gap: 20,
+            flexWrap: "wrap",
+            width: "100%",
           }}
         >
-          {/* ── Top Header Branding ───────────────────────────────────────── */}
-          <header
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-end",
-              paddingBottom: 24,
-              borderBottom: "1px solid #eeeeee",
-              gap: 16,
-              flexWrap: "wrap",
-            }}
-          >
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <span
                 style={{
                   fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
@@ -318,108 +394,189 @@ export function TelemetryModal({
               >
                 System Status
               </span>
-              <h1
-                style={{
-                  margin: 0,
-                  fontSize: "clamp(1.65rem, 3vw, 2.15rem)",
-                  fontWeight: 600,
-                  letterSpacing: "-0.035em",
-                  lineHeight: 1.08,
-                  color: "#0a0a0a",
-                }}
-              >
-                DevLens AI
-              </h1>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+                <span
+                  style={{
+                    fontSize: "1.5rem",
+                    fontWeight: 600,
+                    letterSpacing: "-0.035em",
+                    color: "#0a0a0a",
+                  }}
+                >
+                  DevLens AI
+                </span>
+              </div>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <div
+            <div
+              style={{
+                height: 24,
+                width: 1,
+                backgroundColor: "#e5e5e5",
+              }}
+            />
+
+            {/* Target Repo Breadcrumb Pill */}
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "6px 12px",
+                borderRadius: 6,
+                backgroundColor: "#fafafa",
+                border: "1px solid #eaeaea",
+                fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
+                fontSize: "0.75rem",
+                color: "#525252",
+              }}
+            >
+              <FolderGit2 size={14} style={{ color: "#0a0a0a" }} />
+              <span>
+                {owner} / <strong style={{ color: "#0a0a0a", fontWeight: 600 }}>{repoName}</strong>
+              </span>
+              <span style={{ color: "#d4d4d4" }}>·</span>
+              <span
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
-                  gap: 8,
-                  fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
-                  fontSize: "0.75rem",
-                  letterSpacing: "0.06em",
-                  fontWeight: 500,
-                  color: error ? "#dc2626" : "#0a0a0a",
+                  gap: 4,
+                  color: "#737373",
                 }}
               >
-                <span
-                  style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: "50%",
-                    backgroundColor: error ? "#ef4444" : "#10b981",
-                    boxShadow: error
-                      ? "0 0 8px rgba(239, 68, 68, 0.4)"
-                      : "0 0 8px rgba(16, 185, 129, 0.4)",
-                    animation: error
-                      ? "none"
-                      : "devlens-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
-                  }}
-                />
-                {error ? "HALTED" : "ACTIVE SESSION"}
-              </div>
-
-              <button
-                type="button"
-                onClick={onCancel}
-                style={{
-                  fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
-                  fontSize: "0.6875rem",
-                  letterSpacing: "0.05em",
-                  textTransform: "uppercase",
-                  color: "#525252",
-                  background: "#ffffff",
-                  border: "1px solid #e5e5e5",
-                  borderRadius: 6,
-                  padding: "6px 14px",
-                  cursor: "pointer",
-                  transition: "all 0.15s ease",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = "#0a0a0a";
-                  e.currentTarget.style.borderColor = "#0a0a0a";
-                  e.currentTarget.style.background = "#fafafa";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = "#525252";
-                  e.currentTarget.style.borderColor = "#e5e5e5";
-                  e.currentTarget.style.background = "#ffffff";
-                }}
-              >
-                Cancel ✕
-              </button>
+                <GitBranch size={12} />
+                HEAD
+              </span>
             </div>
-          </header>
+          </div>
 
-          {/* ── Seamless Analysis Workspace (Merged directly with background) ── */}
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 32,
-            }}
-          >
-            {/* 1. Progress Header */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <div
+          <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+            <span
+              style={{
+                fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
+                fontSize: "0.75rem",
+                color: "#737373",
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              ELAPSED {formattedElapsed}
+            </span>
+
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "6px 12px",
+                borderRadius: 6,
+                backgroundColor: error ? "#fef2f2" : "#f5fdf9",
+                border: error ? "1px solid #fecaca" : "1px solid #d1fae5",
+                fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
+                fontSize: "0.72rem",
+                letterSpacing: "0.06em",
+                fontWeight: 600,
+                color: error ? "#dc2626" : "#065f46",
+              }}
+            >
+              <span
                 style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "baseline",
-                  gap: 16,
-                  flexWrap: "wrap",
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  backgroundColor: error ? "#ef4444" : "#10b981",
+                  boxShadow: error
+                    ? "0 0 8px rgba(239, 68, 68, 0.4)"
+                    : "0 0 8px rgba(16, 185, 129, 0.4)",
+                  animation: error
+                    ? "none"
+                    : "devlens-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
                 }}
-              >
+              />
+              {error ? "HALTED" : "ACTIVE SESSION"}
+            </div>
+
+            <button
+              type="button"
+              onClick={onCancel}
+              style={{
+                fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
+                fontSize: "0.72rem",
+                letterSpacing: "0.05em",
+                textTransform: "uppercase",
+                color: "#525252",
+                background: "#ffffff",
+                border: "1px solid #e5e5e5",
+                borderRadius: 6,
+                padding: "7px 14px",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = "#0a0a0a";
+                e.currentTarget.style.borderColor = "#0a0a0a";
+                e.currentTarget.style.background = "#fafafa";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = "#525252";
+                e.currentTarget.style.borderColor = "#e5e5e5";
+                e.currentTarget.style.background = "#ffffff";
+              }}
+            >
+              Cancel ✕
+            </button>
+          </div>
+        </header>
+
+        {/* ── 2. Full-Width Central Workspace ────────────────────────────── */}
+        <main
+          style={{
+            width: "100%",
+            display: "flex",
+            flexDirection: "column",
+            gap: 32,
+            flex: 1,
+            justifyContent: "center",
+          }}
+        >
+          {/* Hero Progress Header Row */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-end",
+                gap: 24,
+                flexWrap: "wrap",
+              }}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 10,
+                    fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
+                    fontSize: "0.75rem",
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    color: "#737373",
+                  }}
+                >
+                  <span style={{ color: "#0a0a0a", fontWeight: 600 }}>
+                    0{activePhaseIdx + 1} / 04
+                  </span>
+                  <span>—</span>
+                  <span>{currentPhase.phaseLabel}</span>
+                </div>
+
                 <h2
                   style={{
                     margin: 0,
-                    fontSize: "clamp(1.35rem, 2.5vw, 1.65rem)",
+                    fontSize: "clamp(2rem, 3.4vw, 2.85rem)",
                     fontWeight: 600,
                     color: "#0a0a0a",
-                    letterSpacing: "-0.025em",
+                    letterSpacing: "-0.035em",
+                    lineHeight: 1.08,
                   }}
                 >
                   Analyzing Repository
@@ -427,357 +584,426 @@ export function TelemetryModal({
 
                 <div
                   style={{
-                    fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
-                    fontSize: "0.9375rem",
-                    fontWeight: 600,
-                    color: "#0a0a0a",
-                    letterSpacing: "0.05em",
-                    fontVariantNumeric: "tabular-nums",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    flexWrap: "wrap",
+                    marginTop: 2,
                   }}
                 >
-                  {Math.round(progressPct)}% COMPLETE
-                </div>
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 12,
-                  flexWrap: "wrap",
-                }}
-              >
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: "0.95rem",
-                    color: "#737373",
-                    lineHeight: 1.5,
-                  }}
-                >
-                  Deconstructing{" "}
-                  <span style={{ color: "#0a0a0a", fontWeight: 600 }}>
-                    {owner}/{repoName}
-                  </span>{" "}
-                  architecture...
-                </p>
-
-                {topLanguages.length > 0 && (
-                  <span
+                  <p
                     style={{
-                      fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
-                      fontSize: "0.6875rem",
-                      color: "#8a8a8a",
-                      letterSpacing: "0.03em",
+                      margin: 0,
+                      fontSize: "1.05rem",
+                      color: "#737373",
+                      lineHeight: 1.5,
                     }}
                   >
-                    {topLanguages.join(" · ")}
-                  </span>
-                )}
-              </div>
-            </div>
+                    Deconstructing{" "}
+                    <span style={{ color: "#0a0a0a", fontWeight: 600 }}>
+                      {owner}/{repoName}
+                    </span>{" "}
+                    architecture...
+                  </p>
 
-            {/* 2. Progress Bar Visual */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
-                  fontSize: "0.75rem",
-                  letterSpacing: "0.05em",
-                  textTransform: "uppercase",
-                  color: "#737373",
-                  gap: 12,
-                  flexWrap: "wrap",
-                }}
-              >
-                <span>{currentPhase.phaseLabel}</span>
-                <span style={{ fontWeight: 600, color: "#0a0a0a" }}>
-                  {currentPhase.actionLabel}
-                </span>
-              </div>
-
-              <div
-                style={{
-                  height: 4,
-                  backgroundColor: "#efefef",
-                  borderRadius: 9999,
-                  position: "relative",
-                  overflow: "hidden",
-                }}
-              >
-                <div
-                  style={{
-                    height: "100%",
-                    backgroundColor: "#0a0a0a",
-                    width: `${Math.min(100, Math.max(progressPct, 4))}%`,
-                    borderRadius: 9999,
-                    transition: "width 0.45s cubic-bezier(0.16, 1, 0.3, 1)",
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* 3. Phase Indicator Cards (4 Columns) */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                gap: 14,
-              }}
-            >
-              {PHASES.map((p, idx) => {
-                const isDone = idx < activePhaseIdx || progressPct >= 100;
-                const isActive = idx === activePhaseIdx && progressPct < 100;
-                const isPending = idx > activePhaseIdx && progressPct < 100;
-
-                return (
-                  <div
-                    key={p.stepNumber}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                      padding: "14px 16px",
-                      borderRadius: 6,
-                      border: isActive
-                        ? "1px solid #0a0a0a"
-                        : isDone
-                          ? "1px solid #eaeaea"
-                          : "1px solid #f2f2f2",
-                      backgroundColor: isActive
-                        ? "#ffffff"
-                        : isDone
-                          ? "#fafafa"
-                          : "#ffffff",
-                      boxShadow: isActive ? "0 4px 14px rgba(0, 0, 0, 0.04)" : "none",
-                      opacity: isPending ? 0.45 : 1,
-                      position: "relative",
-                      overflow: "hidden",
-                      transition: "all 0.2s ease",
-                    }}
-                  >
-                    {/* Status Icon */}
-                    {isDone ? (
-                      <CheckCircle2
-                        size={19}
-                        style={{ color: "#0a0a0a", flexShrink: 0, position: "relative", zIndex: 2 }}
-                      />
-                    ) : isActive ? (
-                      <Loader2
-                        size={19}
-                        style={{
-                          color: "#0a0a0a",
-                          flexShrink: 0,
-                          animation: "spin 1.4s linear infinite",
-                          position: "relative",
-                          zIndex: 2,
-                        }}
-                      />
-                    ) : (
-                      <CircleDot
-                        size={19}
-                        style={{ color: "#a3a3a3", flexShrink: 0, position: "relative", zIndex: 2 }}
-                      />
-                    )}
-
-                    {/* Step Text */}
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 2,
-                        position: "relative",
-                        zIndex: 2,
-                        minWidth: 0,
-                      }}
-                    >
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                    {topLanguages.map((lang) => (
                       <span
+                        key={lang}
                         style={{
                           fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
                           fontSize: "0.6875rem",
-                          letterSpacing: "0.05em",
-                          color: isActive ? "#0a0a0a" : "#737373",
-                          fontWeight: isActive ? 600 : 500,
+                          padding: "3px 9px",
+                          borderRadius: 4,
+                          backgroundColor: "#f5f5f5",
+                          border: "1px solid #eaeaea",
+                          color: "#525252",
+                          fontWeight: 500,
                         }}
                       >
-                        STEP {p.stepNumber}
+                        {lang}
                       </span>
-                      <span
-                        style={{
-                          fontSize: "0.84375rem",
-                          fontWeight: isActive ? 600 : 500,
-                          color: isPending ? "#737373" : "#0a0a0a",
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {p.name}
-                      </span>
-                    </div>
+                    ))}
                   </div>
-                );
-              })}
-            </div>
-
-            {/* 4. System Log & Technical Metrics Split */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-                gap: 28,
-                borderTop: "1px solid #eeeeee",
-                paddingTop: 28,
-              }}
-            >
-              {/* Left Column: System Log */}
-              <div
-                style={{
-                  gridColumn: "span 2",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 14,
-                  minWidth: 0,
-                }}
-                className="col-span-1 md:col-span-2"
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <span
-                    style={{
-                      fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
-                      fontSize: "0.75rem",
-                      fontWeight: 500,
-                      letterSpacing: "0.06em",
-                      textTransform: "uppercase",
-                      color: "#737373",
-                    }}
-                  >
-                    System Log
-                  </span>
-                  <span
-                    style={{
-                      fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
-                      fontSize: "0.75rem",
-                      color: "#a3a3a3",
-                    }}
-                  >
-                    Streaming...
-                  </span>
-                </div>
-
-                <div
-                  ref={logContainerRef}
-                  data-lenis-prevent="true"
-                  className="devlens-log-scroll overflow-y-auto"
-                  style={{
-                    height: 170,
-                    overflowY: "auto",
-                    fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
-                    fontSize: "0.75rem",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 8,
-                    paddingRight: 8,
-                  }}
-                >
-                  {logs.map((entry) => (
-                    <div
-                      key={entry.id}
-                      style={{
-                        display: "flex",
-                        alignItems: "baseline",
-                        gap: 12,
-                        lineHeight: 1.55,
-                      }}
-                    >
-                      <span
-                        style={{
-                          color: "#a3a3a3",
-                          flexShrink: 0,
-                          fontSize: "0.6875rem",
-                        }}
-                      >
-                        {entry.time}
-                      </span>
-                      <span
-                        style={{
-                          color: entry.isInfo ? "#0a0a0a" : "#333333",
-                          fontWeight: entry.isInfo ? 600 : 400,
-                        }}
-                      >
-                        {entry.text}{" "}
-                        {entry.codeBadge && (
-                          <code
-                            style={{
-                              backgroundColor: "#f5f5f5",
-                              border: "1px solid #eaeaea",
-                              padding: "1px 6px",
-                              borderRadius: 3,
-                              fontSize: "0.6875rem",
-                              color: "#0a0a0a",
-                            }}
-                          >
-                            {entry.codeBadge}
-                          </code>
-                        )}
-                      </span>
-                    </div>
-                  ))}
                 </div>
               </div>
 
-              {/* Right Column: Technical Metrics */}
+              {/* Right Monumental Percentage Readout */}
               <div
                 style={{
                   display: "flex",
                   flexDirection: "column",
-                  gap: 14,
-                  backgroundColor: "#fafafa",
-                  padding: 18,
-                  borderRadius: 6,
-                  border: "1px solid #eeeeee",
+                  alignItems: "flex-end",
+                  gap: 6,
+                }}
+              >
+                <div
+                  style={{
+                    fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
+                    fontSize: "clamp(2.5rem, 4.5vw, 3.75rem)",
+                    fontWeight: 600,
+                    color: "#0a0a0a",
+                    letterSpacing: "-0.04em",
+                    lineHeight: 1,
+                    fontVariantNumeric: "tabular-nums",
+                  }}
+                >
+                  {Math.round(progressPct)}
+                  <span style={{ fontSize: "0.5em", color: "#8a8a8a", marginLeft: 3 }}>%</span>
+                </div>
+                <span
+                  style={{
+                    fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                    color: "#0a0a0a",
+                  }}
+                >
+                  {currentPhase.actionLabel}
+                </span>
+              </div>
+            </div>
+
+            {/* Full-Width Progress Bar Track */}
+            <div
+              style={{
+                height: 5,
+                backgroundColor: "#efefef",
+                borderRadius: 9999,
+                position: "relative",
+                overflow: "hidden",
+                width: "100%",
+              }}
+            >
+              <div
+                style={{
+                  height: "100%",
+                  backgroundColor: "#0a0a0a",
+                  width: `${Math.min(100, Math.max(progressPct, 4))}%`,
+                  borderRadius: 9999,
+                  transition: "width 0.45s cubic-bezier(0.16, 1, 0.3, 1)",
+                }}
+              />
+            </div>
+          </div>
+
+          {/* ── 3. Full-Width 4-Column Phase Indicator Cards ─────────────── */}
+          <div className="devlens-phase-grid">
+            {PHASES.map((p, idx) => {
+              const isDone = idx < activePhaseIdx || progressPct >= 100;
+              const isActive = idx === activePhaseIdx && progressPct < 100;
+              const isPending = idx > activePhaseIdx && progressPct < 100;
+
+              return (
+                <div
+                  key={p.stepNumber}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    gap: 14,
+                    padding: "18px 20px",
+                    borderRadius: 8,
+                    border: isActive
+                      ? "1.5px solid #0a0a0a"
+                      : isDone
+                        ? "1px solid #e5e5e5"
+                        : "1px solid #f0f0f0",
+                    backgroundColor: isActive
+                      ? "#ffffff"
+                      : isDone
+                        ? "#fafafa"
+                        : "#ffffff",
+                    boxShadow: isActive ? "0 8px 24px -6px rgba(0, 0, 0, 0.06)" : "none",
+                    opacity: isPending ? 0.48 : 1,
+                    position: "relative",
+                    overflow: "hidden",
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 8,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
+                        fontSize: "0.6875rem",
+                        letterSpacing: "0.08em",
+                        color: isActive ? "#0a0a0a" : "#737373",
+                        fontWeight: 600,
+                      }}
+                    >
+                      STEP 0{p.stepNumber}
+                    </span>
+
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <span
+                        style={{
+                          fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
+                          fontSize: "0.625rem",
+                          letterSpacing: "0.06em",
+                          textTransform: "uppercase",
+                          padding: "2px 6px",
+                          borderRadius: 4,
+                          backgroundColor: isActive
+                            ? "#0a0a0a"
+                            : isDone
+                              ? "#eaeaea"
+                              : "#f5f5f5",
+                          color: isActive ? "#ffffff" : isDone ? "#0a0a0a" : "#8a8a8a",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {isDone ? "Done" : isActive ? "Active" : "Queued"}
+                      </span>
+
+                      {isDone ? (
+                        <CheckCircle2 size={17} style={{ color: "#0a0a0a", flexShrink: 0 }} />
+                      ) : isActive ? (
+                        <Loader2
+                          size={17}
+                          style={{
+                            color: "#0a0a0a",
+                            flexShrink: 0,
+                            animation: "spin 1.4s linear infinite",
+                          }}
+                        />
+                      ) : (
+                        <CircleDot size={17} style={{ color: "#a3a3a3", flexShrink: 0 }} />
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <span
+                      style={{
+                        fontSize: "1rem",
+                        fontWeight: 600,
+                        color: "#0a0a0a",
+                        letterSpacing: "-0.015em",
+                      }}
+                    >
+                      {p.name}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "0.8125rem",
+                        color: "#737373",
+                        lineHeight: 1.45,
+                      }}
+                    >
+                      {p.detail}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* ── 4. Full-Width Bottom Split: System Log (7fr) & Technical Metrics (5fr) ── */}
+          <div
+            className="devlens-bottom-split"
+            style={{
+              borderTop: "1px solid #eaeaea",
+              paddingTop: 28,
+            }}
+          >
+            {/* Left Column: System Log Stream */}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 14,
+                minWidth: 0,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
                 }}
               >
                 <span
                   style={{
                     fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
                     fontSize: "0.75rem",
-                    fontWeight: 500,
-                    letterSpacing: "0.06em",
+                    fontWeight: 600,
+                    letterSpacing: "0.08em",
                     textTransform: "uppercase",
+                    color: "#0a0a0a",
+                  }}
+                >
+                  System Log // AST Telemetry
+                </span>
+                <span
+                  style={{
+                    fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
+                    fontSize: "0.75rem",
                     color: "#737373",
+                  }}
+                >
+                  Streaming live...
+                </span>
+              </div>
+
+              <div
+                ref={logContainerRef}
+                data-lenis-prevent="true"
+                className="devlens-log-scroll overflow-y-auto"
+                style={{
+                  height: 210,
+                  overflowY: "auto",
+                  fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
+                  fontSize: "0.8125rem",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 10,
+                  padding: "16px 18px",
+                  backgroundColor: "#fafafa",
+                  border: "1px solid #eeeeee",
+                  borderRadius: 8,
+                }}
+              >
+                {logs.map((entry) => (
+                  <div
+                    key={entry.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "baseline",
+                      gap: 12,
+                      lineHeight: 1.55,
+                    }}
+                  >
+                    <span
+                      style={{
+                        color: "#a3a3a3",
+                        flexShrink: 0,
+                        fontSize: "0.72rem",
+                        fontVariantNumeric: "tabular-nums",
+                      }}
+                    >
+                      {entry.time}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "0.65rem",
+                        fontWeight: 600,
+                        padding: "1px 6px",
+                        borderRadius: 3,
+                        backgroundColor: entry.isInfo ? "#0a0a0a" : "#eaeaea",
+                        color: entry.isInfo ? "#ffffff" : "#525252",
+                        flexShrink: 0,
+                        letterSpacing: "0.04em",
+                      }}
+                    >
+                      {entry.tag}
+                    </span>
+                    <span
+                      style={{
+                        color: entry.isInfo ? "#0a0a0a" : "#262626",
+                        fontWeight: entry.isInfo ? 600 : 400,
+                      }}
+                    >
+                      {entry.text}{" "}
+                      {entry.codeBadge && (
+                        <code
+                          style={{
+                            backgroundColor: "#ffffff",
+                            border: "1px solid #e5e5e5",
+                            padding: "2px 7px",
+                            borderRadius: 4,
+                            fontSize: "0.72rem",
+                            color: "#0a0a0a",
+                            fontWeight: 500,
+                          }}
+                        >
+                          {entry.codeBadge}
+                        </code>
+                      )}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right Column: Technical Metrics */}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 14,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    color: "#0a0a0a",
                   }}
                 >
                   Technical Metrics
                 </span>
+                <span
+                  style={{
+                    fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
+                    fontSize: "0.75rem",
+                    color: "#737373",
+                  }}
+                >
+                  Real-time telemetry
+                </span>
+              </div>
 
-                {/* Metric: Files Processed */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  gap: 16,
+                  backgroundColor: "#fafafa",
+                  padding: "18px 20px",
+                  borderRadius: 8,
+                  border: "1px solid #eeeeee",
+                  height: 210,
+                  boxSizing: "border-box",
+                }}
+              >
+                {/* Metric 1: Files Processed */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   <div
                     style={{
                       display: "flex",
                       justifyContent: "space-between",
                       alignItems: "center",
-                      fontSize: "0.8125rem",
+                      fontSize: "0.875rem",
                     }}
                   >
-                    <span style={{ color: "#737373" }}>Files Processed</span>
+                    <span style={{ color: "#525252", fontWeight: 500 }}>Files Processed</span>
                     <span
                       style={{
                         fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
-                        fontSize: "0.75rem",
+                        fontSize: "0.8125rem",
                         fontWeight: 600,
                         color: "#0a0a0a",
+                        fontVariantNumeric: "tabular-nums",
                       }}
                     >
                       {processedFiles.toLocaleString()} / {totalFiles.toLocaleString()}
@@ -787,7 +1013,7 @@ export function TelemetryModal({
                     style={{
                       width: "100%",
                       backgroundColor: "#e5e5e5",
-                      height: 4,
+                      height: 5,
                       borderRadius: 9999,
                       overflow: "hidden",
                     }}
@@ -804,52 +1030,46 @@ export function TelemetryModal({
                   </div>
                 </div>
 
-                {/* Metric: Repository Size */}
+                {/* Metric 2 & 3 Grid */}
                 <div
                   style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    fontSize: "0.8125rem",
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 16,
+                    paddingTop: 4,
                   }}
                 >
-                  <span style={{ color: "#737373" }}>Repository Size</span>
-                  <span
-                    style={{
-                      fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
-                      fontSize: "0.75rem",
-                      fontWeight: 600,
-                      color: "#0a0a0a",
-                    }}
-                  >
-                    {sizeFormatted}
-                  </span>
-                </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <span style={{ fontSize: "0.75rem", color: "#737373" }}>Repository Size</span>
+                    <span
+                      style={{
+                        fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
+                        fontSize: "0.9375rem",
+                        fontWeight: 600,
+                        color: "#0a0a0a",
+                      }}
+                    >
+                      {sizeFormatted}
+                    </span>
+                  </div>
 
-                {/* Metric: Complexity Index */}
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    fontSize: "0.8125rem",
-                  }}
-                >
-                  <span style={{ color: "#737373" }}>Complexity Index</span>
-                  <span
-                    style={{
-                      fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
-                      fontSize: "0.6875rem",
-                      fontWeight: 600,
-                      padding: "2px 7px",
-                      backgroundColor: "#0a0a0a",
-                      color: "#ffffff",
-                      borderRadius: 3,
-                      letterSpacing: "0.05em",
-                    }}
-                  >
-                    {complexityRating}
-                  </span>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-start" }}>
+                    <span style={{ fontSize: "0.75rem", color: "#737373" }}>Complexity Index</span>
+                    <span
+                      style={{
+                        fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
+                        fontSize: "0.72rem",
+                        fontWeight: 600,
+                        padding: "2px 8px",
+                        backgroundColor: "#0a0a0a",
+                        color: "#ffffff",
+                        borderRadius: 4,
+                        letterSpacing: "0.06em",
+                      }}
+                    >
+                      {complexityRating}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Worker Node Footer */}
@@ -857,44 +1077,61 @@ export function TelemetryModal({
                   style={{
                     marginTop: "auto",
                     paddingTop: 12,
-                    borderTop: "1px solid #eaeaea",
+                    borderTop: "1px solid #e5e5e5",
                     display: "flex",
                     alignItems: "center",
-                    gap: 6,
+                    justifyContent: "space-between",
+                    gap: 8,
                   }}
                 >
-                  <Terminal size={14} style={{ color: "#0a0a0a", flexShrink: 0 }} />
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <Terminal size={14} style={{ color: "#0a0a0a", flexShrink: 0 }} />
+                    <span
+                      style={{
+                        fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
+                        fontSize: "0.75rem",
+                        color: "#525252",
+                      }}
+                    >
+                      Worker node: <strong style={{ color: "#0a0a0a" }}>{workerNodeId}</strong>
+                    </span>
+                  </div>
+
                   <span
                     style={{
                       fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
-                      fontSize: "0.75rem",
-                      color: "#737373",
+                      fontSize: "0.6875rem",
+                      color: "#8a8a8a",
                     }}
                   >
-                    Worker node: {workerNodeId}
+                    Tree-sitter AST
                   </span>
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* Error Banner (If present) */}
-            <AnimatePresence>
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 4 }}
-                  style={{
-                    padding: "16px 20px",
-                    borderRadius: 6,
-                    backgroundColor: "#fef2f2",
-                    border: "1px solid #fecaca",
-                    color: "#991b1b",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 10,
-                  }}
-                >
+          {/* Error Banner (If present) */}
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 4 }}
+                style={{
+                  padding: "16px 20px",
+                  borderRadius: 8,
+                  backgroundColor: "#fef2f2",
+                  border: "1px solid #fecaca",
+                  color: "#991b1b",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 16,
+                  flexWrap: "wrap",
+                }}
+              >
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                   <div
                     style={{
                       display: "flex",
@@ -909,99 +1146,129 @@ export function TelemetryModal({
                     <AlertTriangle size={15} style={{ color: "#dc2626" }} />
                     <span>Analysis Interrupted</span>
                   </div>
-                  <div style={{ fontSize: "0.8125rem", color: "#7f1d1d", lineHeight: 1.5 }}>
+                  <div style={{ fontSize: "0.84375rem", color: "#7f1d1d", lineHeight: 1.5 }}>
                     {error}
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
-                    {onRetry && (
-                      <button
-                        type="button"
-                        onClick={onRetry}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 6,
-                          padding: "6px 14px",
-                          borderRadius: 4,
-                          backgroundColor: "#0a0a0a",
-                          color: "#ffffff",
-                          border: "1px solid #0a0a0a",
-                          fontSize: "0.75rem",
-                          fontWeight: 500,
-                          cursor: "pointer",
-                        }}
-                      >
-                        <RefreshCw size={12} />
-                        Retry Analysis
-                      </button>
-                    )}
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  {onRetry && (
                     <button
                       type="button"
-                      onClick={onCancel}
+                      onClick={onRetry}
                       style={{
-                        padding: "6px 14px",
-                        borderRadius: 4,
-                        backgroundColor: "#ffffff",
-                        color: "#0a0a0a",
-                        border: "1px solid #d4d4d4",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        padding: "8px 16px",
+                        borderRadius: 6,
+                        backgroundColor: "#0a0a0a",
+                        color: "#ffffff",
+                        border: "1px solid #0a0a0a",
                         fontSize: "0.75rem",
                         fontWeight: 500,
                         cursor: "pointer",
                       }}
                     >
-                      Dismiss
+                      <RefreshCw size={12} />
+                      Retry Analysis
                     </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={onCancel}
+                    style={{
+                      padding: "8px 16px",
+                      borderRadius: 6,
+                      backgroundColor: "#ffffff",
+                      color: "#0a0a0a",
+                      border: "1px solid #d4d4d4",
+                      fontSize: "0.75rem",
+                      fontWeight: 500,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </main>
 
-          {/* ── Footer Visual Hint ─────────────────────────────────────────── */}
-          <footer
+        {/* ── 5. Full-Width Architectural Footer ──────────────────────────── */}
+        <footer
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            paddingTop: 18,
+            borderTop: "1px solid #eeeeee",
+            width: "100%",
+            gap: 16,
+            flexWrap: "wrap",
+          }}
+        >
+          <span
+            style={{
+              fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
+              fontSize: "0.6875rem",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "#8a8a8a",
+            }}
+          >
+            Ephemeral Worktree · Zero Code Retention
+          </span>
+
+          <div
             style={{
               display: "flex",
-              justifyContent: "center",
-              paddingTop: 12,
+              alignItems: "center",
+              gap: 16,
+              opacity: 0.55,
             }}
           >
             <div
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 20,
-                opacity: 0.4,
+                width: 64,
+                height: 1,
+                background: "linear-gradient(90deg, transparent, #0a0a0a)",
+              }}
+            />
+            <span
+              style={{
+                fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
+                fontSize: "0.6875rem",
+                letterSpacing: "0.28em",
+                textTransform: "uppercase",
+                color: "#0a0a0a",
+                fontWeight: 500,
               }}
             >
-              <div
-                style={{
-                  width: 96,
-                  height: 1,
-                  background: "linear-gradient(90deg, transparent, #0a0a0a)",
-                }}
-              />
-              <span
-                style={{
-                  fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
-                  fontSize: "0.6875rem",
-                  letterSpacing: "0.3em",
-                  textTransform: "uppercase",
-                  color: "#0a0a0a",
-                  fontWeight: 500,
-                }}
-              >
-                DevLens AST Core v2.4
-              </span>
-              <div
-                style={{
-                  width: 96,
-                  height: 1,
-                  background: "linear-gradient(270deg, transparent, #0a0a0a)",
-                }}
-              />
-            </div>
-          </footer>
-        </main>
+              DevLens AST Core v2.4
+            </span>
+            <div
+              style={{
+                width: 64,
+                height: 1,
+                background: "linear-gradient(270deg, transparent, #0a0a0a)",
+              }}
+            />
+          </div>
+
+          <span
+            style={{
+              fontFamily: "var(--mf-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace)",
+              fontSize: "0.6875rem",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "#8a8a8a",
+            }}
+          >
+            Isolated Sandbox // AST Verified
+          </span>
+        </footer>
       </div>
     </motion.div>
   );
