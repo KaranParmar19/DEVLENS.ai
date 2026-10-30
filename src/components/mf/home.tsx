@@ -705,6 +705,21 @@ export function HomePage() {
               </form>
 
               <div className="mf-chips">
+                <Link
+                  to="/dashboard"
+                  search={{ previewLoading: true }}
+                  className="mf-pill mf-chip"
+                  style={{
+                    background: "rgba(16, 185, 129, 0.14)",
+                    borderColor: "#10b981",
+                    color: "#10b981",
+                    fontWeight: 600,
+                  }}
+                  title="Temporary button to view and fix the loading screen"
+                >
+                  <span>⚡ Preview Loading Screen</span>
+                </Link>
+
                 {TRY.map((t) => (
                   <motion.button
                     key={t.label}

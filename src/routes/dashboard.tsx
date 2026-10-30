@@ -2,6 +2,8 @@ import { useMemo, useState, useEffect, useCallback } from "react";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { StudioWorkspace } from "@/components/studio/studio-workspace";
+import { TelemetryModal } from "@/components/studio/telemetry-modal";
+import type { AnalysisStep } from "@/hooks/useAnalysis";
 import { StatsSection, type StatMetric } from "@/components/ui/stats-section";
 import { CurvyShowcase } from "@/components/ui/curvy-showcase";
 import { ActivityBadge } from "@/components/ui/activity-badge";
@@ -19,6 +21,7 @@ type DashboardSearch = {
   repo?: string;
   jobId?: string;
   sessionId?: string;
+  previewLoading?: boolean;
 };
 
 export const Route = createFileRoute("/dashboard")({
@@ -26,6 +29,7 @@ export const Route = createFileRoute("/dashboard")({
     repo: search.repo as string | undefined,
     jobId: search.jobId as string | undefined,
     sessionId: search.sessionId as string | undefined,
+    previewLoading: Boolean(search.previewLoading),
   }),
   component: DashboardPage,
   head: () => ({
@@ -68,13 +72,50 @@ const QUICK = [
   { label: "tailwindlabs/tailwindcss", tag: "CSS Engine" },
 ];
 
+const DEMO_PREVIEW_STEPS: AnalysisStep[] = [
+  { label: "Cloning repository structure", status: "done" },
+  { label: "Parsing file tree with Tree-sitter", status: "active" },
+  { label: "Building AST module graph", status: "pending" },
+  { label: "Analyzing cyclomatic complexity", status: "pending" },
+  { label: "Synthesizing cited onboarding dossier", status: "pending" },
+];
+
 function DashboardPage() {
-  const { repo: rawRepo, jobId, sessionId } = Route.useSearch();
+  const { repo: rawRepo, jobId, sessionId, previewLoading: queryPreviewLoading } = Route.useSearch();
   const repo = useMemo(() => (rawRepo ? normalizeRepoUrl(rawRepo) : undefined), [rawRepo]);
   const navigate = useNavigate({ from: Route.fullPath });
   const [inputRepo, setInputRepo] = useState("");
   const [version, setVersion] = useState(0);
   const [health, setHealth] = useState<"idle" | "ok" | "down">("idle");
+
+  // Developer Preview Loading Screen State
+  const [previewLoading, setPreviewLoading] = useState(Boolean(queryPreviewLoading));
+  const [previewProgress, setPreviewProgress] = useState(48);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewAuto, setPreviewAuto] = useState(false);
+
+  useEffect(() => {
+    if (queryPreviewLoading) {
+      setPreviewLoading(true);
+    }
+  }, [queryPreviewLoading]);
+
+  useEffect(() => {
+    if (!previewLoading || !previewAuto) return;
+    const interval = setInterval(() => {
+      setPreviewProgress((p) => (p >= 98 ? 10 : p + 5));
+    }, 450);
+    return () => clearInterval(interval);
+  }, [previewLoading, previewAuto]);
+
+  const currentPreviewSteps: AnalysisStep[] = useMemo(() => {
+    return DEMO_PREVIEW_STEPS.map((s, idx) => {
+      const threshold = (idx + 1) * 20;
+      if (previewProgress >= threshold) return { ...s, status: "done" };
+      if (previewProgress >= idx * 20) return { ...s, status: "active" };
+      return { ...s, status: "pending" };
+    });
+  }, [previewProgress]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const history = useMemo(() => repoHistory.getAll(), [version, repo]);
@@ -119,6 +160,141 @@ function DashboardPage() {
       setPatLoading(false);
     }
   };
+
+  if (previewLoading) {
+    return (
+      <div style={{ position: "relative", width: "100%", height: "100%" }}>
+        {/* Floating Developer Preview Control Bar */}
+        <div
+          style={{
+            position: "fixed",
+            top: 14,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 150,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            background: "rgba(18, 18, 24, 0.94)",
+            border: "1px solid rgba(16, 185, 129, 0.5)",
+            backdropFilter: "blur(14px)",
+            borderRadius: 999,
+            padding: "8px 18px",
+            boxShadow: "0 14px 40px rgba(0,0,0,0.7)",
+            fontFamily: "var(--mf-mono, monospace)",
+            fontSize: "0.75rem",
+            color: "#ffffff",
+            flexWrap: "wrap",
+            maxWidth: "96vw",
+          }}
+        >
+          <span style={{ color: "#10b981", fontWeight: 700, letterSpacing: "0.06em" }}>
+            [⚡ LOADING SCREEN PREVIEW]
+          </span>
+          <span style={{ opacity: 0.6 }}>Progress:</span>
+          {[15, 45, 75, 95].map((pct) => (
+            <button
+              key={pct}
+              type="button"
+              onClick={() => {
+                setPreviewAuto(false);
+                setPreviewProgress(pct);
+              }}
+              style={{
+                background: previewProgress === pct ? "#10b981" : "rgba(255,255,255,0.08)",
+                color: previewProgress === pct ? "#000000" : "#ffffff",
+                border: "1px solid rgba(255,255,255,0.18)",
+                borderRadius: 999,
+                padding: "3px 9px",
+                fontSize: "0.7rem",
+                cursor: "pointer",
+                fontWeight: 600,
+              }}
+            >
+              {pct}%
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setPreviewAuto((v) => !v)}
+            style={{
+              background: previewAuto ? "#10b981" : "rgba(255,255,255,0.08)",
+              color: previewAuto ? "#000000" : "#ffffff",
+              border: "1px solid rgba(255,255,255,0.18)",
+              borderRadius: 999,
+              padding: "3px 10px",
+              fontSize: "0.7rem",
+              cursor: "pointer",
+              fontWeight: 600,
+            }}
+          >
+            {previewAuto ? "❚❚ Pause Loop" : "▶ Auto Loop"}
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              setPreviewError((prev) =>
+                prev ? null : "Repository tree exceeds memory quota or GitHub rate limit reached."
+              )
+            }
+            style={{
+              background: previewError ? "#ef4444" : "rgba(255,255,255,0.08)",
+              color: "#ffffff",
+              border: "1px solid rgba(255,255,255,0.18)",
+              borderRadius: 999,
+              padding: "3px 10px",
+              fontSize: "0.7rem",
+              cursor: "pointer",
+            }}
+          >
+            {previewError ? "Clear Error" : "Test Error Alert"}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setPreviewLoading(false);
+              navigate({ search: (prev) => ({ ...prev, previewLoading: undefined }) });
+            }}
+            style={{
+              background: "#ffffff",
+              color: "#0a0a0a",
+              border: "none",
+              borderRadius: 999,
+              padding: "4px 12px",
+              fontSize: "0.72rem",
+              fontWeight: 600,
+              cursor: "pointer",
+              marginLeft: 8,
+            }}
+          >
+            ✕ Exit Preview
+          </button>
+        </div>
+
+        <TelemetryModal
+          repoUrl="https://github.com/facebook/react"
+          steps={currentPreviewSteps}
+          progressPct={previewProgress}
+          repoMeta={{
+            stars: 228400,
+            files: 1420,
+            languages: { TypeScript: 76, JavaScript: 18, CSS: 6 },
+            sizeKb: 34800,
+          }}
+          jobId="job_devlens_scan_981a4b"
+          error={previewError}
+          onRetry={() => {
+            setPreviewError(null);
+            setPreviewProgress(15);
+          }}
+          onCancel={() => {
+            setPreviewLoading(false);
+            navigate({ search: (prev) => ({ ...prev, previewLoading: undefined }) });
+          }}
+        />
+      </div>
+    );
+  }
 
   if (repo) {
     return (
@@ -512,10 +688,27 @@ function DashboardPage() {
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
           >
             <div className="mf-hero-top" style={{ paddingBottom: 24 }}>
-              <span className="mf-pill">
-                <span className="mf-dot live" />
-                Workspace
-              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <span className="mf-pill">
+                  <span className="mf-dot live" />
+                  Workspace
+                </span>
+                <button
+                  type="button"
+                  className="mf-pill"
+                  onClick={() => setPreviewLoading(true)}
+                  style={{
+                    background: "rgba(16, 185, 129, 0.1)",
+                    borderColor: "rgba(16, 185, 129, 0.4)",
+                    color: "#10b981",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                  title="Temporary developer button to inspect and fix the loading screen"
+                >
+                  ⚡ Preview Loading Screen
+                </button>
+              </div>
               <span className="mf-mono mf-muted">
                 {new Date().toLocaleDateString(undefined, {
                   weekday: "long",
@@ -567,6 +760,24 @@ function DashboardPage() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4, delay: 0.16 }}
           >
+            <motion.button
+              type="button"
+              className="mf-pill mf-chip"
+              style={{
+                background: "rgba(16, 185, 129, 0.15)",
+                borderColor: "#10b981",
+                color: "#10b981",
+                fontWeight: 600,
+              }}
+              whileHover={{ y: -2, scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              transition={{ type: "spring", stiffness: 450, damping: 28 }}
+              onClick={() => setPreviewLoading(true)}
+              title="Temporary developer button to inspect and fix the loading screen"
+            >
+              <span>⚡ Preview Loading Screen</span>
+            </motion.button>
+
             {QUICK.map((q) => (
               <motion.button
                 key={q.label}
