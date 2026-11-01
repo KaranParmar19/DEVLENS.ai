@@ -416,17 +416,17 @@ export function HowItWorksPage() {
       {/* ═══════════════════════════════════════════════════════════════════
           01 · "FOLLOW ANY ACTION" — STEP-BY-STEP STORY (LIGHT)
           ═══════════════════════════════════════════════════════════════════ */}
-      <section className="mf-section" data-theme="light" style={{ paddingTop: "clamp(24px, 3vw, 44px)", paddingBottom: 0 }}>
+      <section className="mf-section" data-theme="light" style={{ paddingTop: "clamp(20px, 2.5vw, 36px)", paddingBottom: 0 }}>
         <div className="mf-wrap">
-          <div className="mf-sec-bar">
-            <span className="idx">[01 / ARCHITECTURE TRACE]</span>
-            <Pill>True Code Execution</Pill>
-            <span className="tag">SEE HOW AN ACTION TRAVERSES THE REAL CODEBASE</span>
-          </div>
-
-          <div className="hwc-thread-head" style={{ marginBottom: 32 }}>
+          <div className="hwc-thread-head" style={{ textAlign: "center", maxWidth: "44em", margin: "0 auto clamp(24px, 3.5vw, 36px)" }}>
             <Reveal>
-              <h2 className="mf-h1" style={{ maxWidth: "14em", margin: 0 }}>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                <Pill live>Architecture Trace</Pill>
+                <span className="mf-mono" style={{ fontSize: "0.72rem", color: "var(--mf-ink-3)", letterSpacing: "0.08em" }}>
+                  TRUE CODE EXECUTION
+                </span>
+              </div>
+              <h2 className="mf-h1" style={{ margin: "0 auto", fontSize: "clamp(2rem, 3.8vw, 3.2rem)", lineHeight: 1.15 }}>
                 Pick an everyday action.{" "}
                 <span className="mf-serif-i" style={{ fontWeight: 400, color: "var(--mf-ink-3, #767676)" }}>
                   Watch how it executes.

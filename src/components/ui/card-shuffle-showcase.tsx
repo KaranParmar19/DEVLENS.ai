@@ -41,7 +41,7 @@ export function CardShuffleShowcase({
 
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Link scroll position through a generous 450vh scroll track
+  // Link scroll position through a smooth 280vh track
   const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ["start start", "end end"],
@@ -54,15 +54,18 @@ export function CardShuffleShowcase({
     mass: 0.3,
   });
 
-  // Spatial offsets
-  const xSpan = isMobile ? 115 : 270;
-  const ySpan = isMobile ? 95 : 160;
-  const fullCoverScale = isMobile ? 1.35 : 1.85;
-  const gridScale = isMobile ? 0.82 : 0.90;
-  const defaultScale = 1.0;
+  // Spatial offsets for the 2x2 grid and shuffles
+  const xSpan = isMobile ? 100 : 210;
+  const ySpan = isMobile ? 80 : 130;
+
+  // Pin-sharp scale factors: card base size is designed at 1:1 native hero scale (1.0),
+  // scaling DOWN into the grid (0.60) rather than upscaling, guaranteeing zero blur.
+  const fullCoverScale = 1.0;
+  const gridScale = isMobile ? 0.65 : 0.60;
+  const stackScale = isMobile ? 0.72 : 0.68;
 
   // 12 Keyframe points:
-  // 0.00 — 0.06 : Initial state: single card covering full screen
+  // 0.00 — 0.06 : Initial state: single card covering full screen at native resolution (zero blur)
   // 0.06 — 0.22 : Trigger 1: scale down & reposition to 2x2 grid
   // 0.22 — 0.28 : Rest gap in 2x2 grid
   // 0.28 — 0.44 : Trigger 2: 2 cards slide vertically over 2 static cards (layered shuffle)
@@ -76,33 +79,33 @@ export function CardShuffleShowcase({
   const P = [0, 0.06, 0.22, 0.28, 0.44, 0.50, 0.66, 0.72, 0.84, 0.90, 0.96, 1.0];
 
   /* ── Card 0: Topmost hero -> Top-Left in grid -> Slides DOWN over Card 2 -> Center below -> Stack top -> Scales up -> Settles to default ── */
-  const c0_x = useTransform(smoothProgress, P, [0, 0, -xSpan, -xSpan, -xSpan, -xSpan, -18, -18, 0, 0, 0, 0]);
+  const c0_x = useTransform(smoothProgress, P, [0, 0, -xSpan, -xSpan, -xSpan, -xSpan, -16, -16, 0, 0, 0, 0]);
   const c0_y = useTransform(smoothProgress, P, [0, 0, -ySpan, -ySpan, ySpan, ySpan, ySpan * 0.42, ySpan * 0.42, -8, -8, 0, 0]);
-  const c0_s = useTransform(smoothProgress, P, [fullCoverScale, fullCoverScale, gridScale, gridScale, 0.96, 0.96, 0.95, 0.95, defaultScale, defaultScale, fullCoverScale, defaultScale]);
+  const c0_s = useTransform(smoothProgress, P, [fullCoverScale, fullCoverScale, gridScale, gridScale, 0.66, 0.66, 0.64, 0.64, stackScale, stackScale, fullCoverScale, stackScale]);
   const c0_r = useTransform(smoothProgress, P, [0, 0, 0, 0, -2, -2, 0, 0, -3, -3, 0, 0]);
   const c0_o = useTransform(smoothProgress, P, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]);
   const c0_z = useTransform(smoothProgress, P, [35, 35, 20, 20, 26, 26, 26, 26, 30, 30, 35, 20]);
 
   /* ── Card 1: Top-Right in grid -> Static in Trigger 2 while Card 3 slides over -> Center above -> Stack middle -> Tucked behind ── */
-  const c1_x = useTransform(smoothProgress, P, [0, 0, xSpan, xSpan, xSpan, xSpan, 18, 18, 0, 0, 0, 0]);
+  const c1_x = useTransform(smoothProgress, P, [0, 0, xSpan, xSpan, xSpan, xSpan, 16, 16, 0, 0, 0, 0]);
   const c1_y = useTransform(smoothProgress, P, [0, 0, -ySpan, -ySpan, -ySpan, -ySpan, -ySpan * 0.42, -ySpan * 0.42, -3, -3, 0, 0]);
-  const c1_s = useTransform(smoothProgress, P, [0.95, 0.95, gridScale, gridScale, 0.88, 0.88, 0.92, 0.92, 0.98, 0.98, 0.95, 0.95]);
+  const c1_s = useTransform(smoothProgress, P, [gridScale, gridScale, gridScale, gridScale, 0.58, 0.58, 0.62, 0.62, stackScale - 0.02, stackScale - 0.02, 0.64, 0.64]);
   const c1_r = useTransform(smoothProgress, P, [0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 0, 0]);
   const c1_o = useTransform(smoothProgress, P, [0, 0, 1, 1, 0.6, 0.6, 0.85, 0.85, 1, 1, 0, 0]);
   const c1_z = useTransform(smoothProgress, P, [10, 10, 15, 15, 10, 10, 15, 15, 25, 25, 10, 10]);
 
   /* ── Card 2: Bottom-Left in grid -> Static in Trigger 2 while Card 0 slides over -> Center below -> Stack middle -> Tucked behind ── */
-  const c2_x = useTransform(smoothProgress, P, [0, 0, -xSpan, -xSpan, -xSpan, -xSpan, -18, -18, 0, 0, 0, 0]);
+  const c2_x = useTransform(smoothProgress, P, [0, 0, -xSpan, -xSpan, -xSpan, -xSpan, -16, -16, 0, 0, 0, 0]);
   const c2_y = useTransform(smoothProgress, P, [0, 0, ySpan, ySpan, ySpan, ySpan, ySpan * 0.42, ySpan * 0.42, 3, 3, 0, 0]);
-  const c2_s = useTransform(smoothProgress, P, [0.95, 0.95, gridScale, gridScale, 0.88, 0.88, 0.90, 0.90, 0.96, 0.96, 0.95, 0.95]);
+  const c2_s = useTransform(smoothProgress, P, [gridScale, gridScale, gridScale, gridScale, 0.58, 0.58, 0.60, 0.60, stackScale - 0.04, stackScale - 0.04, 0.64, 0.64]);
   const c2_r = useTransform(smoothProgress, P, [0, 0, 0, 0, 0, 0, -1, -1, -1, -1, 0, 0]);
   const c2_o = useTransform(smoothProgress, P, [0, 0, 1, 1, 0.6, 0.6, 0.85, 0.85, 1, 1, 0, 0]);
   const c2_z = useTransform(smoothProgress, P, [10, 10, 15, 15, 10, 10, 15, 15, 20, 20, 10, 10]);
 
   /* ── Card 3: Bottom-Right in grid -> Slides UP over Card 1 -> Center above -> Stack base -> Tucked behind ── */
-  const c3_x = useTransform(smoothProgress, P, [0, 0, xSpan, xSpan, xSpan, xSpan, 18, 18, 0, 0, 0, 0]);
+  const c3_x = useTransform(smoothProgress, P, [0, 0, xSpan, xSpan, xSpan, xSpan, 16, 16, 0, 0, 0, 0]);
   const c3_y = useTransform(smoothProgress, P, [0, 0, ySpan, ySpan, -ySpan, -ySpan, -ySpan * 0.42, -ySpan * 0.42, 8, 8, 0, 0]);
-  const c3_s = useTransform(smoothProgress, P, [0.95, 0.95, gridScale, gridScale, 0.96, 0.96, 0.96, 0.96, 0.94, 0.94, 0.95, 0.95]);
+  const c3_s = useTransform(smoothProgress, P, [gridScale, gridScale, gridScale, gridScale, 0.66, 0.66, 0.64, 0.64, stackScale - 0.06, stackScale - 0.06, 0.64, 0.64]);
   const c3_r = useTransform(smoothProgress, P, [0, 0, 0, 0, 2, 2, 0, 0, 3, 3, 0, 0]);
   const c3_o = useTransform(smoothProgress, P, [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0]);
   const c3_z = useTransform(smoothProgress, P, [10, 10, 15, 15, 26, 26, 25, 25, 15, 15, 10, 10]);
@@ -199,8 +202,8 @@ export function CardShuffleShowcase({
                   onClick={() => setActiveCardIdx(idx)}
                   style={{
                     position: "absolute",
-                    width: isMobile ? "min(88vw, 320px)" : "min(88vw, 420px)",
-                    height: isMobile ? 230 : 270,
+                    width: isMobile ? "min(88vw, 360px)" : "min(88vw, 560px)",
+                    height: isMobile ? 240 : 330,
                     x: transform.x,
                     y: transform.y,
                     rotate: transform.r,
@@ -208,7 +211,11 @@ export function CardShuffleShowcase({
                     opacity: transform.o,
                     zIndex: transform.z,
                     cursor: "pointer",
-                    willChange: "transform, opacity",
+                    WebkitFontSmoothing: "antialiased",
+                    MozOsxFontSmoothing: "grayscale",
+                    textRendering: "optimizeLegibility",
+                    transformStyle: "preserve-3d",
+                    backfaceVisibility: "hidden",
                   }}
                   whileHover={{
                     scale: 1.025,
@@ -220,8 +227,8 @@ export function CardShuffleShowcase({
                     style={{
                       width: "100%",
                       height: "100%",
-                      borderRadius: 22,
-                      padding: isMobile ? "18px 20px" : "24px 26px",
+                      borderRadius: 24,
+                      padding: isMobile ? "20px 22px" : "32px 36px",
                       display: "flex",
                       flexDirection: "column",
                       justifyContent: "space-between",
@@ -244,8 +251,8 @@ export function CardShuffleShowcase({
                         justifyContent: "space-between",
                         alignItems: "center",
                         fontFamily: "var(--mf-mono)",
-                        fontSize: "0.6875rem",
-                        letterSpacing: "0.06em",
+                        fontSize: isMobile ? "0.6875rem" : "0.75rem",
+                        letterSpacing: "0.08em",
                         color: isSelected ? "#10b981" : "var(--mf-ink-3)",
                       }}
                     >
@@ -253,12 +260,13 @@ export function CardShuffleShowcase({
                       <span
                         style={{
                           textTransform: "uppercase",
-                          padding: "3px 10px",
+                          padding: "4px 12px",
                           borderRadius: 999,
                           backgroundColor: isSelected ? "rgba(16, 185, 129, 0.15)" : "#f5f5f5",
                           color: isSelected ? "#10b981" : "var(--mf-ink-2)",
                           fontWeight: 500,
-                          fontSize: "0.625rem",
+                          fontSize: isMobile ? "0.625rem" : "0.6875rem",
+                          letterSpacing: "0.06em",
                         }}
                       >
                         {hop.role}
@@ -266,12 +274,12 @@ export function CardShuffleShowcase({
                     </div>
 
                     {/* Middle: Name & Plain-English Description */}
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                       <div
                         style={{
-                          fontSize: isMobile ? "1.1rem" : "1.25rem",
+                          fontSize: isMobile ? "1.2rem" : "1.5rem",
                           fontWeight: 600,
-                          letterSpacing: "-0.02em",
+                          letterSpacing: "-0.025em",
                           lineHeight: 1.2,
                         }}
                       >
@@ -280,24 +288,24 @@ export function CardShuffleShowcase({
                       <p
                         style={{
                           margin: 0,
-                          fontSize: isMobile ? "0.8125rem" : "0.875rem",
-                          lineHeight: 1.45,
-                          color: isSelected ? "rgba(255, 255, 255, 0.78)" : "var(--mf-ink-2)",
+                          fontSize: isMobile ? "0.85rem" : "0.98rem",
+                          lineHeight: 1.55,
+                          color: isSelected ? "rgba(255, 255, 255, 0.82)" : "var(--mf-ink-2)",
                         }}
                       >
                         {hop.note}
                       </p>
                     </div>
 
-                    {/* Bottom: Exact Code Spot Tag */}
+                    {/* Bottom: Verified Code Citation Tag */}
                     <div
                       style={{
                         display: "flex",
                         justifyContent: "space-between",
                         alignItems: "center",
                         fontFamily: "var(--mf-mono)",
-                        fontSize: "0.72rem",
-                        paddingTop: 10,
+                        fontSize: isMobile ? "0.7rem" : "0.78rem",
+                        paddingTop: 14,
                         borderTop: isSelected ? "1px solid rgba(255, 255, 255, 0.12)" : "1px solid #f0f0f0",
                         letterSpacing: "0.04em",
                       }}
@@ -309,7 +317,7 @@ export function CardShuffleShowcase({
                         style={{
                           color: isSelected ? "#10b981" : "var(--mf-ink)",
                           fontWeight: 600,
-                          fontSize: "0.75rem",
+                          fontSize: isMobile ? "0.75rem" : "0.82rem",
                         }}
                       >
                         {hop.line}
