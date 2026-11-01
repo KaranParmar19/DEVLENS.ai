@@ -356,7 +356,7 @@ export function HowItWorksPage() {
       {/* ═══════════════════════════════════════════════════════════════════
           00 · EDITORIAL HERO + INTERACTIVE MAGIC LENS
           ═══════════════════════════════════════════════════════════════════ */}
-      <section className="mf-hero" data-theme="light" style={{ paddingBottom: "clamp(56px, 7vw, 96px)" }}>
+      <section className="mf-hero" data-theme="light" style={{ paddingBottom: "clamp(20px, 2.5vw, 36px)" }}>
         <div className="mf-hero-grid-bg" />
         <div className="mf-wrap">
           <motion.div
@@ -416,7 +416,7 @@ export function HowItWorksPage() {
       {/* ═══════════════════════════════════════════════════════════════════
           01 · "FOLLOW ANY ACTION" — STEP-BY-STEP STORY (LIGHT)
           ═══════════════════════════════════════════════════════════════════ */}
-      <section className="mf-section" data-theme="light" style={{ paddingBottom: 0 }}>
+      <section className="mf-section" data-theme="light" style={{ paddingTop: "clamp(24px, 3vw, 44px)", paddingBottom: 0 }}>
         <div className="mf-wrap">
           <div className="mf-sec-bar">
             <span className="idx">[01 / ARCHITECTURE TRACE]</span>
@@ -428,7 +428,7 @@ export function HowItWorksPage() {
             <Reveal>
               <h2 className="mf-h1" style={{ maxWidth: "14em", margin: 0 }}>
                 Pick an everyday action.{" "}
-                <span className="mf-serif-i" style={{ fontWeight: 400 }}>
+                <span className="mf-serif-i" style={{ fontWeight: 400, color: "var(--mf-ink-3, #767676)" }}>
                   Watch how it executes.
                 </span>
               </h2>
