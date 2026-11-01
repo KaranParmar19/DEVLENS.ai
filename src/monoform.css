@@ -1413,37 +1413,31 @@ button.mf-btn.sm {
 
 .curvy-stage {
   width: 100%;
-  height: 330px;
   position: relative;
   overflow: hidden;
-  touch-action: pan-y;
-  user-select: none;
-  cursor: grab;
-}
-
-.curvy-stage:active {
-  cursor: grabbing;
 }
 
 .curvy-track {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  transform-style: preserve-3d;
   display: flex;
-  align-items: center;
-  pointer-events: auto;
+  gap: 22px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+  padding: 8px 4px 20px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.curvy-track::-webkit-scrollbar {
+  display: none;
 }
 
 .curvy-card-slot {
-  position: absolute;
-  left: 0;
-  top: 15px;
-  height: 290px;
-  transform-style: preserve-3d;
-  will-change: transform, opacity;
+  flex: 0 0 340px;
+  min-width: 300px;
+  max-width: 360px;
+  height: 275px;
+  scroll-snap-align: start;
 }
 
 .curvy-repo-card {
@@ -1458,7 +1452,7 @@ button.mf-btn.sm {
   flex-direction: column;
   justify-content: space-between;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
   cursor: pointer;
   text-align: left;
   outline: none;
@@ -1468,21 +1462,33 @@ button.mf-btn.sm {
 .curvy-repo-card:hover {
   border-color: #000000 !important;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.14) !important;
+  transform: translateY(-4px);
 }
 
 .dx-card-remove-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid var(--mf-line);
+  background: #ffffff;
+  color: var(--mf-ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-family: var(--mf-mono, monospace);
   cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
   z-index: 10;
   position: relative;
-  pointer-events: auto;
-  transition: all 0.15s ease;
 }
 
 .dx-card-remove-btn:hover {
   background: #000000 !important;
   color: #ffffff !important;
   border-color: #000000 !important;
-  transform: scale(1.08);
+  transform: scale(1.1);
 }
 
 .mf-root[data-theme='dark'] .curvy-repo-card {
