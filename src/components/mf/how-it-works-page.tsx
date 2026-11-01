@@ -439,7 +439,7 @@ export function HowItWorksPage() {
         {/* Full-Screen Card Shuffle on Scroll: takes entire page during animation, returns to default size when scrolling past */}
         <CardShuffleShowcase chains={THREAD_CHAINS} />
 
-        <div className="mf-wrap" style={{ marginTop: 72 }}>
+        <div className="mf-wrap" style={{ marginTop: "clamp(64px, 8vw, 112px)", marginBottom: "clamp(64px, 8vw, 112px)" }}>
           {/* 2 Simple, Friendly Promise Cards */}
           <div className="hwc-promise-grid">
             <Reveal>
@@ -454,7 +454,7 @@ export function HowItWorksPage() {
               </div>
             </Reveal>
 
-            <Reveal delay={80}>
+            <Reveal>
               <div className="hwc-promise-card hwc-promise-card--light">
                 <span className="mf-mono" style={{ fontSize: "0.68rem", color: "var(--mf-ink-3)" }}>
                   NO GUESSWORK
@@ -472,7 +472,7 @@ export function HowItWorksPage() {
       {/* ═══════════════════════════════════════════════════════════════════
           02 · BEGINNER FAQ + ONE-CLICK PROJECT LAUNCHER
           ═══════════════════════════════════════════════════════════════════ */}
-      <section className="mf-section" data-theme="light" style={{ paddingTop: 0 }}>
+      <section className="mf-section" data-theme="light">
         <div className="mf-wrap">
           <Reveal>
             <FAQSection items={BEGINNER_FAQS} />

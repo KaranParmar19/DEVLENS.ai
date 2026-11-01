@@ -124,21 +124,20 @@ export function CardShuffleShowcase({
       style={{
         position: "relative",
         height: "450vh",
-        width: "100vw",
-        marginLeft: "calc(-50vw + 50%)",
-        marginRight: "calc(-50vw + 50%)",
+        width: "100%",
         marginTop: 0,
         marginBottom: 0,
+        overflow: "visible",
       }}
     >
-      {/* Sticky Viewport Stage: Takes over the ENTIRE page (100vw, 100vh) for the animation duration */}
+      {/* Sticky Viewport Stage: Takes over the ENTIRE page for the animation duration */}
       <div
         className="card-shuffle-sticky"
         style={{
           position: "sticky",
           top: 0,
           left: 0,
-          width: "100vw",
+          width: "100%",
           height: "100vh",
           display: "flex",
           alignItems: "center",
