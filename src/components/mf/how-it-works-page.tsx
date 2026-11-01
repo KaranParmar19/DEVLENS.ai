@@ -1,22 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { Pill, Reveal, SiteLayout } from "./site-layout";
 import { MorphText } from "@/components/ui/morph-text";
 import { FAQSection, type FAQItemData } from "@/components/ui/faq-section";
 import { CardShuffleShowcase } from "@/components/ui/card-shuffle-showcase";
-import { normalizeRepoUrl } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    BEGINNER-FRIENDLY INTERACTIVE DATA (PLAIN, SIMPLE ENGLISH)
    ═══════════════════════════════════════════════════════════════════════════ */
-
-const TRY_REPOS = [
-  { label: "facebook/react", tag: "Popular App" },
-  { label: "vercel/next.js", tag: "Web Starter" },
-  { label: "fastapi/fastapi", tag: "Python App" },
-  { label: "tailwindlabs/tailwindcss", tag: "Design Tool" },
-];
 
 /* Nodes inside the Hero Magic Lens */
 const LENS_ITEMS = [
@@ -337,20 +328,6 @@ function InteractiveXRayLens() {
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export function HowItWorksPage() {
-  const navigate = useNavigate();
-
-  // Repo launcher state
-  const [repoInput, setRepoInput] = useState<string>("");
-
-  const launchRepo = (value: string) => {
-    const normalized = normalizeRepoUrl(value);
-    if (!normalized) {
-      navigate({ to: "/dashboard" });
-      return;
-    }
-    navigate({ to: "/dashboard", search: { repo: normalized } });
-  };
-
   return (
     <SiteLayout>
       {/* ═══════════════════════════════════════════════════════════════════
@@ -470,63 +447,12 @@ export function HowItWorksPage() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          02 · BEGINNER FAQ + ONE-CLICK PROJECT LAUNCHER
+          02 · BEGINNER FAQ
           ═══════════════════════════════════════════════════════════════════ */}
       <section className="mf-section" data-theme="light" style={{ paddingTop: "clamp(36px, 4.5vw, 60px)" }}>
         <div className="mf-wrap">
           <Reveal>
             <FAQSection items={BEGINNER_FAQS} />
-          </Reveal>
-
-          <Reveal>
-            <div className="hwc-finale">
-              <div>
-                <Pill live>Ready in About 7 Seconds</Pill>
-                <h2 className="mf-h1" style={{ margin: "18px 0 0", fontSize: "clamp(2.2rem, 4.8vw, 4.2rem)" }}>
-                  Try it on a project{" "}
-                  <span className="mf-serif-i" style={{ fontWeight: 400 }}>
-                    right now.
-                  </span>
-                </h2>
-              </div>
-
-              <div>
-                <form
-                  className="mf-ingest"
-                  style={{ width: "100%" }}
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    launchRepo(repoInput);
-                  }}
-                >
-                  <span className="mf-mono mf-muted">github.com/</span>
-                  <input
-                    value={repoInput}
-                    onChange={(e) => setRepoInput(e.target.value)}
-                    placeholder="owner/project or paste link"
-                    aria-label="GitHub project link"
-                    spellCheck={false}
-                  />
-                  <button type="submit" className="mf-btn">
-                    Explore <span className="mf-arrow">↗</span>
-                  </button>
-                </form>
-
-                <div className="mf-chips" style={{ marginTop: 14 }}>
-                  {TRY_REPOS.map((t) => (
-                    <button
-                      key={t.label}
-                      type="button"
-                      className="mf-pill mf-chip"
-                      onClick={() => launchRepo(t.label)}
-                    >
-                      <span>{t.label}</span>
-                      <span style={{ opacity: 0.5, fontSize: "0.625rem" }}>({t.tag})</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
           </Reveal>
         </div>
       </section>

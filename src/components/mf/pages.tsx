@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { Pill, Reveal, SiteLayout } from "./site-layout";
 import { MorphText } from "@/components/ui/morph-text";
 import { AnimatedPath } from "@/components/ui/animated-path";
-import { normalizeRepoUrl } from "@/lib/utils";
 
 /* ═══ INTERACTIVE DATA FOR FEATURES SHOWCASE ════════════════════════ */
 
@@ -284,14 +283,12 @@ INVARIANT_03: Worker sandboxes must purge cloned disk state within 30s of job co
 /* ═══ FEATURES PAGE COMPONENT ═══════════════════════════════════════ */
 
 export function FeaturesPage() {
-  const navigate = useNavigate();
   const [selectedNodeId, setSelectedNodeId] = useState(2);
   const [activeHop, setActiveHop] = useState(2);
   const [activeCommit, setActiveCommit] = useState(0);
   const [activePrompt, setActivePrompt] = useState(0);
   const [activeDossier, setActiveDossier] = useState(0);
   const [copiedDoc, setCopiedDoc] = useState(false);
-  const [repoInput, setRepoInput] = useState("facebook/react");
 
   const activeNode = FEAT_NODES.find((n) => n.id === selectedNodeId) ?? FEAT_NODES[2];
   const currentHop = FLOW_HOPS[activeHop] ?? FLOW_HOPS[2];
@@ -312,12 +309,6 @@ export function FeaturesPage() {
     );
     setCopiedDoc(true);
     setTimeout(() => setCopiedDoc(false), 1800);
-  };
-
-  const handleLaunchRepo = (raw: string) => {
-    const normalized = normalizeRepoUrl(raw);
-    if (!normalized) return;
-    navigate({ to: "/dashboard", search: { repo: normalized } });
   };
 
   return (
@@ -1147,66 +1138,6 @@ export function FeaturesPage() {
                     </tr>
                   </tbody>
                 </table>
-              </div>
-            </div>
-          </Reveal>
-
-          {/* Interactive Bottom Repo Launcher */}
-          <Reveal>
-            <div
-              style={{
-                marginTop: "clamp(64px, 8vw, 112px)",
-                padding: "clamp(36px, 5vw, 64px)",
-                borderRadius: 28,
-                border: "1px solid var(--mf-ink)",
-                background: "var(--mf-soft)",
-                display: "grid",
-                gridTemplateColumns: "1.1fr 1fr",
-                gap: 40,
-                alignItems: "center",
-              }}
-              className="feat-hero-grid"
-            >
-              <div>
-                <Pill live>READY IN UNDER 8 SECONDS</Pill>
-                <h2 className="mf-h1" style={{ margin: "18px 0 0", fontSize: "clamp(2.2rem, 4.8vw, 4.2rem)" }}>
-                  Map your own repository <span className="mf-serif-i">right now.</span>
-                </h2>
-              </div>
-
-              <div>
-                <form
-                  className="mf-ingest"
-                  style={{ width: "100%" }}
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    handleLaunchRepo(repoInput);
-                  }}
-                >
-                  <span className="mf-mono mf-muted">github.com/</span>
-                  <input
-                    value={repoInput}
-                    onChange={(e) => setRepoInput(e.target.value)}
-                    placeholder="owner/repo or full URL"
-                    aria-label="Repository URL"
-                    spellCheck={false}
-                  />
-                  <button type="submit" className="mf-btn">
-                    Analyze <span className="mf-arrow">↗</span>
-                  </button>
-                </form>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
-                  {["facebook/react", "vercel/next.js", "fastapi/fastapi"].map((sample) => (
-                    <button
-                      key={sample}
-                      type="button"
-                      className="mf-pill mf-chip"
-                      onClick={() => handleLaunchRepo(sample)}
-                    >
-                      {sample} ↗
-                    </button>
-                  ))}
-                </div>
               </div>
             </div>
           </Reveal>
