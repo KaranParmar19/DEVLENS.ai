@@ -222,21 +222,18 @@ function DashboardPage() {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const history = useMemo(() => repoHistory.getAll(), [version, repo]);
-  const [showcaseMode, setShowcaseMode] = useState<"recent" | "starters">("recent");
-
-  // Automatically show starter showcase if history is empty
-  const effectiveShowcaseMode = history.length === 0 ? "starters" : showcaseMode;
 
   const activeShowcaseEntries = useMemo(() => {
-    const base = effectiveShowcaseMode === "recent" ? history : STARTER_SHOWCASE_ENTRIES;
+    const base = history.length > 0 ? history : STARTER_SHOWCASE_ENTRIES;
     if (!repoFilter.trim()) return base;
     const q = repoFilter.trim().toLowerCase();
     return base.filter(
       (item) =>
         item.repoLabel.toLowerCase().includes(q) ||
+        item.repoUrl.toLowerCase().includes(q) ||
         Object.keys(item.meta?.languages || {}).some((l) => l.toLowerCase().includes(q))
     );
-  }, [effectiveShowcaseMode, history, repoFilter]);
+  }, [history, repoFilter]);
 
   const { user, isAuthenticated, loginWithGitHub, loginWithToken, logout } = useAuth();
   const [showTokenModal, setShowTokenModal] = useState(false);
@@ -963,7 +960,7 @@ function DashboardPage() {
           </motion.aside>
         </section>
 
-        {/* 3. Full-Width Sliding Repository Showcase (CurvyShowcase Kept Intact) */}
+        {/* 3. Full-Width Sliding Repository Showcase */}
         <motion.section
           className="dx-showcase-section"
           initial={{ opacity: 0, y: 18 }}
@@ -972,40 +969,10 @@ function DashboardPage() {
         >
           <div className="dx-showcase-bar">
             <div className="dx-showcase-title-group">
-              <span className="mf-mono mf-muted">[ REPOSITORY STAGE // 3D RIBBON ]</span>
               <div className="dx-showcase-heading-row">
                 <h2 className="mf-h2 dx-showcase-h2">
-                  Workspace <span className="mf-serif-i">repositories.</span>
+                  Workspace repositories.
                 </h2>
-
-                {/* Segmented Switcher: User History vs Curated Starters */}
-                <div className="dx-tabs" role="tablist">
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={effectiveShowcaseMode === "recent"}
-                    className={`dx-tab ${effectiveShowcaseMode === "recent" ? "is-active" : ""}`}
-                    onClick={() => setShowcaseMode("recent")}
-                    disabled={history.length === 0}
-                    title={
-                      history.length === 0
-                        ? "Analyze a repository first to populate your history"
-                        : "Your recently analyzed repositories"
-                    }
-                  >
-                    Recent <span className="dx-tab-count">{history.length}</span>
-                  </button>
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={effectiveShowcaseMode === "starters"}
-                    className={`dx-tab ${effectiveShowcaseMode === "starters" ? "is-active" : ""}`}
-                    onClick={() => setShowcaseMode("starters")}
-                  >
-                    Starter Showcase{" "}
-                    <span className="dx-tab-count">{STARTER_SHOWCASE_ENTRIES.length}</span>
-                  </button>
-                </div>
               </div>
             </div>
 
@@ -1030,7 +997,7 @@ function DashboardPage() {
                 )}
               </div>
 
-              {effectiveShowcaseMode === "recent" && history.length > 0 && (
+              {history.length > 0 && (
                 <button
                   type="button"
                   className="mf-btn ghost sm"
@@ -1048,12 +1015,20 @@ function DashboardPage() {
           {activeShowcaseEntries.length > 0 ? (
             <CurvyShowcase
               entries={activeShowcaseEntries}
-              onOpen={(repoUrl) => navigate({ search: { repo: repoUrl } })}
+              onOpen={(entry) => {
+                const target = entry.repoUrl || entry.repoLabel;
+                const normalized = normalizeRepoUrl(target);
+                if (!normalized) return;
+                navigate({
+                  search: {
+                    repo: normalized,
+                    sessionId: entry.id && !entry.id.startsWith("starter-") ? entry.id : undefined,
+                  },
+                });
+              }}
               onDelete={(id) => {
-                if (effectiveShowcaseMode === "recent") {
-                  repoHistory.remove(id);
-                  setVersion((v) => v + 1);
-                }
+                repoHistory.remove(id);
+                setVersion((v) => v + 1);
               }}
             />
           ) : (

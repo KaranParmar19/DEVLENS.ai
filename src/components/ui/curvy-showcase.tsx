@@ -13,6 +13,17 @@ export const LANG_COLORS: Record<string, string> = {
   PHP: "#4F5D95",
   HTML: "#e34c26",
   CSS: "#563d7c",
+  PLpgSQL: "#336791",
+  PLPGSQL: "#336791",
+  SQL: "#e38c00",
+  Shell: "#89e051",
+  C: "#555555",
+  "C++": "#f34b7d",
+  "C#": "#178600",
+  Kotlin: "#A97BFF",
+  Swift: "#F05138",
+  Vue: "#41b883",
+  Svelte: "#ff3e00",
 };
 
 export function timeAgo(iso: string): string {
@@ -26,7 +37,7 @@ export function timeAgo(iso: string): string {
 
 export interface CurvyShowcaseProps {
   entries: RepoHistoryEntry[];
-  onOpen: (repoUrl: string) => void;
+  onOpen: (entry: RepoHistoryEntry) => void;
   onDelete: (id: string) => void;
   className?: string;
 }
@@ -60,6 +71,7 @@ export function CurvyShowcase({
   const lastTime = useRef(0);
   const velocity = useRef(0);
   const hasMoved = useRef(false);
+  const pointerCaptured = useRef(false);
   const wheelTimer = useRef<number | null>(null);
   const activeIndexRef = useRef(0);
 
@@ -196,26 +208,29 @@ export function CurvyShowcase({
 
     isDragging.current = true;
     hasMoved.current = false;
+    pointerCaptured.current = false;
     startX.current = e.clientX;
     lastX.current = e.clientX;
     lastTime.current = performance.now();
     startScroll.current = currentScroll.current;
     velocity.current = 0;
-
-    try {
-      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    } catch {
-      // Ignore if pointer capture fails
-    }
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
     if (!isDragging.current) return;
 
     const deltaX = e.clientX - startX.current;
-    if (Math.abs(deltaX) > 6) {
+    if (!hasMoved.current && Math.abs(deltaX) > 6) {
       hasMoved.current = true;
+      try {
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        pointerCaptured.current = true;
+      } catch {
+        // Ignore if pointer capture fails
+      }
     }
+
+    if (!hasMoved.current) return;
 
     const now = performance.now();
     const dt = now - lastTime.current;
@@ -242,10 +257,18 @@ export function CurvyShowcase({
     if (!isDragging.current) return;
     isDragging.current = false;
 
-    try {
-      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-    } catch {
-      // Ignore
+    if (pointerCaptured.current) {
+      try {
+        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+      } catch {
+        // Ignore
+      }
+      pointerCaptured.current = false;
+    }
+
+    if (!hasMoved.current) {
+      // User tapped or clicked without dragging — native click handler will fire
+      return;
     }
 
     // Toss projection based on drag velocity
@@ -324,9 +347,7 @@ export function CurvyShowcase({
                   ? `${sizeKb} KB`
                   : null;
             const pct =
-              entry.status === "complete" ? 100 : entry.status === "failed" ? 0 : 55;
-
-            const isCurrent = idx === activeIndex;
+              entry.status === "complete" ? 100 : entry.status === "failed" ? 100 : 55;
 
             return (
               <div
@@ -340,17 +361,27 @@ export function CurvyShowcase({
                 }}
               >
                 <motion.div
-                  className={`curvy-repo-card ${isCurrent ? "is-active" : ""}`}
+                  className="curvy-repo-card"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Open repository workspace for ${entry.repoLabel}`}
                   onClick={(e) => {
-                    // Prevent accidental clicks if the user dragged
+                    if ((e.target as HTMLElement).closest(".mf-kbd, button[aria-label]")) return;
                     if (hasMoved.current) {
                       e.preventDefault();
                       e.stopPropagation();
                       return;
                     }
-                    onOpen(entry.repoUrl);
+                    onOpen(entry);
                   }}
-                  whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onOpen(entry);
+                    }
+                  }}
+                  whileHover={{ y: -5, transition: { duration: 0.18, ease: "easeOut" } }}
+                  whileTap={{ scale: 0.985 }}
                 >
                   {/* Top Bar: Status Badge + Delete Button */}
                   <div className="curvy-card-top">
@@ -362,14 +393,14 @@ export function CurvyShowcase({
                             ? { background: "#10b981" }
                             : entry.status === "failed"
                               ? { background: "#ef4444" }
-                              : undefined
+                              : { background: "#f59e0b" }
                         }
                       />
-                      {entry.status}
+                      {entry.status.toUpperCase()}
                     </span>
                     <button
                       type="button"
-                      aria-label="Remove repository"
+                      aria-label={`Remove ${entry.repoLabel} from history`}
                       className="mf-kbd"
                       style={{ cursor: "pointer", transition: "all 0.15s" }}
                       onClick={(e) => {
@@ -416,7 +447,12 @@ export function CurvyShowcase({
                       <i
                         style={{
                           width: `${pct}%`,
-                          background: entry.status === "failed" ? "#ef4444" : "var(--mf-ink)",
+                          background:
+                            entry.status === "failed"
+                              ? "#ef4444"
+                              : entry.status === "indexing"
+                                ? "#f59e0b"
+                                : "var(--mf-ink)",
                         }}
                       />
                     </div>
@@ -436,29 +472,35 @@ export function CurvyShowcase({
                       </span>
 
                       <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                        {langs.map((lang) => (
-                          <span
-                            key={lang}
-                            className="mf-mono"
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 4,
-                              fontSize: "0.625rem",
-                              color: "var(--mf-ink-2)",
-                            }}
-                          >
+                        {langs.map((lang) => {
+                          const langKey =
+                            Object.keys(LANG_COLORS).find(
+                              (k) => k.toLowerCase() === lang.toLowerCase()
+                            ) || lang;
+                          return (
                             <span
+                              key={lang}
+                              className="mf-mono"
                               style={{
-                                width: 6,
-                                height: 6,
-                                borderRadius: "50%",
-                                background: LANG_COLORS[lang] || "#888888",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 4,
+                                fontSize: "0.625rem",
+                                color: "var(--mf-ink-2)",
                               }}
-                            />
-                            {lang.toUpperCase()}
-                          </span>
-                        ))}
+                            >
+                              <span
+                                style={{
+                                  width: 6,
+                                  height: 6,
+                                  borderRadius: "50%",
+                                  background: LANG_COLORS[langKey] || "#888888",
+                                }}
+                              />
+                              {lang.toUpperCase()}
+                            </span>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>

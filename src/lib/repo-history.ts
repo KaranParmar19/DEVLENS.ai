@@ -62,7 +62,42 @@ function save(entries: RepoHistoryEntry[]) {
 
 export const repoHistory = {
   getAll(): RepoHistoryEntry[] {
-    return load().sort((a, b) => {
+    const raw = load();
+    const now = Date.now();
+    const seen = new Set<string>();
+    const cleaned: RepoHistoryEntry[] = [];
+    let modified = false;
+
+    for (const entry of raw) {
+      // Normalize unique key (case-insensitive repoLabel or repoUrl)
+      const key = (entry.repoLabel || entry.repoUrl || entry.id).trim().toLowerCase();
+      if (seen.has(key)) {
+        modified = true;
+        continue;
+      }
+      seen.add(key);
+
+      // Reconcile stale 'indexing' jobs from past sessions (> 5 minutes old)
+      if (entry.status === 'indexing') {
+        const timestamp = new Date(entry.analyzedAt || entry.lastVisitedAt || 0).getTime();
+        if (now - timestamp > 5 * 60 * 1000) {
+          if (entry.meta && entry.meta.files > 0) {
+            entry.status = 'complete';
+          } else {
+            entry.status = 'failed';
+          }
+          modified = true;
+        }
+      }
+
+      cleaned.push(entry);
+    }
+
+    if (modified) {
+      save(cleaned);
+    }
+
+    return cleaned.sort((a, b) => {
       const timeB = new Date(b.lastVisitedAt || b.analyzedAt || 0).getTime();
       const timeA = new Date(a.lastVisitedAt || a.analyzedAt || 0).getTime();
       return timeB - timeA;
@@ -71,7 +106,14 @@ export const repoHistory = {
 
   upsert(entry: Omit<RepoHistoryEntry, 'lastVisitedAt'>): RepoHistoryEntry {
     const entries = load();
-    const existing = entries.findIndex((e) => e.id === entry.id || e.repoUrl === entry.repoUrl);
+    const targetLabel = (entry.repoLabel || "").trim().toLowerCase();
+    const targetUrl = (entry.repoUrl || "").trim().toLowerCase();
+    const existing = entries.findIndex(
+      (e) =>
+        e.id === entry.id ||
+        (targetLabel && e.repoLabel.trim().toLowerCase() === targetLabel) ||
+        (targetUrl && e.repoUrl.trim().toLowerCase() === targetUrl)
+    );
     const now = new Date().toISOString();
     const updated: RepoHistoryEntry = { ...entry, lastVisitedAt: now };
 
@@ -112,7 +154,13 @@ export const repoHistory = {
   },
 
   remove(sessionId: string) {
-    const entries = load().filter((e) => e.id !== sessionId);
+    const target = sessionId.trim().toLowerCase();
+    const entries = load().filter(
+      (e) =>
+        e.id !== sessionId &&
+        e.repoLabel.trim().toLowerCase() !== target &&
+        e.repoUrl.trim().toLowerCase() !== target
+    );
     save(entries);
   },
 
