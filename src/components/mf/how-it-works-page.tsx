@@ -416,7 +416,7 @@ export function HowItWorksPage() {
       {/* ═══════════════════════════════════════════════════════════════════
           01 · "FOLLOW ANY ACTION" — STEP-BY-STEP STORY (LIGHT)
           ═══════════════════════════════════════════════════════════════════ */}
-      <section className="mf-section" data-theme="light">
+      <section className="mf-section" data-theme="light" style={{ paddingBottom: 0 }}>
         <div className="mf-wrap">
           <div className="mf-sec-bar">
             <span className="idx">[01 / FOLLOW ANY ACTION]</span>
@@ -424,7 +424,7 @@ export function HowItWorksPage() {
             <span className="tag">SEE HOW ONE CLICK TRAVELS THROUGH AN APP</span>
           </div>
 
-          <div className="hwc-thread-head" style={{ marginBottom: 20 }}>
+          <div className="hwc-thread-head" style={{ marginBottom: 32 }}>
             <Reveal>
               <h2 className="mf-h1" style={{ maxWidth: "13em", margin: 0 }}>
                 Pick an everyday action.{" "}
@@ -434,10 +434,12 @@ export function HowItWorksPage() {
               </h2>
             </Reveal>
           </div>
+        </div>
 
-          {/* Interactive Card Shuffle on Scroll Component */}
-          <CardShuffleShowcase chains={THREAD_CHAINS} />
+        {/* Full-Screen Card Shuffle on Scroll: takes entire page during animation, returns to default size when scrolling past */}
+        <CardShuffleShowcase chains={THREAD_CHAINS} />
 
+        <div className="mf-wrap" style={{ marginTop: 72 }}>
           {/* 2 Simple, Friendly Promise Cards */}
           <div className="hwc-promise-grid">
             <Reveal>
