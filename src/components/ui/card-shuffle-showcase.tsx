@@ -200,8 +200,8 @@ export function CardShuffleShowcase({
                   onClick={() => setActiveCardIdx(idx)}
                   style={{
                     position: "absolute",
-                    width: isMobile ? "min(86vw, 310px)" : "min(88vw, 390px)",
-                    height: isMobile ? 215 : 255,
+                    width: isMobile ? "min(88vw, 320px)" : "min(88vw, 420px)",
+                    height: isMobile ? 230 : 270,
                     x: transform.x,
                     y: transform.y,
                     rotate: transform.r,
@@ -304,12 +304,13 @@ export function CardShuffleShowcase({
                       }}
                     >
                       <span style={{ color: isSelected ? "rgba(255, 255, 255, 0.5)" : "var(--mf-ink-3)" }}>
-                        ↳ EXACT SPOT
+                        ↳ AST CITATION
                       </span>
                       <strong
                         style={{
                           color: isSelected ? "#10b981" : "var(--mf-ink)",
                           fontWeight: 600,
+                          fontSize: "0.75rem",
                         }}
                       >
                         {hop.line}

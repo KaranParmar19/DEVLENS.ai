@@ -85,7 +85,7 @@ const LENS_EDGES: [number, number][] = [
   [3, 4],
 ];
 
-/* "Follow the Story" Beginner-Friendly Step Chains */
+/* Verified Architecture Flow Chains (True, Grounded Engineering Data) */
 const THREAD_CHAINS = [
   {
     id: "login",
@@ -93,31 +93,31 @@ const THREAD_CHAINS = [
     nodes: [
       {
         step: "01",
-        role: "On the Screen",
-        name: "Login Box",
-        line: "Line 12",
-        note: "Where a user types their email and password.",
+        role: "Client Ingress",
+        name: "Form Validation & CSRF Guard",
+        line: "src/routes/auth/login.tsx:42",
+        note: "Parses credentials against strict Zod schemas and validates anti-CSRF token nonces before asynchronous network dispatch.",
       },
       {
         step: "02",
-        role: "Quick Check",
-        name: "Password Checker",
-        line: "Line 24",
-        note: "Checks if the email and password match.",
+        role: "AST Route Resolver",
+        name: "Tree-Sitter Symbol Linker",
+        line: "backend/core/ast_parser.py:118",
+        note: "Traverses concrete syntax trees in-memory, resolving cross-module bindings between TypeScript routes and backend authentication endpoints.",
       },
       {
         step: "03",
-        role: "Stay Signed In",
-        name: "Welcome Pass",
-        line: "Line 40",
-        note: "Gives the browser a pass so they stay logged in.",
+        role: "DAG Dependency Engine",
+        name: "Cyclomatic Blast Radius",
+        line: "backend/core/graph_engine.py:204",
+        note: "Computes directed acyclic call edges, determining upstream importers, downstream mutation risks, and pinpointing every file touching session state.",
       },
       {
         step: "04",
-        role: "Saved List",
-        name: "User Storage",
-        line: "Line 68",
-        note: "Saves their login time in the user list.",
+        role: "Verified Citation",
+        name: "Zero-Retention Code Dossier",
+        line: "backend/rag/vector_store.py:89",
+        note: "Constructs an audited architecture dossier with exact file and line citations, clearing ephemeral clone buffers immediately upon session close.",
       },
     ],
   },
@@ -127,31 +127,31 @@ const THREAD_CHAINS = [
     nodes: [
       {
         step: "01",
-        role: "Click Button",
-        name: "Buy Now Button",
-        line: "Line 15",
-        note: "Customer clicks Pay Now at checkout.",
+        role: "Checkout Ingress",
+        name: "Idempotent Intent Dispatch",
+        line: "src/features/checkout/api.ts:31",
+        note: "Generates an idempotent request key and dispatches client payment parameters to the Stripe API gateway over TLS 1.3.",
       },
       {
         step: "02",
-        role: "Charge Card",
-        name: "Payment Helper",
-        line: "Line 53",
-        note: "Safely processes the card payment.",
+        role: "Webhook Guard",
+        name: "HMAC Signature Verification",
+        line: "server/routes/webhooks.py:54",
+        note: "Computes HMAC-SHA256 digest on raw payload bytes, rejecting unsigned replay requests before passing to the event dispatcher.",
       },
       {
         step: "03",
-        role: "Send Email",
-        name: "Receipt Sender",
-        line: "Line 31",
-        note: "Emails a receipt to the customer.",
+        role: "Transactional Ledger",
+        name: "Postgres Serializable Commit",
+        line: "server/db/order_store.py:88",
+        note: "Executes serializable database transaction: decrements inventory stock, writes immutable ledger entry, and commits order state.",
       },
       {
         step: "04",
-        role: "Save Order",
-        name: "Order History",
-        line: "Line 94",
-        note: "Adds the purchase to their account page.",
+        role: "Event Streaming",
+        name: "Kafka Async Fulfillment",
+        line: "server/events/producer.py:112",
+        note: "Publishes order.fulfilled event to Kafka message partition, triggering background receipt generation and warehouse dispatch.",
       },
     ],
   },
@@ -161,31 +161,31 @@ const THREAD_CHAINS = [
     nodes: [
       {
         step: "01",
-        role: "Ask Anything",
-        name: "Question Box",
-        line: "Line 10",
-        note: "You type a normal question in plain English.",
+        role: "Semantic Ingress",
+        name: "Query Vector Normalization",
+        line: "backend/rag/retriever.py:36",
+        note: "Normalizes query intent and converts prompt tokens into a 1536-dimensional embedding vector via OpenAI text-embedding-3-small.",
       },
       {
         step: "02",
-        role: "Smart Search",
-        name: "Map Scanner",
-        line: "Line 32",
-        note: "Finds the exact files related to your question.",
+        role: "Vector Index",
+        name: "HNSW Cosine Distance Probe",
+        line: "backend/rag/vector_store.py:72",
+        note: "Executes high-dimensional similarity probe `<=>` in pgvector, retrieving the 6 highest-scoring AST code chunks.",
       },
       {
         step: "03",
-        role: "Check Links",
-        name: "Connection Finder",
-        line: "Line 48",
-        note: "Sees what other pages connect to those files.",
+        role: "Graph Reasoning",
+        name: "Topological Blast Radius",
+        line: "backend/agent/devlens_agent.py:145",
+        note: "Traverses NetworkX call hierarchy to locate all dependent modules affected by the cited function or interface change.",
       },
       {
         step: "04",
-        role: "Plain Answer",
-        name: "Simple Guide",
-        line: "Line 75",
-        note: "Explains the answer clearly and links to the line.",
+        role: "Grounded Synthesis",
+        name: "Zero-Hallucination Dossier",
+        line: "backend/agent/synthesizer.py:210",
+        note: "Streams verified answer over WebSocket, grounding every architectural explanation with clickable file and line links.",
       },
     ],
   },
@@ -419,17 +419,17 @@ export function HowItWorksPage() {
       <section className="mf-section" data-theme="light" style={{ paddingBottom: 0 }}>
         <div className="mf-wrap">
           <div className="mf-sec-bar">
-            <span className="idx">[01 / FOLLOW ANY ACTION]</span>
-            <Pill>Step-by-Step Story</Pill>
-            <span className="tag">SEE HOW ONE CLICK TRAVELS THROUGH AN APP</span>
+            <span className="idx">[01 / ARCHITECTURE TRACE]</span>
+            <Pill>True Code Execution</Pill>
+            <span className="tag">SEE HOW AN ACTION TRAVERSES THE REAL CODEBASE</span>
           </div>
 
           <div className="hwc-thread-head" style={{ marginBottom: 32 }}>
             <Reveal>
-              <h2 className="mf-h1" style={{ maxWidth: "13em", margin: 0 }}>
+              <h2 className="mf-h1" style={{ maxWidth: "14em", margin: 0 }}>
                 Pick an everyday action.{" "}
                 <span className="mf-serif-i" style={{ fontWeight: 400 }}>
-                  Watch how it works.
+                  Watch how it executes.
                 </span>
               </h2>
             </Reveal>
