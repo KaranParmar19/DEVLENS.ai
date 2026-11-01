@@ -223,17 +223,54 @@ function DashboardPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const history = useMemo(() => repoHistory.getAll(), [version, repo]);
 
+  const [dismissedRepos, setDismissedRepos] = useState<string[]>(() => {
+    try {
+      if (typeof window === "undefined" || typeof localStorage === "undefined") return [];
+      const raw = localStorage.getItem("devlens_dismissed_repos");
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const handleDeleteRepo = useCallback((entry: RepoHistoryEntry) => {
+    // 1. Remove from localStorage repo history using all matching identifiers
+    repoHistory.remove(entry.id, entry.repoLabel, entry.repoUrl);
+
+    // 2. Track as dismissed in persistent state
+    const identifiers = [entry.id, entry.repoLabel, entry.repoUrl].filter(Boolean) as string[];
+    setDismissedRepos((prev) => {
+      const next = Array.from(new Set([...prev, ...identifiers]));
+      try {
+        localStorage.setItem("devlens_dismissed_repos", JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+
+    setVersion((v) => v + 1);
+  }, []);
+
   const activeShowcaseEntries = useMemo(() => {
     const base = history.length > 0 ? history : STARTER_SHOWCASE_ENTRIES;
-    if (!repoFilter.trim()) return base;
+    const dismissedSet = new Set(dismissedRepos.map((d) => d.toLowerCase()));
+    const visible = base.filter((item) => {
+      const idMatch = item.id && dismissedSet.has(item.id.toLowerCase());
+      const labelMatch = item.repoLabel && dismissedSet.has(item.repoLabel.toLowerCase());
+      const urlMatch = item.repoUrl && dismissedSet.has(item.repoUrl.toLowerCase());
+      return !idMatch && !labelMatch && !urlMatch;
+    });
+
+    if (!repoFilter.trim()) return visible;
     const q = repoFilter.trim().toLowerCase();
-    return base.filter(
+    return visible.filter(
       (item) =>
         item.repoLabel.toLowerCase().includes(q) ||
         item.repoUrl.toLowerCase().includes(q) ||
         Object.keys(item.meta?.languages || {}).some((l) => l.toLowerCase().includes(q))
     );
-  }, [history, repoFilter]);
+  }, [history, dismissedRepos, repoFilter]);
 
   const { user, isAuthenticated, loginWithGitHub, loginWithToken, logout } = useAuth();
   const [showTokenModal, setShowTokenModal] = useState(false);
@@ -997,12 +1034,24 @@ function DashboardPage() {
                 )}
               </div>
 
-              {history.length > 0 && (
+              {activeShowcaseEntries.length > 0 && (
                 <button
                   type="button"
                   className="mf-btn ghost sm"
                   onClick={() => {
-                    history.forEach((h) => repoHistory.remove(h.id));
+                    history.forEach((h) => repoHistory.remove(h.id, h.repoLabel, h.repoUrl));
+                    const allIds = activeShowcaseEntries.flatMap((e) =>
+                      [e.id, e.repoLabel, e.repoUrl].filter(Boolean)
+                    ) as string[];
+                    setDismissedRepos((prev) => {
+                      const next = Array.from(new Set([...prev, ...allIds]));
+                      try {
+                        localStorage.setItem("devlens_dismissed_repos", JSON.stringify(next));
+                      } catch {
+                        // ignore
+                      }
+                      return next;
+                    });
                     setVersion((v) => v + 1);
                   }}
                 >
@@ -1026,10 +1075,7 @@ function DashboardPage() {
                   },
                 });
               }}
-              onDelete={(id) => {
-                repoHistory.remove(id);
-                setVersion((v) => v + 1);
-              }}
+              onDelete={handleDeleteRepo}
             />
           ) : (
             <div className="dx-empty">

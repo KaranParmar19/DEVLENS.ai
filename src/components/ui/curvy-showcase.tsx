@@ -38,7 +38,7 @@ export function timeAgo(iso: string): string {
 export interface CurvyShowcaseProps {
   entries: RepoHistoryEntry[];
   onOpen: (entry: RepoHistoryEntry) => void;
-  onDelete: (id: string) => void;
+  onDelete: (entry: RepoHistoryEntry) => void;
   className?: string;
 }
 
@@ -199,7 +199,7 @@ export function CurvyShowcase({
   // Pointer drag interaction handlers
   const onPointerDown = (e: React.PointerEvent) => {
     // Prevent dragging when clicking a remove/delete button
-    if ((e.target as HTMLElement).closest(".mf-kbd, button[aria-label]")) return;
+    if ((e.target as HTMLElement).closest(".dx-card-remove-btn, .mf-kbd, button[aria-label]")) return;
 
     if (animRaf.current) {
       cancelAnimationFrame(animRaf.current);
@@ -366,7 +366,7 @@ export function CurvyShowcase({
                   tabIndex={0}
                   aria-label={`Open repository workspace for ${entry.repoLabel}`}
                   onClick={(e) => {
-                    if ((e.target as HTMLElement).closest(".mf-kbd, button[aria-label]")) return;
+                    if ((e.target as HTMLElement).closest(".dx-card-remove-btn, .mf-kbd, button[aria-label]")) return;
                     if (hasMoved.current) {
                       e.preventDefault();
                       e.stopPropagation();
@@ -380,7 +380,11 @@ export function CurvyShowcase({
                       onOpen(entry);
                     }
                   }}
-                  whileHover={{ y: -5, transition: { duration: 0.18, ease: "easeOut" } }}
+                  whileHover={{
+                    y: -5,
+                    borderColor: "#000000",
+                    transition: { duration: 0.15, ease: "easeOut" },
+                  }}
                   whileTap={{ scale: 0.985 }}
                 >
                   {/* Top Bar: Status Badge + Delete Button */}
@@ -401,11 +405,14 @@ export function CurvyShowcase({
                     <button
                       type="button"
                       aria-label={`Remove ${entry.repoLabel} from history`}
-                      className="mf-kbd"
-                      style={{ cursor: "pointer", transition: "all 0.15s" }}
-                      onClick={(e) => {
+                      className="mf-kbd dx-card-remove-btn"
+                      onPointerDown={(e) => {
                         e.stopPropagation();
-                        onDelete(entry.id);
+                      }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onDelete(entry);
                       }}
                       title="Remove from history"
                     >

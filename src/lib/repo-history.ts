@@ -153,14 +153,24 @@ export const repoHistory = {
     }
   },
 
-  remove(sessionId: string) {
-    const target = sessionId.trim().toLowerCase();
-    const entries = load().filter(
-      (e) =>
-        e.id !== sessionId &&
-        e.repoLabel.trim().toLowerCase() !== target &&
-        e.repoUrl.trim().toLowerCase() !== target
+  remove(...identifiers: (string | undefined | null)[]) {
+    const targets = new Set(
+      identifiers
+        .filter((id): id is string => typeof id === "string" && Boolean(id.trim()))
+        .map((id) => id.trim().toLowerCase())
     );
+    if (targets.size === 0) return;
+
+    const entries = load().filter((e) => {
+      const eId = (e.id || "").trim().toLowerCase();
+      const eLabel = (e.repoLabel || "").trim().toLowerCase();
+      const eUrl = (e.repoUrl || "").trim().toLowerCase();
+      const matches =
+        (eId && targets.has(eId)) ||
+        (eLabel && targets.has(eLabel)) ||
+        (eUrl && targets.has(eUrl));
+      return !matches;
+    });
     save(entries);
   },
 
