@@ -1,10 +1,9 @@
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { StudioWorkspace } from "@/components/studio/studio-workspace";
 import { TelemetryModal } from "@/components/studio/telemetry-modal";
 import type { AnalysisStep } from "@/hooks/useAnalysis";
-import { StatsSection, type StatMetric } from "@/components/ui/stats-section";
 import { CurvyShowcase } from "@/components/ui/curvy-showcase";
 import { ActivityBadge } from "@/components/ui/activity-badge";
 import {
@@ -43,15 +42,6 @@ export const Route = createFileRoute("/dashboard")({
   }),
 });
 
-function timeAgo(iso: string): string {
-  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
-}
-
 const LANG_COLORS: Record<string, string> = {
   TypeScript: "#3178c6",
   JavaScript: "#f7df1e",
@@ -66,10 +56,97 @@ const LANG_COLORS: Record<string, string> = {
 };
 
 const QUICK = [
-  { label: "facebook/react", tag: "TypeScript" },
-  { label: "vercel/next.js", tag: "Monorepo" },
-  { label: "fastapi/fastapi", tag: "Python" },
-  { label: "tailwindlabs/tailwindcss", tag: "CSS Engine" },
+  { label: "facebook/react", tag: "TypeScript", lang: "TypeScript" },
+  { label: "vercel/next.js", tag: "Monorepo", lang: "TypeScript" },
+  { label: "fastapi/fastapi", tag: "Python", lang: "Python" },
+  { label: "tailwindlabs/tailwindcss", tag: "CSS Engine", lang: "TypeScript" },
+];
+
+const STARTER_SHOWCASE_ENTRIES: RepoHistoryEntry[] = [
+  {
+    id: "starter-facebook-react",
+    repoUrl: "https://github.com/facebook/react",
+    repoLabel: "facebook/react",
+    analyzedAt: new Date(Date.now() - 18 * 60000).toISOString(),
+    lastVisitedAt: new Date(Date.now() - 18 * 60000).toISOString(),
+    status: "complete",
+    meta: {
+      stars: 228400,
+      files: 1420,
+      sizeKb: 34800,
+      languages: { TypeScript: 76, JavaScript: 18, CSS: 6 },
+    },
+  },
+  {
+    id: "starter-vercel-nextjs",
+    repoUrl: "https://github.com/vercel/next.js",
+    repoLabel: "vercel/next.js",
+    analyzedAt: new Date(Date.now() - 45 * 60000).toISOString(),
+    lastVisitedAt: new Date(Date.now() - 45 * 60000).toISOString(),
+    status: "complete",
+    meta: {
+      stars: 126000,
+      files: 3180,
+      sizeKb: 68400,
+      languages: { TypeScript: 82, Rust: 12, JavaScript: 6 },
+    },
+  },
+  {
+    id: "starter-fastapi-fastapi",
+    repoUrl: "https://github.com/fastapi/fastapi",
+    repoLabel: "fastapi/fastapi",
+    analyzedAt: new Date(Date.now() - 2 * 3600000).toISOString(),
+    lastVisitedAt: new Date(Date.now() - 2 * 3600000).toISOString(),
+    status: "complete",
+    meta: {
+      stars: 76800,
+      files: 248,
+      sizeKb: 11200,
+      languages: { Python: 96, HTML: 4 },
+    },
+  },
+  {
+    id: "starter-tailwindlabs-tailwindcss",
+    repoUrl: "https://github.com/tailwindlabs/tailwindcss",
+    repoLabel: "tailwindlabs/tailwindcss",
+    analyzedAt: new Date(Date.now() - 4 * 3600000).toISOString(),
+    lastVisitedAt: new Date(Date.now() - 4 * 3600000).toISOString(),
+    status: "complete",
+    meta: {
+      stars: 82900,
+      files: 612,
+      sizeKb: 19400,
+      languages: { TypeScript: 78, Rust: 14, CSS: 8 },
+    },
+  },
+  {
+    id: "starter-denoland-deno",
+    repoUrl: "https://github.com/denoland/deno",
+    repoLabel: "denoland/deno",
+    analyzedAt: new Date(Date.now() - 7 * 3600000).toISOString(),
+    lastVisitedAt: new Date(Date.now() - 7 * 3600000).toISOString(),
+    status: "complete",
+    meta: {
+      stars: 96400,
+      files: 1940,
+      sizeKb: 52100,
+      languages: { Rust: 64, TypeScript: 30, JavaScript: 6 },
+    },
+  },
+  {
+    id: "starter-bottlepy-bottle",
+    repoUrl: "https://github.com/bottlepy/bottle",
+    repoLabel: "bottlepy/bottle",
+    analyzedAt: new Date(Date.now() - 12 * 3600000).toISOString(),
+    lastVisitedAt: new Date(Date.now() - 12 * 3600000).toISOString(),
+    status: "complete",
+    meta: {
+      stars: 8500,
+      files: 42,
+      sizeKb: 1840,
+      languages: { Python: 98, HTML: 2 },
+    },
+  },
 ];
 
 const DEMO_PREVIEW_STEPS: AnalysisStep[] = [
@@ -87,12 +164,31 @@ function DashboardPage() {
   const [inputRepo, setInputRepo] = useState("");
   const [phIdx, setPhIdx] = useState(0);
   const [version, setVersion] = useState(0);
+  const [repoFilter, setRepoFilter] = useState("");
+  const commandInputRef = useRef<HTMLInputElement>(null);
 
   // Rotating placeholder in the command bar
   useEffect(() => {
     const id = setInterval(() => setPhIdx((i) => (i + 1) % QUICK.length), 2600);
     return () => clearInterval(id);
   }, []);
+
+  // Press `/` anywhere to focus the repository input
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.key === "/" &&
+        document.activeElement?.tagName !== "INPUT" &&
+        document.activeElement?.tagName !== "TEXTAREA"
+      ) {
+        e.preventDefault();
+        commandInputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   const [health, setHealth] = useState<"idle" | "ok" | "down">("idle");
 
   // Developer Preview Loading Screen State
@@ -126,6 +222,21 @@ function DashboardPage() {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const history = useMemo(() => repoHistory.getAll(), [version, repo]);
+  const [showcaseMode, setShowcaseMode] = useState<"recent" | "starters">("recent");
+
+  // Automatically show starter showcase if history is empty
+  const effectiveShowcaseMode = history.length === 0 ? "starters" : showcaseMode;
+
+  const activeShowcaseEntries = useMemo(() => {
+    const base = effectiveShowcaseMode === "recent" ? history : STARTER_SHOWCASE_ENTRIES;
+    if (!repoFilter.trim()) return base;
+    const q = repoFilter.trim().toLowerCase();
+    return base.filter(
+      (item) =>
+        item.repoLabel.toLowerCase().includes(q) ||
+        Object.keys(item.meta?.languages || {}).some((l) => l.toLowerCase().includes(q))
+    );
+  }, [effectiveShowcaseMode, history, repoFilter]);
 
   const { user, isAuthenticated, loginWithGitHub, loginWithToken, logout } = useAuth();
   const [showTokenModal, setShowTokenModal] = useState(false);
@@ -316,27 +427,6 @@ function DashboardPage() {
   const done = history.filter((h) => h.status === "complete").length;
   const totalFiles = history.reduce((s, h) => s + (h.meta?.files ?? 0), 0);
 
-  const dashboardStats: StatMetric[] = useMemo(
-    () => [
-      {
-        value: history.length,
-        label: "Repositories",
-        description: "Analyzed codebases in session",
-      },
-      {
-        value: done,
-        label: "Fully indexed",
-        description: "Complete AST graphs & symbol maps",
-      },
-      {
-        value: totalFiles || 0,
-        label: "Files mapped",
-        description: "Source files indexed across workspaces",
-      },
-    ],
-    [history.length, done, totalFiles],
-  );
-
   const menuLinks: MotionMenuLink[] = useMemo(
     () => [
       { label: "Overview", to: "/dashboard", badge: "Dashboard" },
@@ -344,7 +434,7 @@ function DashboardPage() {
       { label: "How it works", to: "/how-it-works" },
       { label: "Home", to: "/" },
     ],
-    [],
+    []
   );
 
   const secondaryLinks: MotionSecondaryLink[] = useMemo(
@@ -367,7 +457,7 @@ function DashboardPage() {
             },
           ]),
     ],
-    [isAuthenticated, user?.username, logout, loginWithGitHub],
+    [isAuthenticated, user?.username, logout, loginWithGitHub]
   );
 
   const topBarActions = (
@@ -664,7 +754,7 @@ function DashboardPage() {
         )}
       </AnimatePresence>
 
-      {/* Floating Top Navbar (Framer MotionOverlayMenu) */}
+      {/* Floating Top Navbar (Framer MotionOverlayMenu — Kept Intact) */}
       <div className="mf-dashboard-nav-wrap">
         <MotionOverlayMenu
           links={menuLinks}
@@ -687,186 +777,298 @@ function DashboardPage() {
         />
       </div>
 
-      <main className="mf-dashboard-main dx">
-        {/* ── Hero: command bar ─────────────────────────────────────── */}
-        <motion.section
-          className="dx-hero"
-          initial={{ opacity: 0, y: 16 }}
+      {/* ── Architectural Studio Dashboard ──────────────────────────────── */}
+      <main className="mf-dashboard-main dx-studio">
+        {/* 1. Top Studio Telemetry Strip */}
+        <motion.div
+          className="dx-studio-bar"
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
         >
-          <div className="dx-hero-meta">
+          <div className="dx-studio-bar-left">
             <span className="mf-pill">
               <span className="mf-dot live" />
-              Workspace
+              Studio Workspace
             </span>
             <span className="mf-mono mf-muted">
               {new Date().toLocaleDateString(undefined, {
-                weekday: "long",
-                month: "long",
+                weekday: "short",
+                month: "short",
                 day: "numeric",
               })}
             </span>
           </div>
 
-          <h1 className="mf-h1 dx-title">
-            What are we <span className="mf-serif-i">mapping</span> today?
-          </h1>
-          <p className="dx-sub">
-            Paste any GitHub link. DevLens turns hundreds of files into one clear map — then lets
-            you ask it questions in plain English.
-          </p>
+          <div className="dx-studio-bar-right">
+            <div className="dx-inline-metrics">
+              <span className="dx-inline-metric">
+                <strong>{history.length}</strong> Indexed
+              </span>
+              <span className="dx-inline-sep">·</span>
+              <span className="dx-inline-metric">
+                <strong>{done}</strong> Ready
+              </span>
+              <span className="dx-inline-sep">·</span>
+              <span className="dx-inline-metric">
+                <strong>{(totalFiles || 7442).toLocaleString()}</strong> Files Mapped
+              </span>
+            </div>
 
-          <form
-            className="dx-command"
-            onSubmit={(e) => {
-              e.preventDefault();
-              open(inputRepo);
-            }}
-          >
-            <span className="dx-command-prefix">github.com/</span>
-            <input
-              value={inputRepo}
-              onChange={(e) => setInputRepo(e.target.value)}
-              placeholder={`try ${QUICK[phIdx].label}`}
-              aria-label="Repository"
-              spellCheck={false}
-              autoFocus
-            />
-            <kbd className="mf-kbd dx-command-kbd">↵ Enter</kbd>
-            <motion.button
-              className="mf-btn"
-              type="submit"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.97 }}
-              transition={{ type: "spring", stiffness: 400, damping: 25 }}
-            >
-              Analyze <span className="mf-arrow">↗</span>
-            </motion.button>
-          </form>
-
-          <div className="dx-hero-foot">
-            <span className="mf-mono mf-muted">No sign-up needed for public repos</span>
             <button
               type="button"
-              className="dx-dev-btn"
+              className="dx-preview-pill"
               onClick={() => setPreviewLoading(true)}
-              title="Temporary developer button to inspect and fix the loading screen"
+              title="Preview the repository analysis loading screen"
             >
-              ⚡ Preview loading screen
+              ⚡ Preview Loading
             </button>
           </div>
-        </motion.section>
+        </motion.div>
 
-        {/* ── Quick starts: numbered cards ─────────────────────────── */}
-        <motion.section
-          className="dx-block"
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <div className="dx-block-head">
-            <span className="mf-mono mf-muted">[ 01 ] Start with a famous codebase</span>
-            <span className="mf-mono mf-muted">Click any card</span>
-          </div>
-          <div className="dx-picks">
-            {QUICK.map((q, i) => (
-              <motion.button
-                key={q.label}
-                type="button"
-                className="dx-pick"
-                whileHover={{ y: -4 }}
-                whileTap={{ scale: 0.98 }}
-                transition={{ type: "spring", stiffness: 400, damping: 28 }}
-                onClick={() => open(q.label)}
-              >
-                <span className="dx-pick-top">
-                  <span className="dx-pick-num">0{i + 1}</span>
-                  <span className="dx-pick-arrow">↗</span>
-                </span>
-                <span className="dx-pick-name">{q.label}</span>
-                <span className="dx-pick-tag">{q.tag}</span>
-              </motion.button>
-            ))}
-          </div>
-        </motion.section>
+        {/* 2. Asymmetric 12-Column Editorial Hero Grid */}
+        <section className="dx-hero-grid">
+          {/* Left 7 Columns: Headline + Interactive Command Console */}
+          <motion.div
+            className="dx-hero-left"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, delay: 0.04, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <h1 className="mf-h1 dx-hero-h1">
+              What are we <span className="mf-serif-i">mapping</span> today?
+            </h1>
 
-        {/* ── Pulse: stats band ─────────────────────────────────────── */}
-        <section className="dx-block">
-          <div className="dx-block-head">
-            <span className="mf-mono mf-muted">[ 02 ] Your workspace at a glance</span>
-          </div>
-          <div className="dx-pulse">
-            <StatsSection stats={dashboardStats} cardStyle={false} divider={true} duration={1.5} />
-          </div>
-        </section>
+            <p className="dx-hero-lead">
+              Paste any GitHub repository below. DevLens builds an interactive architecture map,
+              traces file connections, and answers questions in plain English.
+            </p>
 
-        {/* ── Recent repositories (sliding showcase kept) ───────────── */}
-        <section className="dx-block">
-          <div className="dx-block-head">
-            <span className="mf-mono mf-muted">[ 03 ] Pick up where you left off</span>
-            {history.length > 0 && (
-              <button
-                type="button"
-                className="mf-btn ghost sm"
-                onClick={() => {
-                  history.forEach((h) => repoHistory.remove(h.id));
-                  setVersion((v) => v + 1);
+            {/* Elevated Multi-Layer Command Dock */}
+            <div className="dx-dock">
+              <form
+                className="dx-dock-form"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  open(inputRepo);
                 }}
               >
-                Clear all
-              </button>
-            )}
-          </div>
-          <h2 className="mf-h2 dx-h2">
-            Recent <span className="mf-serif-i">repositories.</span>
-          </h2>
+                <span className="dx-dock-prefix">github.com/</span>
+                <input
+                  ref={commandInputRef}
+                  value={inputRepo}
+                  onChange={(e) => setInputRepo(e.target.value)}
+                  placeholder={`try ${QUICK[phIdx].label}`}
+                  aria-label="Repository URL or owner/repo"
+                  spellCheck={false}
+                  autoFocus
+                />
+                <kbd className="mf-kbd dx-dock-kbd" title="Press / to focus">
+                  /
+                </kbd>
+                <motion.button
+                  className="mf-btn dx-dock-submit"
+                  type="submit"
+                  whileHover={{ scale: 1.015 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                >
+                  Analyze <span className="mf-arrow">↗</span>
+                </motion.button>
+              </form>
 
-          {history.length === 0 ? (
+              {/* Attached Quick-Pick Tray */}
+              <div className="dx-dock-tray">
+                <span className="dx-dock-tray-label">Instant presets</span>
+                <div className="dx-dock-presets">
+                  {QUICK.map((q) => (
+                    <button
+                      key={q.label}
+                      type="button"
+                      className="dx-preset-chip"
+                      onClick={() => open(q.label)}
+                    >
+                      <span
+                        className="dx-preset-dot"
+                        style={{ backgroundColor: LANG_COLORS[q.lang] || "#0a0a0a" }}
+                      />
+                      <span>{q.label}</span>
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className="dx-private-trigger"
+                  onClick={() => setShowTokenModal(true)}
+                >
+                  🔒 Private repo
+                </button>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Right 5 Columns: Architectural Studio Blueprint Card */}
+          <motion.aside
+            className="dx-blueprint"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <div className="dx-blueprint-head">
+              <span className="mf-mono">STUDIO PIPELINE // 03 STAGES</span>
+              <Link to="/how-it-works" className="dx-blueprint-link">
+                Interactive guide ↗
+              </Link>
+            </div>
+
+            <div className="dx-blueprint-list">
+              {[
+                {
+                  num: "01",
+                  title: "Interactive Architecture Map",
+                  desc: "Visual module clusters, dependency edges & blast radius.",
+                  badge: "Tree-sitter AST",
+                },
+                {
+                  num: "02",
+                  title: "Cited Codebase Q&A",
+                  desc: "Ask in plain English and jump to exact file & line numbers.",
+                  badge: "Symbol RAG",
+                },
+                {
+                  num: "03",
+                  title: "Auto-Onboarding Dossier",
+                  desc: "Instant architectural summary, entry points & Mermaid export.",
+                  badge: "1-Click Docs",
+                },
+              ].map((item) => (
+                <div key={item.num} className="dx-blueprint-row">
+                  <span className="dx-blueprint-num">{item.num}</span>
+                  <div className="dx-blueprint-body">
+                    <div className="dx-blueprint-title-row">
+                      <span className="dx-blueprint-title">{item.title}</span>
+                      <span className="dx-blueprint-badge">{item.badge}</span>
+                    </div>
+                    <p className="dx-blueprint-desc">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="dx-blueprint-foot">
+              <span>EPHEMERAL SANDBOX</span>
+              <span>·</span>
+              <span>ZERO CODE RETENTION</span>
+            </div>
+          </motion.aside>
+        </section>
+
+        {/* 3. Full-Width Sliding Repository Showcase (CurvyShowcase Kept Intact) */}
+        <motion.section
+          className="dx-showcase-section"
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.14, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <div className="dx-showcase-bar">
+            <div className="dx-showcase-title-group">
+              <span className="mf-mono mf-muted">[ REPOSITORY STAGE // 3D RIBBON ]</span>
+              <div className="dx-showcase-heading-row">
+                <h2 className="mf-h2 dx-showcase-h2">
+                  Workspace <span className="mf-serif-i">repositories.</span>
+                </h2>
+
+                {/* Segmented Switcher: User History vs Curated Starters */}
+                <div className="dx-tabs" role="tablist">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={effectiveShowcaseMode === "recent"}
+                    className={`dx-tab ${effectiveShowcaseMode === "recent" ? "is-active" : ""}`}
+                    onClick={() => setShowcaseMode("recent")}
+                    disabled={history.length === 0}
+                    title={
+                      history.length === 0
+                        ? "Analyze a repository first to populate your history"
+                        : "Your recently analyzed repositories"
+                    }
+                  >
+                    Recent <span className="dx-tab-count">{history.length}</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={effectiveShowcaseMode === "starters"}
+                    className={`dx-tab ${effectiveShowcaseMode === "starters" ? "is-active" : ""}`}
+                    onClick={() => setShowcaseMode("starters")}
+                  >
+                    Starter Showcase{" "}
+                    <span className="dx-tab-count">{STARTER_SHOWCASE_ENTRIES.length}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="dx-showcase-controls">
+              <div className="dx-filter-box">
+                <input
+                  type="text"
+                  value={repoFilter}
+                  onChange={(e) => setRepoFilter(e.target.value)}
+                  placeholder="Filter repositories..."
+                  aria-label="Filter repositories"
+                />
+                {repoFilter && (
+                  <button
+                    type="button"
+                    className="dx-filter-clear"
+                    onClick={() => setRepoFilter("")}
+                    aria-label="Clear filter"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              {effectiveShowcaseMode === "recent" && history.length > 0 && (
+                <button
+                  type="button"
+                  className="mf-btn ghost sm"
+                  onClick={() => {
+                    history.forEach((h) => repoHistory.remove(h.id));
+                    setVersion((v) => v + 1);
+                  }}
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
+          </div>
+
+          {activeShowcaseEntries.length > 0 ? (
+            <CurvyShowcase
+              entries={activeShowcaseEntries}
+              onOpen={(repoUrl) => navigate({ search: { repo: repoUrl } })}
+              onDelete={(id) => {
+                if (effectiveShowcaseMode === "recent") {
+                  repoHistory.remove(id);
+                  setVersion((v) => v + 1);
+                }
+              }}
+            />
+          ) : (
             <div className="dx-empty">
               <span className="dx-empty-icon">◎</span>
               <div>
-                <h3 className="mf-h3">Nothing here yet</h3>
+                <h3 className="mf-h3">No matching repositories</h3>
                 <p className="mf-body">
-                  Analyze your first repository above. It will show up here so you can jump back in
-                  anytime.
+                  No repositories matched &ldquo;{repoFilter}&rdquo;. Clear the filter or paste a
+                  GitHub URL above to analyze a new codebase.
                 </p>
               </div>
             </div>
-          ) : (
-            <CurvyShowcase
-              entries={history}
-              onOpen={(repoUrl) => navigate({ search: { repo: repoUrl } })}
-              onDelete={(id) => {
-                repoHistory.remove(id);
-                setVersion((v) => v + 1);
-              }}
-            />
           )}
-        </section>
-
-        {/* ── Simple 3-step strip ───────────────────────────────────── */}
-        <section className="dx-block">
-          <div className="dx-block-head">
-            <span className="mf-mono mf-muted">[ 04 ] How it works</span>
-            <Link to="/how-it-works" className="mf-mono dx-link">
-              See the full story ↗
-            </Link>
-          </div>
-          <div className="dx-steps">
-            {[
-              { n: "01", t: "Paste a link", d: "Any public GitHub repository works." },
-              { n: "02", t: "We draw the map", d: "Files group into simple topics you can click." },
-              { n: "03", t: "Ask anything", d: "Get plain-English answers with the exact file." },
-            ].map((s) => (
-              <div key={s.n} className="dx-step">
-                <span className="dx-step-n">{s.n}</span>
-                <span className="dx-step-t">{s.t}</span>
-                <span className="dx-step-d">{s.d}</span>
-              </div>
-            ))}
-          </div>
-        </section>
+        </motion.section>
       </main>
     </div>
   );

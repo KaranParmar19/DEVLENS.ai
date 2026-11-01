@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Pill, Reveal, SiteLayout } from "./site-layout";
 import { MorphText } from "@/components/ui/morph-text";
 import { FAQSection, type FAQItemData } from "@/components/ui/faq-section";
+import { CardShuffleShowcase } from "@/components/ui/card-shuffle-showcase";
 import { normalizeRepoUrl } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -476,10 +477,6 @@ export function HowItWorksPage() {
   const [phaseIdx, setPhaseIdx] = useState<number>(2);
   const [autoCycle, setAutoCycle] = useState<boolean>(true);
 
-  // Interactive "Follow the Story" state
-  const [chainIdx, setChainIdx] = useState<number>(0);
-  const [activeHopIdx, setActiveHopIdx] = useState<number>(2);
-
   // Repo launcher state
   const [repoInput, setRepoInput] = useState<string>("");
 
@@ -492,7 +489,6 @@ export function HowItWorksPage() {
   }, [autoCycle]);
 
   const currentPhase = MORPH_PHASES[phaseIdx];
-  const currentChain = THREAD_CHAINS[chainIdx];
 
   const launchRepo = (value: string) => {
     const normalized = normalizeRepoUrl(value);
@@ -767,7 +763,7 @@ export function HowItWorksPage() {
             <span className="tag">SEE HOW ONE CLICK TRAVELS THROUGH AN APP</span>
           </div>
 
-          <div className="hwc-thread-head">
+          <div className="hwc-thread-head" style={{ marginBottom: 20 }}>
             <Reveal>
               <h2 className="mf-h1" style={{ maxWidth: "13em", margin: 0 }}>
                 Pick an everyday action.{" "}
@@ -776,56 +772,10 @@ export function HowItWorksPage() {
                 </span>
               </h2>
             </Reveal>
-
-            <div className="hwc-thread-tabs">
-              {THREAD_CHAINS.map((c, idx) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  className="hwc-thread-tab"
-                  data-active={idx === chainIdx}
-                  onClick={() => {
-                    setChainIdx(idx);
-                    setActiveHopIdx(2);
-                  }}
-                >
-                  {c.trigger}
-                </button>
-              ))}
-            </div>
           </div>
 
-          {/* Interactive 4-Step Story Cards */}
-          <div className="hwc-chain-track">
-            {currentChain.nodes.map((hop, idx) => {
-              const isLit = idx <= activeHopIdx;
-              const isCurrent = idx === activeHopIdx;
-              return (
-                <motion.button
-                  key={hop.name}
-                  type="button"
-                  className="hwc-hop-card"
-                  data-lit={isLit}
-                  data-current={isCurrent}
-                  onMouseEnter={() => setActiveHopIdx(idx)}
-                  onClick={() => setActiveHopIdx(idx)}
-                  whileHover={{ y: -4 }}
-                  transition={{ type: "spring", stiffness: 360, damping: 26 }}
-                >
-                  <div className="hwc-hop-top mf-mono">
-                    <span>STEP {hop.step}</span>
-                    <span className="hwc-hop-role">{hop.role}</span>
-                  </div>
-                  <div className="hwc-hop-name">{hop.name}</div>
-                  <p className="hwc-hop-note">{hop.note}</p>
-                  <div className="hwc-hop-line mf-mono">
-                    <span>↳ EXACT SPOT</span>
-                    <strong>{hop.line}</strong>
-                  </div>
-                </motion.button>
-              );
-            })}
-          </div>
+          {/* Interactive Card Shuffle on Scroll Component */}
+          <CardShuffleShowcase chains={THREAD_CHAINS} />
 
           {/* 2 Simple, Friendly Promise Cards */}
           <div className="hwc-promise-grid">
