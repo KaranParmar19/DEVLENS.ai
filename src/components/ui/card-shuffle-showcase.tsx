@@ -123,7 +123,7 @@ export function CardShuffleShowcase({
       className={`card-shuffle-container ${className}`}
       style={{
         position: "relative",
-        height: "450vh",
+        height: "280vh",
         width: "100%",
         marginTop: 0,
         marginBottom: 0,
