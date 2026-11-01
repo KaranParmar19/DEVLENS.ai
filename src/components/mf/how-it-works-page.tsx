@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { Pill, Reveal, SiteLayout } from "./site-layout";
 import { MorphText } from "@/components/ui/morph-text";
 import { FAQSection, type FAQItemData } from "@/components/ui/faq-section";
@@ -83,140 +83,6 @@ const LENS_EDGES: [number, number][] = [
   [1, 4],
   [1, 5],
   [3, 4],
-];
-
-/* 4-Stage Interactive Scrubber Morph States */
-interface MorphPhase {
-  id: string;
-  step: string;
-  stepLabel: string;
-  timeRange: string;
-  progress: number;
-  title: string;
-  italic: string;
-  caption: string;
-  badge: string;
-}
-
-const MORPH_PHASES: MorphPhase[] = [
-  {
-    id: "drop",
-    step: "01",
-    stepLabel: "Paste repository link",
-    timeRange: "0.0s — 1.2s",
-    progress: 25,
-    title: "Paste a link.",
-    italic: "We clean the clutter.",
-    caption:
-      "Just copy and paste any GitHub project link. DevLens automatically skips junk files and extra clutter so you only see the files that actually matter.",
-    badge: "STEP 01 · PASTE YOUR LINK",
-  },
-  {
-    id: "cluster",
-    step: "02",
-    stepLabel: "Files group into topics",
-    timeRange: "1.2s — 3.6s",
-    progress: 50,
-    title: "Files group into",
-    italic: "simple topics.",
-    caption:
-      "Instead of a scary list of hundreds of files, DevLens neatly groups related parts together—like Login, Checkout, and Saved Data—just like a city map.",
-    badge: "STEP 02 · AUTO-ORGANIZE",
-  },
-  {
-    id: "pulse",
-    step: "03",
-    stepLabel: "See what connects",
-    timeRange: "3.6s — 5.6s",
-    progress: 75,
-    title: "See what connects",
-    italic: "to what.",
-    caption:
-      "Lines appear between cards so you can see how the whole app works together—and which important files you shouldn't accidentally break.",
-    badge: "STEP 03 · SEE CONNECTIONS",
-  },
-  {
-    id: "ask",
-    step: "04",
-    stepLabel: "Ask in plain English",
-    timeRange: "5.6s — 7.4s",
-    progress: 100,
-    title: "Ask in plain English.",
-    italic: "Find the exact spot.",
-    caption:
-      "Stuck or curious? Ask a normal question like “How does login work?” and DevLens points you straight to the exact file and line.",
-    badge: "STEP 04 · ASK ANYTHING",
-  },
-];
-
-/* Coordinates of the 5 friendly visual cards across the 4 steps — perfectly centered in the stage */
-const MORPH_NODE_COORDS: {
-  id: string;
-  label: string;
-  file: string;
-  color: string;
-  pos: { x: number; y: number; scale?: number }[];
-}[] = [
-  {
-    id: "url",
-    label: "Home Page",
-    file: "pages/home.js (Line 14)",
-    color: "#3b82f6",
-    pos: [
-      { x: 25, y: 26, scale: 0.95 },  // Step 1: Orbit top-left
-      { x: 27, y: 32, scale: 1 },     // Step 2: Left topic cluster top (centered at X: 27)
-      { x: 24, y: 50, scale: 1.05 },  // Step 3: Entry node (centered flow)
-      { x: 25, y: 58, scale: 0.95 },  // Step 4: Framing node
-    ],
-  },
-  {
-    id: "auth",
-    label: "Login Check",
-    file: "login/check.js (Line 24)",
-    color: "#10b981",
-    pos: [
-      { x: 25, y: 74, scale: 0.95 },  // Step 1: Orbit bottom-left
-      { x: 27, y: 68, scale: 1 },     // Step 2: Left topic cluster bottom (centered at X: 27)
-      { x: 46, y: 28, scale: 1.12 },  // Step 3: Auth router
-      { x: 50, y: 32, scale: 1.2 },   // Step 4: SPOTLIGHTED CENTER
-    ],
-  },
-  {
-    id: "core",
-    label: "Main Brain",
-    file: "app/main.js (Line 88)",
-    color: "#ffffff",
-    pos: [
-      { x: 50, y: 84, scale: 0.92 },  // Step 1: Orbit bottom-center
-      { x: 50, y: 50, scale: 1.08 },  // Step 2: EXACT CENTER HUB
-      { x: 50, y: 70, scale: 1.08 },  // Step 3: Core coordinator
-      { x: 25, y: 24, scale: 0.95 },  // Step 4: Framing node
-    ],
-  },
-  {
-    id: "billing",
-    label: "Payment Box",
-    file: "shop/pay.js (Line 41)",
-    color: "#f59e0b",
-    pos: [
-      { x: 75, y: 26, scale: 0.95 },  // Step 1: Orbit top-right
-      { x: 73, y: 32, scale: 1 },     // Step 2: Right topic cluster top (centered at X: 73)
-      { x: 74, y: 34, scale: 1 },     // Step 3: Downstream billing
-      { x: 75, y: 58, scale: 0.95 },  // Step 4: Framing node
-    ],
-  },
-  {
-    id: "db",
-    label: "Saved Users",
-    file: "data/users.js (Line 62)",
-    color: "#a855f7",
-    pos: [
-      { x: 75, y: 74, scale: 0.95 },  // Step 1: Orbit bottom-right
-      { x: 73, y: 68, scale: 1 },     // Step 2: Right topic cluster bottom (centered at X: 73)
-      { x: 74, y: 70, scale: 1.04 },  // Step 3: Downstream database
-      { x: 75, y: 24, scale: 0.95 },  // Step 4: Framing node
-    ],
-  },
 ];
 
 /* "Follow the Story" Beginner-Friendly Step Chains */
@@ -473,22 +339,8 @@ function InteractiveXRayLens() {
 export function HowItWorksPage() {
   const navigate = useNavigate();
 
-  // Interactive Morph Theatre state
-  const [phaseIdx, setPhaseIdx] = useState<number>(2);
-  const [autoCycle, setAutoCycle] = useState<boolean>(true);
-
   // Repo launcher state
   const [repoInput, setRepoInput] = useState<string>("");
-
-  useEffect(() => {
-    if (!autoCycle) return;
-    const id = window.setInterval(() => {
-      setPhaseIdx((p) => (p + 1) % MORPH_PHASES.length);
-    }, 3600);
-    return () => window.clearInterval(id);
-  }, [autoCycle]);
-
-  const currentPhase = MORPH_PHASES[phaseIdx];
 
   const launchRepo = (value: string) => {
     const normalized = normalizeRepoUrl(value);
@@ -562,203 +414,12 @@ export function HowItWorksPage() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          01 · DARK INTERACTIVE 4-STEP STORY (0.0s TO 7.4s)
-          ═══════════════════════════════════════════════════════════════════ */}
-      <section className="mf-section mf-dark" data-theme="dark">
-        <div className="mf-wrap">
-          <div className="mf-sec-bar">
-            <span className="idx">[{currentPhase.step} / 04 SIMPLE STEPS]</span>
-            <Pill live>How It Works</Pill>
-            <span className="tag">STEP {currentPhase.step} OF 04 · CLICK TO WATCH</span>
-          </div>
-
-          <div className="hwc-theatre">
-            {/* Left: Friendly Story + Step Buttons */}
-            <div className="hwc-theatre-left">
-              <div className="hwc-phase-pill mf-mono">{currentPhase.badge}</div>
-
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={currentPhase.id}
-                  initial={{ opacity: 0, y: 14 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -14 }}
-                  transition={{ duration: 0.25 }}
-                >
-                  <h2 className="mf-h1 hwc-theatre-title">
-                    {currentPhase.title}
-                    <br />
-                    <span className="mf-serif-i" style={{ fontWeight: 400, color: "#10b981" }}>
-                      {currentPhase.italic}
-                    </span>
-                  </h2>
-                  <p className="mf-lead hwc-theatre-desc">{currentPhase.caption}</p>
-                </motion.div>
-              </AnimatePresence>
-
-              {/* Step Selector Pills */}
-              <div className="hwc-scrubber-steps">
-                {MORPH_PHASES.map((ph, idx) => {
-                  const active = idx === phaseIdx;
-                  return (
-                    <button
-                      key={ph.id}
-                      type="button"
-                      className="hwc-scrubber-btn"
-                      data-active={active}
-                      onClick={() => {
-                        setAutoCycle(false);
-                        setPhaseIdx(idx);
-                      }}
-                    >
-                      <div className="hwc-scrubber-top mf-mono">
-                        <span>STEP {ph.step} / 04</span>
-                        <span>{ph.timeRange}</span>
-                      </div>
-                      <div className="hwc-scrubber-name">{ph.stepLabel}</div>
-                      <div className="hwc-scrubber-bar">
-                        <span
-                          style={{
-                            width: active ? "100%" : idx < phaseIdx ? "100%" : "0%",
-                          }}
-                        />
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Right: Live Animated Visual Canvas */}
-            <div className="hwc-theatre-canvas">
-              <div className="hwc-canvas-chrome mf-mono">
-                <span>LIVE PREVIEW // STEP {currentPhase.step} OF 04</span>
-                <button
-                  type="button"
-                  className="hwc-autoplay-btn mf-mono"
-                  onClick={() => setAutoCycle((v) => !v)}
-                >
-                  {autoCycle ? "❚❚ PAUSE" : "▶ AUTO-PLAY"}
-                </button>
-              </div>
-
-              <div className="hwc-morph-stage">
-                {/* Ambient Topic Circles in Step 2+ */}
-                {phaseIdx >= 1 && (
-                  <div className="hwc-domain-halos" aria-hidden="true">
-                    <div className="hwc-halo h1" />
-                    <div className="hwc-halo h2" />
-                  </div>
-                )}
-
-                {/* Connection Lines in Step 3 & 4 */}
-                {phaseIdx >= 2 && (
-                  <svg className="hwc-morph-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-                    {/* Home Page -> Login Check */}
-                    <line
-                      x1={MORPH_NODE_COORDS[0].pos[phaseIdx].x}
-                      y1={MORPH_NODE_COORDS[0].pos[phaseIdx].y}
-                      x2={MORPH_NODE_COORDS[1].pos[phaseIdx].x}
-                      y2={MORPH_NODE_COORDS[1].pos[phaseIdx].y}
-                      stroke="#10b981"
-                      strokeWidth="0.6"
-                      strokeDasharray="1.5 1.5"
-                    />
-                    {/* Login Check -> Main Brain */}
-                    <line
-                      x1={MORPH_NODE_COORDS[1].pos[phaseIdx].x}
-                      y1={MORPH_NODE_COORDS[1].pos[phaseIdx].y}
-                      x2={MORPH_NODE_COORDS[2].pos[phaseIdx].x}
-                      y2={MORPH_NODE_COORDS[2].pos[phaseIdx].y}
-                      stroke="rgba(255,255,255,0.45)"
-                      strokeWidth="0.5"
-                    />
-                    {/* Main Brain -> Payment Box */}
-                    <line
-                      x1={MORPH_NODE_COORDS[2].pos[phaseIdx].x}
-                      y1={MORPH_NODE_COORDS[2].pos[phaseIdx].y}
-                      x2={MORPH_NODE_COORDS[3].pos[phaseIdx].x}
-                      y2={MORPH_NODE_COORDS[3].pos[phaseIdx].y}
-                      stroke="#f59e0b"
-                      strokeWidth="0.6"
-                    />
-                    {/* Main Brain -> Saved Users */}
-                    <line
-                      x1={MORPH_NODE_COORDS[2].pos[phaseIdx].x}
-                      y1={MORPH_NODE_COORDS[2].pos[phaseIdx].y}
-                      x2={MORPH_NODE_COORDS[4].pos[phaseIdx].x}
-                      y2={MORPH_NODE_COORDS[4].pos[phaseIdx].y}
-                      stroke="#a855f7"
-                      strokeWidth="0.6"
-                    />
-                  </svg>
-                )}
-
-                {/* Floating Visual Topic Cards */}
-                {MORPH_NODE_COORDS.map((node) => {
-                  const target = node.pos[phaseIdx];
-                  const isSpotlight = phaseIdx === 3 && node.id === "auth";
-                  return (
-                    <motion.div
-                      key={node.id}
-                      className="hwc-morph-node"
-                      data-spotlight={isSpotlight}
-                      animate={{
-                        left: `${target.x}%`,
-                        top: `${target.y}%`,
-                        scale: target.scale ?? 1,
-                      }}
-                      transition={{ type: "spring", stiffness: 180, damping: 22 }}
-                    >
-                      <span className="hwc-node-dot" style={{ background: node.color }} />
-                      <div>
-                        <div className="hwc-node-title">{node.label}</div>
-                        <div className="hwc-node-file mf-mono">{node.file}</div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-
-                {/* Step 01 Center Link Pill */}
-                {phaseIdx === 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.85 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="hwc-center-pill mf-mono"
-                  >
-                    github.com/vercel/next.js
-                  </motion.div>
-                )}
-
-                {/* Step 04 Friendly Answer Bubble */}
-                {phaseIdx === 3 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="hwc-copilot-toast"
-                  >
-                    <div className="mf-mono" style={{ fontSize: "0.64rem", color: "#10b981" }}>
-                      ✓ CLEAR ANSWER · EXACT FILE FOUND
-                    </div>
-                    <div style={{ fontSize: "0.86rem", color: "#fff", marginTop: 4 }}>
-                      “Users sign in through the <code>Login Check</code> card inside{" "}
-                      <span style={{ color: "#10b981" }}>login/check.js (Line 24)</span>.”
-                    </div>
-                  </motion.div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════════
-          02 · "FOLLOW ANY ACTION" — STEP-BY-STEP STORY (LIGHT)
+          01 · "FOLLOW ANY ACTION" — STEP-BY-STEP STORY (LIGHT)
           ═══════════════════════════════════════════════════════════════════ */}
       <section className="mf-section" data-theme="light">
         <div className="mf-wrap">
           <div className="mf-sec-bar">
-            <span className="idx">[02 / FOLLOW ANY ACTION]</span>
+            <span className="idx">[01 / FOLLOW ANY ACTION]</span>
             <Pill>Step-by-Step Story</Pill>
             <span className="tag">SEE HOW ONE CLICK TRAVELS THROUGH AN APP</span>
           </div>
@@ -807,7 +468,7 @@ export function HowItWorksPage() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          03 · BEGINNER FAQ + ONE-CLICK PROJECT LAUNCHER
+          02 · BEGINNER FAQ + ONE-CLICK PROJECT LAUNCHER
           ═══════════════════════════════════════════════════════════════════ */}
       <section className="mf-section" data-theme="light" style={{ paddingTop: 0 }}>
         <div className="mf-wrap">
