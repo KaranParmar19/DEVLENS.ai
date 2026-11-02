@@ -29,7 +29,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-lg w-full text-center">
         <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-destructive/10 text-destructive mb-4">
-          <span className="text-xl">⚠</span>
+          <span className="text-xl font-mono font-bold">!</span>
         </div>
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
           This page didn't load
@@ -72,11 +72,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "DevLens AI — Understand any codebase in seconds" },
-      { name: "description", content: "DevLens AI gives you an interactive cognitive layer for any codebase. Architecture maps, code flow, smart Q&A, and onboarding docs in under 8 seconds." },
-      { name: "author", content: "DevLens AI" },
-      { property: "og:title", content: "DevLens AI — Understand any codebase in seconds" },
-      { property: "og:description", content: "Map architecture, trace flows, and query any GitHub repository like a senior engineer who's read every line." },
+      { title: "DevLens | Understand any codebase in seconds" },
+      { name: "description", content: "Paste a GitHub URL to inspect file dependencies, trace request execution paths, and search your codebase with exact line citations." },
+      { name: "author", content: "DevLens" },
+      { property: "og:title", content: "DevLens | Understand any codebase in seconds" },
+      { property: "og:description", content: "Map file dependencies, trace request flows, and search any GitHub repository with line-level citations." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@DevLensAI" },

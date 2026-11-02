@@ -115,6 +115,10 @@ export function MorphText({
     whiteSpace: "nowrap",
     userSelect: "none",
     willChange: "filter, opacity",
+    fontFamily: "inherit",
+    fontStyle: "normal",
+    fontWeight: "inherit",
+    letterSpacing: "inherit",
   };
 
   return (
@@ -130,6 +134,10 @@ export function MorphText({
         alignItems: "center",
         verticalAlign: "baseline",
         lineHeight: "inherit",
+        fontFamily: "inherit",
+        fontStyle: "normal",
+        fontWeight: "inherit",
+        letterSpacing: "inherit",
       }}
     >
       {/* Invisible spacer words to preserve natural layout dimensions */}

@@ -90,7 +90,7 @@ export function CurvyShowcase({
       <div className="curvy-showcase-bar">
         <div className="curvy-showcase-counter">
           <span className="mf-mono" style={{ fontSize: "0.75rem", color: "var(--mf-ink-3)" }}>
-            SHOWING <strong>{currentIndex + 1}</strong> OF <strong>{count}</strong> REPOSITORIES
+            Showing <strong>{currentIndex + 1}</strong> of <strong>{count}</strong> repositories
           </span>
         </div>
 
@@ -165,7 +165,11 @@ export function CurvyShowcase({
                               : { background: "#f59e0b" }
                         }
                       />
-                      {entry.status.toUpperCase()}
+                      {entry.status === "complete"
+                        ? "Indexed"
+                        : entry.status === "failed"
+                          ? "Failed"
+                          : "Indexing"}
                     </span>
                     <button
                       type="button"
@@ -205,7 +209,7 @@ export function CurvyShowcase({
                         fontSize: "0.6875rem",
                       }}
                     >
-                      <span>ANALYZED {timeAgo(entry.analyzedAt).toUpperCase()}</span>
+                      <span>Indexed {timeAgo(entry.analyzedAt)}</span>
                       {sizeFormatted && <span>· {sizeFormatted}</span>}
                     </div>
                   </div>
@@ -237,7 +241,7 @@ export function CurvyShowcase({
                           fontSize: "0.6875rem",
                         }}
                       >
-                        <span>📄</span> {files ? `${files.toLocaleString()} FILES` : "— FILES"}
+                        {files ? `${files.toLocaleString()} files` : "File count pending"}
                       </span>
 
                       <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -266,7 +270,7 @@ export function CurvyShowcase({
                                   background: LANG_COLORS[langKey] || "#888888",
                                 }}
                               />
-                              {lang.toUpperCase()}
+                              {lang}
                             </span>
                           );
                         })}

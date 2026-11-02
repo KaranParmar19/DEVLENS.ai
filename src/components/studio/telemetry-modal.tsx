@@ -474,10 +474,10 @@ export function TelemetryModal({
                   width: 6,
                   height: 6,
                   borderRadius: "50%",
-                  backgroundColor: error ? "#ef4444" : "#10b981",
+                  backgroundColor: error ? "#ef4444" : "#ffffff",
                   boxShadow: error
                     ? "0 0 8px rgba(239, 68, 68, 0.4)"
-                    : "0 0 8px rgba(16, 185, 129, 0.4)",
+                    : "0 0 8px rgba(255, 255, 255, 0.4)",
                   animation: error
                     ? "none"
                     : "devlens-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
@@ -826,7 +826,7 @@ export function TelemetryModal({
                     color: "var(--mf-ink, #0a0a0a)",
                   }}
                 >
-                  System Log // AST Telemetry
+                  System Log · AST Telemetry
                 </span>
                 <span
                   className="mf-mono"

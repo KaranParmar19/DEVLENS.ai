@@ -1,10 +1,15 @@
 import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
+import {
+  Terminal,
+  ArrowUpRight,
+} from "lucide-react";
 import { Pill, Reveal, SiteLayout } from "./site-layout";
 import { StatsSection } from "@/components/ui/stats-section";
 import { FAQSection } from "@/components/ui/faq-section";
 import { MorphText } from "@/components/ui/morph-text";
+import { PlumblinePipeline } from "@/components/ui/plumbline";
 import { normalizeRepoUrl } from "@/lib/utils";
 
 const TRY = [
@@ -17,48 +22,33 @@ const TRY = [
 const FEATURES = [
   {
     n: "01",
-    t: "Architecture map",
-    d: "A live dependency graph of every module, clustered by package, with coupling and cyclomatic complexity scored per node.",
-    tag: "LIVE AST GRAPH",
+    t: "Dependency graph",
+    d: "See every file and module import in one interactive graph, with coupling and complexity scores per file.",
+    tag: "AST graph",
   },
   {
     n: "02",
-    t: "Code flow tracer",
-    d: "Trace a request from entry point to data layer. Scrub through the full call path one execution hop at a time.",
-    tag: "CALL GRAPH",
+    t: "Request flow tracer",
+    d: "Follow an HTTP route or worker job from the entry handler down to the database query, one function call at a time.",
+    tag: "Call path",
   },
   {
     n: "03",
-    t: "Drift timeline",
-    d: "Step through commit history to assess blast radius, dependency deltas, and architectural erosion before shipping.",
-    tag: "RISK RADAR",
+    t: "Commit impact timeline",
+    d: "Check recent commits to see which downstream modules were affected and whether new circular imports were introduced.",
+    tag: "Git history",
   },
   {
     n: "04",
-    t: "Ask DevLens Copilot",
-    d: "An AI copilot grounded directly in parsed AST symbols and call hierarchies. Every answer cites exact source lines.",
-    tag: "AST GROUNDED",
+    t: "Codebase Q&A",
+    d: "Ask how a feature works in plain English. Every answer points to the exact file and line numbers in your repository.",
+    tag: "Line links",
   },
   {
     n: "05",
-    t: "Onboarding doc generator",
-    d: "A generated architectural walkthrough: what matters, what's fragile, and where to start reading.",
-    tag: "AUTODOC",
-  },
-];
-
-const STEPS = [
-  {
-    t: "Paste a repo",
-    d: "Any public GitHub repository URL or shorthand (owner/repo) — or connect private repositories with a PAT.",
-  },
-  {
-    t: "Tree-sitter parses it",
-    d: "Clone to an ephemeral worker, parse AST syntax trees, resolve module imports and compute cyclomatic blast radius.",
-  },
-  {
-    t: "Explore & interrogate",
-    d: "Interact with the architecture map, trace execution flows, and ask the cited Copilot in plain English.",
+    t: "Onboarding guide",
+    d: "Generate a readable summary of the folder layout, main entry points, and fragile files for new teammates.",
+    tag: "Overview",
   },
 ];
 
@@ -250,19 +240,19 @@ function ProductFrame() {
           <i />
           <i />
           <i />
-          <span className="mf-mono">devlens // vercel/next.js // main</span>
+          <span className="mf-mono">devlens · vercel/next.js · main</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span
             className="mf-pill"
             style={{
               padding: "3px 8px",
-              fontSize: "0.625rem",
-              color: "#10b981",
-              borderColor: "rgba(16,185,129,0.3)",
+              fontSize: "0.68rem",
+              color: "#ffffff",
+              borderColor: "rgba(255,255,255,0.2)",
             }}
           >
-            ● AST ENGINE LIVE
+            Indexed
           </span>
         </div>
       </div>
@@ -304,7 +294,7 @@ function ProductFrame() {
               >
                 <span>{n.label}</span>
                 {isSelected && (
-                  <span style={{ fontSize: "0.625rem", color: "#10b981" }}>focus</span>
+                  <span style={{ fontSize: "0.625rem", color: "#ffffff" }}>focus</span>
                 )}
               </div>
             );
@@ -395,7 +385,7 @@ function ProductFrame() {
                     <span style={{ color: "rgba(255, 255, 255, 0.65)", fontWeight: 400 }}>
                       Complexity:
                     </span>
-                    <strong style={{ color: "#10b981", fontWeight: 700 }}>
+                    <strong style={{ color: "#ffffff", fontWeight: 700 }}>
                       {activeNode.complexity}
                     </strong>
                   </span>
@@ -407,9 +397,9 @@ function ProductFrame() {
               <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
                 <span
                   className="mf-mono"
-                  style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.5)" }}
+                  style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.5)" }}
                 >
-                  EXECUTION FLOW TRACER // INCOMING HTTP
+                  Incoming HTTP request trace
                 </span>
                 {[
                   {
@@ -477,9 +467,9 @@ function ProductFrame() {
               <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
                 <span
                   className="mf-mono"
-                  style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.5)" }}
+                  style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.5)" }}
                 >
-                  COMMIT DRIFT &amp; BLAST RADIUS
+                  Recent commit impact
                 </span>
                 <div
                   style={{
@@ -497,9 +487,9 @@ function ProductFrame() {
                     </span>
                     <span
                       className="mf-pill"
-                      style={{ color: "#10b981", borderColor: "rgba(16,185,129,0.4)" }}
+                      style={{ color: "#ffffff", borderColor: "rgba(255,255,255,0.2)" }}
                     >
-                      RISK: LOW
+                      Low impact
                     </span>
                   </div>
                   <div
@@ -636,7 +626,6 @@ export function HomePage() {
     <SiteLayout>
       {/* Hero Section */}
       <section className="mf-hero" data-theme="light">
-        <div className="mf-hero-grid-bg" />
         <div className="mf-wrap">
           <motion.div
             className="mf-hero-top"
@@ -654,14 +643,12 @@ export function HomePage() {
             transition={{ duration: 0.5, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
           >
             See the{" "}
-            <span className="mf-serif-i">
-              <MorphText
-                words={["shape", "flows", "graph", "logic", "depth"]}
-                morphTime={1.1}
-                holdTime={1.8}
-                strength={8}
-              />
-            </span>
+            <MorphText
+              words={["shape", "flows", "graph", "logic", "depth"]}
+              morphTime={1.1}
+              holdTime={1.8}
+              strength={8}
+            />
             <br />
             of any codebase.
           </motion.h1>
@@ -674,8 +661,8 @@ export function HomePage() {
               transition={{ duration: 0.5, delay: 0.16, ease: [0.16, 1, 0.3, 1] }}
             >
               <p className="mf-lead" style={{ marginBottom: 28 }}>
-                DevLens turns any GitHub repository into an interactive architecture map, traceable
-                code flows, and a cited copilot that shows its work — in under eight seconds.
+                Paste a GitHub URL to see how its files connect and how requests move through the
+                code. Every answer links back to the exact file and line number.
               </p>
 
               <form
@@ -700,26 +687,11 @@ export function HomePage() {
                   whileTap={{ scale: 0.97 }}
                   transition={{ type: "spring", stiffness: 400, damping: 25 }}
                 >
-                  Analyze <span className="mf-arrow">↗</span>
+                  Open repo
                 </motion.button>
               </form>
 
               <div className="mf-chips">
-                <Link
-                  to="/dashboard"
-                  search={{ previewLoading: true }}
-                  className="mf-pill mf-chip"
-                  style={{
-                    background: "rgba(16, 185, 129, 0.14)",
-                    borderColor: "#10b981",
-                    color: "#10b981",
-                    fontWeight: 600,
-                  }}
-                  title="Temporary button to view and fix the loading screen"
-                >
-                  <span>⚡ Preview Loading Screen</span>
-                </Link>
-
                 {TRY.map((t) => (
                   <motion.button
                     key={t.label}
@@ -777,11 +749,11 @@ export function HomePage() {
           <div className="mf-sec-head">
             <Reveal>
               <h2 className="mf-h1" style={{ maxWidth: "10em" }}>
-                Five lenses on one repository.
+                Five views on one repository.
               </h2>
             </Reveal>
             <Link to="/features" className="mf-btn ghost">
-              Explore capabilities <span className="mf-arrow">↗</span>
+              See all features
             </Link>
           </div>
 
@@ -828,39 +800,25 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* Process / Pipeline */}
-      <section className="mf-section mf-dark" data-theme="dark">
+      {/* Process / Pipeline (Scroll-Driven Plumbline Feature) */}
+      <section className="mf-section mf-dark mf-pipeline-section" data-theme="dark">
         <div className="mf-wrap">
-          <div className="mf-sec-head">
+          <div className="mf-sec-head mf-pipeline-sec-head">
             <Reveal>
-              <Pill>Pipeline</Pill>
-            </Reveal>
-            <Reveal>
-              <h2 className="mf-h1" style={{ maxWidth: "10em" }}>
-                From repository URL to full comprehension in seconds.
+              <h2 className="mf-h1 mf-pipeline-h1">
+                From GitHub URL<br />
+                to interactive map<br />
+                in three steps.
               </h2>
             </Reveal>
-          </div>
-
-          {STEPS.map((s, i) => (
-            <Reveal key={s.t}>
-              <motion.div
-                className="mf-step"
-                whileHover={{ x: 6 }}
-                transition={{ type: "spring", stiffness: 400, damping: 26 }}
-              >
-                <span className="mf-step-n">0{i + 1}</span>
-                <h3 className="mf-h2">{s.t}</h3>
-                <p className="mf-lead">{s.d}</p>
-              </motion.div>
+            <Reveal>
+              <p className="mf-lead mf-pipeline-sublead">
+                DevLens clones the repository into a temporary folder, parses its syntax trees with Tree-sitter, and links answers directly to source lines.
+              </p>
             </Reveal>
-          ))}
-
-          <div style={{ marginTop: 40 }}>
-            <Link to="/how-it-works" className="mf-btn inv">
-              Inspect pipeline architecture <span className="mf-arrow">↗</span>
-            </Link>
           </div>
+
+          <PlumblinePipeline />
         </div>
       </section>
 

@@ -5,11 +5,11 @@ export const Route = createFileRoute("/")({
   component: HomePage,
   head: () => ({
     meta: [
-      { title: "DevLens AI — See the shape of any codebase" },
+      { title: "DevLens | See the shape of any codebase" },
       {
         name: "description",
         content:
-          "DevLens AI turns any GitHub repository into an interactive architecture map, traceable code flows, a cited Q&A copilot and an onboarding doc — in under 8 seconds.",
+          "Paste a GitHub repository to inspect its dependency graph, trace request paths, and ask questions with exact line citations.",
       },
     ],
   }),

@@ -400,7 +400,7 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
                 width: 6,
                 height: 6,
                 borderRadius: "50%",
-                background: graphStats.cycles === 0 ? "#10b981" : "#ef4444",
+                background: graphStats.cycles === 0 ? "#ffffff" : "#ef4444",
               }}
             />
             <span>
@@ -421,7 +421,7 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
             <span
               style={{
                 color:
-                  analysisState.graphData?.meta?.search_mode === "semantic" ? "#10b981" : "#eab308",
+                  analysisState.graphData?.meta?.search_mode === "semantic" ? "#ffffff" : "#eab308",
               }}
             >
               {analysisState.graphData?.meta?.search_mode === "semantic"

@@ -48,7 +48,7 @@ export function SiteNav() {
   return <FloatingDock />;
 }
 
-/* ── Footer ───────────────────────────────────────────────────────── */
+/* ── Site Footer ─────────────────────────────────────────────────── */
 export function SiteFooter() {
   return <FooterField />;
 }
@@ -67,24 +67,53 @@ export function SiteLayout({ children }: { children: ReactNode }) {
     const onScroll = () => {
       cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(() => {
-        const trigger = window.innerHeight * 0.72;
-        const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 60;
-        let theme = "light";
-
-        sections.forEach((s) => {
-          if (s.getBoundingClientRect().top <= trigger) {
-            theme = s.dataset.theme || "light";
+        // 1. Top of page safeguard: within 80px of top, ALWAYS force light theme (Hero is active)
+        if (window.scrollY <= 80) {
+          if (root.dataset.theme !== "light") {
+            root.dataset.theme = "light";
+            document.documentElement.dataset.theme = "light";
           }
-        });
-
-        if (atBottom && sections.length > 0) {
-          const last = sections[sections.length - 1];
-          if (last.dataset.theme) theme = last.dataset.theme;
+          return;
         }
 
-        if (root.dataset.theme !== theme) {
-          root.dataset.theme = theme;
-          document.documentElement.dataset.theme = theme;
+        // 2. Bottom of page safeguard: within 80px of document bottom, activate footer/last theme
+        const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 80;
+        if (atBottom && sections.length > 0) {
+          const last = sections[sections.length - 1];
+          const lastTheme = last.dataset.theme || "dark";
+          if (root.dataset.theme !== lastTheme) {
+            root.dataset.theme = lastTheme;
+            document.documentElement.dataset.theme = lastTheme;
+          }
+          return;
+        }
+
+        // 3. Focal line detection: the section that intersects the upper-middle focal point (42% down viewport)
+        const focalY = window.innerHeight * 0.42;
+        let activeTheme = "light";
+        let found = false;
+
+        for (const s of sections) {
+          const rect = s.getBoundingClientRect();
+          if (rect.top <= focalY && rect.bottom >= focalY) {
+            activeTheme = s.dataset.theme || "light";
+            found = true;
+            break;
+          }
+        }
+
+        if (!found) {
+          for (const s of sections) {
+            const rect = s.getBoundingClientRect();
+            if (rect.top <= focalY) {
+              activeTheme = s.dataset.theme || "light";
+            }
+          }
+        }
+
+        if (root.dataset.theme !== activeTheme) {
+          root.dataset.theme = activeTheme;
+          document.documentElement.dataset.theme = activeTheme;
         }
       });
     };
@@ -114,7 +143,6 @@ export function SiteLayout({ children }: { children: ReactNode }) {
 export function PageHero({ eyebrow, title, lead }: { eyebrow: string; title: ReactNode; lead: string }) {
   return (
     <section className="mf-hero" style={{ paddingBottom: 72 }}>
-      <div className="mf-hero-grid-bg" />
       <div className="mf-wrap">
         <div className="mf-hero-top"><Pill live>{eyebrow}</Pill></div>
         <h1 className="mf-h1" style={{ maxWidth: "12em" }}>{title}</h1>

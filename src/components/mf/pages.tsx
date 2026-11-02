@@ -19,45 +19,45 @@ const PROCESS_STEPS = [
   {
     id: "feat-01",
     num: "01)",
-    title: "Architecture map",
-    tag: "AST Force Graph",
-    desc: "AST-projected force layout mapping files, symbols, and dependencies in real time.",
+    title: "Dependency graph",
+    tag: "AST Graph",
+    desc: "See how files, modules, and cross-file imports connect across the repository.",
     x: 70,
     y: 44,
   },
   {
     id: "feat-02",
     num: "02)",
-    title: "Code flow tracer",
-    tag: "Execution Hops",
-    desc: "Multi-hop execution tracing from HTTP ingress down to database mutation.",
+    title: "Request flow tracer",
+    tag: "Call Path",
+    desc: "Follow an HTTP endpoint or background job step by step down to the database.",
     x: 320,
     y: 114,
   },
   {
     id: "feat-03",
     num: "03)",
-    title: "Drift timeline",
-    tag: "Commit Blast Radius",
-    desc: "Commit-by-commit blast radius tracking structural divergence across branches.",
+    title: "Commit history",
+    tag: "Impact Check",
+    desc: "Review recent commits to see which downstream modules were affected.",
     x: 570,
     y: 184,
   },
   {
     id: "feat-04",
     num: "04)",
-    title: "Ask DevLens",
-    tag: "Line-Cited Copilot",
-    desc: "Line-cited contextual reasoning powered by multi-file AST multi-graphs.",
+    title: "Codebase Q&A",
+    tag: "Line Links",
+    desc: "Ask questions about your code and jump straight to the exact file and line.",
     x: 820,
     y: 254,
   },
   {
     id: "feat-05",
     num: "05)",
-    title: "Onboarding doc",
-    tag: "Auto-Wiki Dossier",
-    desc: "Synthesizes architecture mental models and domain dossiers on demand.",
+    title: "Onboarding guide",
+    tag: "Overview",
+    desc: "Read a generated breakdown of the folder layout, entry points, and fragile files.",
     x: 1070,
     y: 324,
   },
@@ -180,7 +180,7 @@ const DRIFT_COMMITS = [
     time: "2h ago",
     title: "refactor(graph): split AST symbol resolver from worker pool",
     risk: "LOW RISK",
-    riskColor: "#10b981",
+    riskColor: "#ffffff",
     deltaEdges: "-4 circular edges",
     touched: "6 files · +184 / -92",
     audit: "Decoupled graph solver from worker loop. Cyclomatic complexity in tree_sitter_runner dropped from 38 to 24.",
@@ -247,7 +247,7 @@ POST /api/v1/repos/analyze
             └─► graphSolver.solve()    // [src/graph/solver.py:87]`,
     bullets: [
       "Start reading in src/api/routes/repos.py to trace job creation.",
-      "Core domain models live in src/schemas/graph.py — shared across all 5 views.",
+      "Core domain models live in src/schemas/graph.py, shared across all five views.",
     ],
   },
   {
@@ -313,9 +313,8 @@ export function FeaturesPage() {
 
   return (
     <SiteLayout>
-      {/* ── 00. ASYMMETRIC EDITORIAL HERO ───────────────────────────── */}
+      {/* 00. Hero */}
       <section className="mf-hero" data-theme="light" style={{ paddingBottom: "clamp(48px, 6vw, 80px)" }}>
-        <div className="mf-hero-grid-bg" />
         <div className="mf-wrap">
           <motion.div
             className="mf-hero-top"
@@ -323,8 +322,7 @@ export function FeaturesPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
           >
-            <Pill live>05 Core Engines · AST Grounded</Pill>
-            <span className="mf-mono mf-muted">SYS.SPEC // V2.4 · ZERO HALLUCINATION</span>
+            <Pill live>Five views backed by one syntax graph</Pill>
           </motion.div>
 
           <div className="feat-hero-grid">
@@ -333,20 +331,15 @@ export function FeaturesPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.55, delay: 0.06, ease: [0.16, 1, 0.3, 1] }}
             >
-              <div className="mf-mono mf-muted" style={{ marginBottom: 18 }}>
-                [ ARCHITECTURAL INTELLIGENCE SUITE ]
-              </div>
               <h1 className="feat-display-title">
                 Five views.
                 <span className="feat-line-indent">
-                  <span className="mf-serif-i">
-                    <MorphText
-                      words={["One truth", "Zero drift", "Full trace", "Exact lines"]}
-                      morphTime={1.05}
-                      holdTime={2.0}
-                      strength={7}
-                    />
-                  </span>{" "}
+                  <MorphText
+                    words={["One truth", "Zero drift", "Full trace", "Exact lines"]}
+                    morphTime={1.05}
+                    holdTime={2.0}
+                    strength={7}
+                  />{" "}
                   in code.
                 </span>
               </h1>
@@ -359,15 +352,14 @@ export function FeaturesPage() {
               transition={{ duration: 0.55, delay: 0.14, ease: [0.16, 1, 0.3, 1] }}
             >
               <p className="mf-lead" style={{ margin: 0 }}>
-                Every view in DevLens is projected from a single Tree-sitter AST and dependency
-                multigraph — so your architecture map, call flow, commit drift, AI answers, and
-                onboarding docs never disagree.
+                Every view in DevLens reads from the same Tree-sitter syntax tree and dependency
+                graph. Your dependency map, request trace, commit history, Q&amp;A answers, and
+                onboarding notes all stay in sync.
               </p>
               <div className="feat-spec-badges">
-                <span className="feat-spec-chip">&lt; 8.0s Cold Parse</span>
-                <span className="feat-spec-chip">14+ AST Grammars</span>
-                <span className="feat-spec-chip">100% Line-Cited</span>
-                <span className="feat-spec-chip">Mermaid &amp; JSON</span>
+                <span className="feat-spec-chip">8 AST languages</span>
+                <span className="feat-spec-chip">Line-level citations</span>
+                <span className="feat-spec-chip">Mermaid &amp; JSON export</span>
               </div>
             </motion.div>
           </div>
@@ -448,9 +440,9 @@ export function FeaturesPage() {
               <div className="feat-num-row">
                 <span className="feat-giant-num">01</span>
                 <div style={{ textAlign: "right" }}>
-                  <Pill live>LIVE AST GRAPH</Pill>
+                  <Pill live>Dependency graph</Pill>
                   <div className="mf-mono mf-muted" style={{ marginTop: 8 }}>
-                    FORCE-DIRECTED · PAGE-RANK SCORED
+                    Module imports &amp; coupling scores
                   </div>
                 </div>
               </div>
@@ -460,27 +452,26 @@ export function FeaturesPage() {
               </h2>
 
               <p className="mf-lead" style={{ margin: 0 }}>
-                Every file becomes an interactive node; every resolved import becomes a directed
-                edge. Modules cluster automatically into package hulls while load-bearing bottlenecks
-                scale by fan-in coupling.
+                Every file becomes an interactive node and every resolved import becomes a directed
+                edge. Click any file to see what imports it and how tightly coupled it is.
               </p>
 
               <div className="feat-subgrid-2x2">
                 <div className="feat-micro-card">
-                  <span className="feat-micro-idx">01.A // TOPOLOGY</span>
-                  <div className="feat-micro-text">Force-directed layout with convex module hulls</div>
+                  <span className="feat-micro-idx">Module grouping</span>
+                  <div className="feat-micro-text">Clusters files automatically by folder and package</div>
                 </div>
                 <div className="feat-micro-card">
-                  <span className="feat-micro-idx">01.B // TELEMETRY</span>
-                  <div className="feat-micro-text">Cyclomatic complexity &amp; coupling per node</div>
+                  <span className="feat-micro-idx">Complexity scores</span>
+                  <div className="feat-micro-text">Shows cyclomatic complexity and coupling per file</div>
                 </div>
                 <div className="feat-micro-card">
-                  <span className="feat-micro-idx">01.C // BLAST HALO</span>
-                  <div className="feat-micro-text">1-hop &amp; 2-hop impact radius on selection</div>
+                  <span className="feat-micro-idx">Impact radius</span>
+                  <div className="feat-micro-text">Highlights direct and indirect dependents on click</div>
                 </div>
                 <div className="feat-micro-card">
-                  <span className="feat-micro-idx">01.D // PORTABILITY</span>
-                  <div className="feat-micro-text">Instant export to Mermaid, PlantUML, or JSON</div>
+                  <span className="feat-micro-idx">Diagram export</span>
+                  <div className="feat-micro-text">Export the graph to Mermaid, PlantUML, or JSON</div>
                 </div>
               </div>
             </div>
@@ -493,11 +484,11 @@ export function FeaturesPage() {
                     <i />
                     <i />
                     <i />
-                    <span className="mf-mono" style={{ marginLeft: 10, color: "#a3a3a3", fontSize: "0.68rem" }}>
-                      AST_GRAPH_INSPECTOR // CLICK ANY NODE
+                    <span className="mf-mono" style={{ marginLeft: 10, color: "#a3a3a3", fontSize: "0.72rem" }}>
+                      Click any node to inspect its connections
                     </span>
                   </div>
-                  <span className="mf-studio-stat-pill">5 CLUSTERS · 6 EDGES</span>
+                  <span className="mf-studio-stat-pill">5 clusters · 6 edges</span>
                 </div>
 
                 <div style={{ padding: "20px 24px 12px" }}>
@@ -533,7 +524,7 @@ export function FeaturesPage() {
                           y1={FEAT_NODES[a].y}
                           x2={FEAT_NODES[b].x}
                           y2={FEAT_NODES[b].y}
-                          stroke={active ? "#10b981" : "rgba(255,255,255,0.18)"}
+                          stroke={active ? "#ffffff" : "rgba(255,255,255,0.18)"}
                           strokeWidth={active ? 2.2 : 1.2}
                           strokeDasharray={active ? "none" : "4 4"}
                           style={{ transition: "all 0.3s ease" }}
@@ -555,8 +546,8 @@ export function FeaturesPage() {
                               cx={node.x}
                               cy={node.y}
                               r="28"
-                              fill="rgba(16, 185, 129, 0.12)"
-                              stroke="#10b981"
+                              fill="rgba(255, 255, 255, 0.08)"
+                              stroke="#ffffff"
                               strokeWidth="1.2"
                               strokeDasharray="3 3"
                             />
@@ -565,7 +556,7 @@ export function FeaturesPage() {
                             cx={node.x}
                             cy={node.y}
                             r={isSel ? 13 : 9}
-                            fill={isSel ? "#10b981" : "#17171c"}
+                            fill={isSel ? "#ffffff" : "#17171c"}
                             stroke={isSel ? "#ffffff" : "rgba(255,255,255,0.65)"}
                             strokeWidth={isSel ? 2.5 : 1.5}
                             style={{ transition: "all 0.25s ease" }}
@@ -599,8 +590,8 @@ export function FeaturesPage() {
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
                     <div>
-                      <span className="mf-mono" style={{ color: "#10b981", fontSize: "0.68rem" }}>
-                        SELECTED NODE // {activeNode.cluster}
+                      <span className="mf-mono" style={{ color: "#ffffff", fontSize: "0.68rem" }}>
+                        SELECTED NODE · {activeNode.cluster}
                       </span>
                       <div style={{ fontSize: "1.15rem", fontWeight: 600, marginTop: 2, fontFamily: "var(--mf-mono)" }}>
                         {activeNode.label}
@@ -644,8 +635,8 @@ export function FeaturesPage() {
               gap: 16,
             }}
           >
-            <span className="mf-mono mf-muted">02 &amp; 03 // EXECUTION TRACE + TEMPORAL DRIFT</span>
-            <span className="mf-mono mf-muted">RUNTIME CALL GRAPH · GIT BLAST RADIUS</span>
+            <span className="mf-mono mf-muted">02 &amp; 03 · Request tracing and commit history</span>
+            <span className="mf-mono mf-muted">Follow execution paths and review recent changes</span>
           </div>
 
           <div className="feat-stagger-wrap">
@@ -656,9 +647,9 @@ export function FeaturesPage() {
                   <div className="feat-num-row">
                     <span className="feat-giant-num">02</span>
                     <div style={{ textAlign: "right" }}>
-                      <Pill live>CALL GRAPH STEPPER</Pill>
+                      <Pill live>Call path stepper</Pill>
                       <div className="mf-mono mf-muted" style={{ marginTop: 8 }}>
-                        ENTRYPOINT → SINK TRACE
+                        Entry handler to database query
                       </div>
                     </div>
                   </div>
@@ -727,14 +718,14 @@ export function FeaturesPage() {
 
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 22, flexWrap: "wrap", gap: 12 }}>
                     <div className="mf-mono mf-muted">
-                      DEEP-LINKABLE HOPS · CYCLE &amp; HOTSPOT FLAGS
+                      Each step links directly to its file and line number
                     </div>
                     <button
                       type="button"
                       className="mf-btn ghost sm"
                       onClick={() => setActiveHop((prev) => (prev + 1) % FLOW_HOPS.length)}
                     >
-                      Step next hop ({activeHop + 1}/{FLOW_HOPS.length}) →
+                      Next step ({activeHop + 1}/{FLOW_HOPS.length})
                     </button>
                   </div>
                 </div>
@@ -748,9 +739,9 @@ export function FeaturesPage() {
                   <div className="feat-num-row">
                     <span className="feat-giant-num">03</span>
                     <div style={{ textAlign: "right" }}>
-                      <Pill live>RISK RADAR</Pill>
+                      <Pill live>Commit history</Pill>
                       <div className="mf-mono mf-muted" style={{ marginTop: 8 }}>
-                        COMMIT-BY-COMMIT DELTA
+                        Downstream impact per commit
                       </div>
                     </div>
                   </div>
@@ -845,9 +836,9 @@ export function FeaturesPage() {
                 <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 20 }}>
                   <span className="feat-giant-num">04</span>
                   <div>
-                    <Pill live>AST-GROUNDED COPILOT</Pill>
+                    <Pill live>Codebase Q&amp;A</Pill>
                     <div className="mf-mono mf-muted" style={{ marginTop: 8 }}>
-                      HYBRID VECTOR + SYMBOL GRAPH RETRIEVAL
+                      Vector search combined with AST symbol lookup
                     </div>
                   </div>
                 </div>
@@ -858,8 +849,8 @@ export function FeaturesPage() {
 
               <div>
                 <p className="mf-lead" style={{ margin: 0 }}>
-                  Zero unverified guesswork. Pin any module with <code style={{ fontFamily: "var(--mf-mono)" }}>@mention</code> and
-                  get streaming architectural answers where every claim links to exact source lines.
+                  Pin any file with <code style={{ fontFamily: "var(--mf-mono)" }}>@mention</code> and
+                  ask how a feature works. Every answer links to the exact source lines it used.
                 </p>
               </div>
             </div>
@@ -868,7 +859,7 @@ export function FeaturesPage() {
               {/* Left Prompt & Context Selector */}
               <div className="feat-copilot-sidebar">
                 <div className="mf-mono mf-muted" style={{ marginBottom: 4 }}>
-                  SELECT AN ENGINEERING QUERY
+                  Sample questions
                 </div>
                 {COPILOT_DEMOS.map((item, idx) => (
                   <button
@@ -877,21 +868,21 @@ export function FeaturesPage() {
                     className={`feat-prompt-btn ${idx === activePrompt ? "active" : ""}`}
                     onClick={() => setActivePrompt(idx)}
                   >
-                    <div className="mf-mono" style={{ fontSize: "0.66rem", opacity: 0.75, marginBottom: 6 }}>
-                      PINNED: {item.pin}
+                    <div className="mf-mono" style={{ fontSize: "0.68rem", opacity: 0.75, marginBottom: 6 }}>
+                      Pinned: {item.pin}
                     </div>
-                    <div>“{item.q}”</div>
+                    <div>{item.q}</div>
                   </button>
                 ))}
 
                 <div style={{ marginTop: "auto", paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.1)" }}>
-                  <div className="mf-mono mf-muted" style={{ fontSize: "0.65rem" }}>
-                    CAPABILITIES //
+                  <div className="mf-mono mf-muted" style={{ fontSize: "0.68rem" }}>
+                    Included in every answer
                   </div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
-                    <span className="mf-studio-stat-pill">FILE:LINE CITATIONS</span>
-                    <span className="mf-studio-stat-pill">@MENTION PINNING</span>
-                    <span className="mf-studio-stat-pill">SESSION MEMORY</span>
+                    <span className="mf-studio-stat-pill">File &amp; line links</span>
+                    <span className="mf-studio-stat-pill">@file pinning</span>
+                    <span className="mf-studio-stat-pill">Follow-up threads</span>
                   </div>
                 </div>
               </div>
@@ -908,15 +899,15 @@ export function FeaturesPage() {
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 20 }}>
                       <span className="mf-studio-stat-pill">
-                        CONTEXT PIN: {currentCopilot.pin}
+                        Pinned: {currentCopilot.pin}
                       </span>
-                      <span className="mf-mono" style={{ color: "#10b981", fontSize: "0.7rem" }}>
-                        ● 3 AST SYMBOLS VERIFIED
+                      <span className="mf-mono" style={{ color: "#ffffff", fontSize: "0.72rem" }}>
+                        3 symbols referenced
                       </span>
                     </div>
 
                     <div style={{ fontSize: "clamp(1.2rem, 2vw, 1.5rem)", fontWeight: 500, color: "#ffffff", letterSpacing: "-0.02em", marginBottom: 16 }}>
-                      “{currentCopilot.q}”
+                      {currentCopilot.q}
                     </div>
 
                     <p style={{ fontSize: "1.05rem", lineHeight: 1.65, color: "#d4d4d4", margin: 0 }}>
@@ -925,8 +916,8 @@ export function FeaturesPage() {
 
                     {/* Verified Source Citations */}
                     <div style={{ marginTop: 28 }}>
-                      <div className="mf-mono mf-muted" style={{ marginBottom: 10, fontSize: "0.68rem" }}>
-                        CITED SOURCE LINES (CLICKABLE IN WORKSPACE)
+                      <div className="mf-mono mf-muted" style={{ marginBottom: 10, fontSize: "0.72rem" }}>
+                        Cited source lines
                       </div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                         {currentCopilot.citations.map((cite) => (
@@ -937,12 +928,12 @@ export function FeaturesPage() {
                               fontSize: "0.75rem",
                               padding: "7px 12px",
                               borderRadius: 8,
-                              background: "rgba(16, 185, 129, 0.12)",
-                              border: "1px solid rgba(16, 185, 129, 0.4)",
-                              color: "#10b981",
+                              background: "rgba(255, 255, 255, 0.08)",
+                              border: "1px solid rgba(255, 255, 255, 0.2)",
+                              color: "#ffffff",
                             }}
                           >
-                            📄 {cite}
+                            {cite}
                           </span>
                         ))}
                       </div>
@@ -961,11 +952,11 @@ export function FeaturesPage() {
                     gap: 12,
                   }}
                 >
-                  <div className="mf-mono mf-muted" style={{ fontSize: "0.68rem" }}>
-                    RESOLVED AST SYMBOLS: {currentCopilot.symbols.join(" · ")}
+                  <div className="mf-mono mf-muted" style={{ fontSize: "0.72rem" }}>
+                    Symbols: {currentCopilot.symbols.join(" · ")}
                   </div>
                   <Link to="/dashboard" className="mf-btn inv sm">
-                    Ask on your repo <span className="mf-arrow">↗</span>
+                    Open dashboard
                   </Link>
                 </div>
               </div>
@@ -1002,7 +993,7 @@ export function FeaturesPage() {
                       className="mf-btn ghost sm"
                       onClick={handleCopyDossier}
                     >
-                      {copiedDoc ? "Copied Markdown ✓" : "Copy Markdown ⧉"}
+                      {copiedDoc ? "Copied Markdown" : "Copy Markdown"}
                     </button>
                   </div>
 
@@ -1046,9 +1037,9 @@ export function FeaturesPage() {
               <div className="feat-num-row">
                 <span className="feat-giant-num">05</span>
                 <div style={{ textAlign: "right" }}>
-                  <Pill live>AUTODOC SYNTHESIZER</Pill>
+                  <Pill live>Onboarding guide</Pill>
                   <div className="mf-mono mf-muted" style={{ marginTop: 8 }}>
-                    SHIPPABLE MARKDOWN WIKI
+                    Exportable Markdown summary
                   </div>
                 </div>
               </div>
@@ -1058,27 +1049,26 @@ export function FeaturesPage() {
               </h2>
 
               <p className="mf-lead" style={{ margin: 0 }}>
-                Turn a 200,000-line codebase into a structured architectural briefing in seconds:
-                what matters, which invariants cannot be broken, and where new engineers should start
-                reading on day one.
+                Generate a structured overview of any repository: where requests enter, how modules
+                are organized, and which high-coupling files new teammates should read first.
               </p>
 
               <div className="feat-subgrid-2x2">
                 <div className="feat-micro-card">
-                  <span className="feat-micro-idx">05.A // WIKI READY</span>
-                  <div className="feat-micro-text">Clean Markdown ready for GitHub or Notion</div>
+                  <span className="feat-micro-idx">Markdown export</span>
+                  <div className="feat-micro-text">Copy clean Markdown for your repo README or wiki</div>
                 </div>
                 <div className="feat-micro-card">
-                  <span className="feat-micro-idx">05.B // INVARIANTS</span>
-                  <div className="feat-micro-text">Surfaces unwritten architectural contracts</div>
+                  <span className="feat-micro-idx">Module boundaries</span>
+                  <div className="feat-micro-text">Lists folder responsibilities and import rules</div>
                 </div>
                 <div className="feat-micro-card">
-                  <span className="feat-micro-idx">05.C // HOTSPOT TRAPS</span>
-                  <div className="feat-micro-text">Flags fragile high-coupling files automatically</div>
+                  <span className="feat-micro-idx">High-coupling files</span>
+                  <div className="feat-micro-text">Flags files with the most dependents and complexity</div>
                 </div>
                 <div className="feat-micro-card">
-                  <span className="feat-micro-idx">05.D // LIVE SYNC</span>
-                  <div className="feat-micro-text">Re-synthesizes whenever you re-index a branch</div>
+                  <span className="feat-micro-idx">Branch updates</span>
+                  <div className="feat-micro-text">Regenerates whenever you index a new branch or commit</div>
                 </div>
               </div>
             </div>
@@ -1093,48 +1083,48 @@ export function FeaturesPage() {
             <div style={{ borderTop: "1px solid var(--mf-line)", paddingTop: "clamp(48px, 6vw, 88px)" }}>
               <div className="mf-sec-head" style={{ marginBottom: 40 }}>
                 <div>
-                  <Pill>BENCHMARK MATRIX</Pill>
+                  <Pill>Comparison</Pill>
                   <h2 className="mf-h2" style={{ marginTop: 16 }}>
                     Why static grep &amp; generic chat <span className="mf-serif-i">fall short.</span>
                   </h2>
                 </div>
-                <span className="mf-mono mf-muted"> DETERMINISTIC AST VS. HEURISTIC GUESSING</span>
+                <span className="mf-mono mf-muted">How AST parsing compares to text search and generic chat</span>
               </div>
 
               <div style={{ overflowX: "auto" }}>
                 <table className="feat-matrix">
                   <thead>
                     <tr>
-                      <th>CAPABILITY</th>
-                      <th>IDE SEARCH / GREP</th>
-                      <th>GENERIC LLM CHAT</th>
-                      <th>DEVLENS AST ENGINE</th>
+                      <th>Task</th>
+                      <th>IDE search / grep</th>
+                      <th>Generic LLM chat</th>
+                      <th>DevLens</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
                       <td>Cross-file call hierarchy</td>
                       <td className="mf-muted">Manual file-by-file jumping</td>
-                      <td className="mf-muted">Hallucinates unindexed imports</td>
-                      <td><strong>Deterministic Tree-sitter multigraph</strong></td>
+                      <td className="mf-muted">Guesses unindexed imports</td>
+                      <td><strong>Resolved Tree-sitter import graph</strong></td>
                     </tr>
                     <tr>
-                      <td>Commit blast radius</td>
+                      <td>Commit impact check</td>
                       <td className="mf-muted">Raw line diff only</td>
-                      <td className="mf-muted">No transitive graph awareness</td>
-                      <td><strong>1-hop &amp; 2-hop coupling risk radar</strong></td>
+                      <td className="mf-muted">No cross-file dependency graph</td>
+                      <td><strong>Direct and indirect dependent check</strong></td>
                     </tr>
                     <tr>
                       <td>Source code citations</td>
                       <td className="mf-muted">String match only</td>
                       <td className="mf-muted">Unverified snippets</td>
-                      <td><strong>100% grounded file:line citations</strong></td>
+                      <td><strong>Clickable file and line links</strong></td>
                     </tr>
                     <tr>
                       <td>New engineer onboarding</td>
-                      <td className="mf-muted">Weeks of tribal knowledge</td>
+                      <td className="mf-muted">Reading folders by hand</td>
                       <td className="mf-muted">Outdated README summaries</td>
-                      <td><strong>Auto-synthesized architecture dossier</strong></td>
+                      <td><strong>Generated Markdown overview</strong></td>
                     </tr>
                   </tbody>
                 </table>

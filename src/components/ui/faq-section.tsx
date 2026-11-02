@@ -44,7 +44,7 @@ export const DEFAULT_DEVLENS_FAQS: FAQItemData[] = [
 
 export function FAQSection({
   title = "Questions & Answers",
-  subtitle = "Have more questions? Don't hesitate to email us:",
+  subtitle = "Common questions about how DevLens indexes and maps repositories.",
   items = DEFAULT_DEVLENS_FAQS,
   defaultOpenIndex = 0,
   className = "",

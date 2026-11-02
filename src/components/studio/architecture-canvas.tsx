@@ -782,7 +782,7 @@ export function ArchitectureCanvas({
                 animation: "mf-pulse 1s infinite",
               }}
             />
-            <span>BLAST RADIUS ACTIVE //</span>
+            <span>BLAST RADIUS ACTIVE ·</span>
             <span style={{ color: "#ffffff", fontWeight: 600 }}>{selectedNode.label}</span>
           </div>
 

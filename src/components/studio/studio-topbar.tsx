@@ -86,7 +86,7 @@ export function StudioTopbar({
               display: "inline-block",
             }}
           />
-          DevLens // Studio
+          DevLens · Studio
         </a>
 
         <div style={{ width: 1, height: 16, backgroundColor: "rgba(255, 255, 255, 0.15)" }} />

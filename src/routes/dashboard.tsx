@@ -2,8 +2,6 @@ import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { StudioWorkspace } from "@/components/studio/studio-workspace";
-import { TelemetryModal } from "@/components/studio/telemetry-modal";
-import type { AnalysisStep } from "@/hooks/useAnalysis";
 import { CurvyShowcase } from "@/components/ui/curvy-showcase";
 import { ActivityBadge } from "@/components/ui/activity-badge";
 import {
@@ -20,7 +18,6 @@ type DashboardSearch = {
   repo?: string;
   jobId?: string;
   sessionId?: string;
-  previewLoading?: boolean;
 };
 
 export const Route = createFileRoute("/dashboard")({
@@ -28,15 +25,15 @@ export const Route = createFileRoute("/dashboard")({
     repo: search.repo as string | undefined,
     jobId: search.jobId as string | undefined,
     sessionId: search.sessionId as string | undefined,
-    previewLoading: Boolean(search.previewLoading),
   }),
   component: DashboardPage,
   head: () => ({
     meta: [
-      { title: "Dashboard — DevLens AI" },
+      { title: "Dashboard | DevLens" },
       {
         name: "description",
-        content: "Interactive architecture mapping, smart Q&A, and onboarding documentation.",
+        content:
+          "Paste a GitHub repository to inspect its file dependency graph, trace request paths, and search the code with line citations.",
       },
     ],
   }),
@@ -56,10 +53,11 @@ const LANG_COLORS: Record<string, string> = {
 };
 
 const QUICK = [
-  { label: "facebook/react", tag: "TypeScript", lang: "TypeScript" },
+  { label: "facebook/react", tag: "UI Runtime", lang: "TypeScript" },
   { label: "vercel/next.js", tag: "Monorepo", lang: "TypeScript" },
-  { label: "fastapi/fastapi", tag: "Python", lang: "Python" },
+  { label: "fastapi/fastapi", tag: "ASGI Framework", lang: "Python" },
   { label: "tailwindlabs/tailwindcss", tag: "CSS Engine", lang: "TypeScript" },
+  { label: "denoland/deno", tag: "Rust Runtime", lang: "Rust" },
 ];
 
 const STARTER_SHOWCASE_ENTRIES: RepoHistoryEntry[] = [
@@ -149,27 +147,60 @@ const STARTER_SHOWCASE_ENTRIES: RepoHistoryEntry[] = [
   },
 ];
 
-const DEMO_PREVIEW_STEPS: AnalysisStep[] = [
-  { label: "Cloning repository structure", status: "done" },
-  { label: "Parsing file tree with Tree-sitter", status: "active" },
-  { label: "Building AST module graph", status: "pending" },
-  { label: "Analyzing cyclomatic complexity", status: "pending" },
-  { label: "Synthesizing cited onboarding dossier", status: "pending" },
-];
+const STUDIO_LENSES = [
+  {
+    id: "map",
+    num: "01",
+    label: "Dependency Graph",
+    tag: "AST",
+    summary:
+      "See which files import each other and check what will break before you edit a shared module.",
+    sampleRepo: "facebook/react",
+  },
+  {
+    id: "flow",
+    num: "02",
+    label: "Request Tracer",
+    tag: "Call path",
+    summary:
+      "Follow an API route or background job from the entry handler all the way to the database query.",
+    sampleRepo: "fastapi/fastapi",
+  },
+  {
+    id: "copilot",
+    num: "03",
+    label: "Codebase Q&A",
+    tag: "Line links",
+    summary:
+      "Ask how a feature works in plain English. Every answer points to the exact file and line numbers.",
+    sampleRepo: "vercel/next.js",
+  },
+  {
+    id: "dossier",
+    num: "04",
+    label: "Onboarding Notes",
+    tag: "Overview",
+    summary:
+      "Read a generated breakdown of the folder layout, main entry points, and recent commit activity.",
+    sampleRepo: "tailwindlabs/tailwindcss",
+  },
+] as const;
 
 function DashboardPage() {
-  const { repo: rawRepo, jobId, sessionId, previewLoading: queryPreviewLoading } = Route.useSearch();
+  const { repo: rawRepo, jobId, sessionId } = Route.useSearch();
   const repo = useMemo(() => (rawRepo ? normalizeRepoUrl(rawRepo) : undefined), [rawRepo]);
   const navigate = useNavigate({ from: Route.fullPath });
   const [inputRepo, setInputRepo] = useState("");
   const [phIdx, setPhIdx] = useState(0);
   const [version, setVersion] = useState(0);
   const [repoFilter, setRepoFilter] = useState("");
+  const [langFilter, setLangFilter] = useState<string>("ALL");
+  const [activeLensIdx, setActiveLensIdx] = useState<number | null>(null);
   const commandInputRef = useRef<HTMLInputElement>(null);
 
   // Rotating placeholder in the command bar
   useEffect(() => {
-    const id = setInterval(() => setPhIdx((i) => (i + 1) % QUICK.length), 2600);
+    const id = setInterval(() => setPhIdx((i) => (i + 1) % QUICK.length), 2800);
     return () => clearInterval(id);
   }, []);
 
@@ -191,35 +222,6 @@ function DashboardPage() {
 
   const [health, setHealth] = useState<"idle" | "ok" | "down">("idle");
 
-  // Developer Preview Loading Screen State
-  const [previewLoading, setPreviewLoading] = useState(Boolean(queryPreviewLoading));
-  const [previewProgress, setPreviewProgress] = useState(48);
-  const [previewError, setPreviewError] = useState<string | null>(null);
-  const [previewAuto, setPreviewAuto] = useState(false);
-
-  useEffect(() => {
-    if (queryPreviewLoading) {
-      setPreviewLoading(true);
-    }
-  }, [queryPreviewLoading]);
-
-  useEffect(() => {
-    if (!previewLoading || !previewAuto) return;
-    const interval = setInterval(() => {
-      setPreviewProgress((p) => (p >= 98 ? 10 : p + 5));
-    }, 450);
-    return () => clearInterval(interval);
-  }, [previewLoading, previewAuto]);
-
-  const currentPreviewSteps: AnalysisStep[] = useMemo(() => {
-    return DEMO_PREVIEW_STEPS.map((s, idx) => {
-      const threshold = (idx + 1) * 20;
-      if (previewProgress >= threshold) return { ...s, status: "done" };
-      if (previewProgress >= idx * 20) return { ...s, status: "active" };
-      return { ...s, status: "pending" };
-    });
-  }, [previewProgress]);
-
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const history = useMemo(() => repoHistory.getAll(), [version, repo]);
 
@@ -234,10 +236,8 @@ function DashboardPage() {
   });
 
   const handleDeleteRepo = useCallback((entry: RepoHistoryEntry) => {
-    // 1. Remove from localStorage repo history using all matching identifiers
     repoHistory.remove(entry.id, entry.repoLabel, entry.repoUrl);
 
-    // 2. Track as dismissed in persistent state
     const identifiers = [entry.id, entry.repoLabel, entry.repoUrl].filter(Boolean) as string[];
     setDismissedRepos((prev) => {
       const next = Array.from(new Set([...prev, ...identifiers]));
@@ -252,15 +252,35 @@ function DashboardPage() {
     setVersion((v) => v + 1);
   }, []);
 
+  const handleRestoreStarters = useCallback(() => {
+    try {
+      localStorage.removeItem("devlens_dismissed_repos");
+    } catch {
+      // ignore
+    }
+    setDismissedRepos([]);
+    setRepoFilter("");
+    setLangFilter("ALL");
+    setVersion((v) => v + 1);
+  }, []);
+
   const activeShowcaseEntries = useMemo(() => {
     const base = history.length > 0 ? history : STARTER_SHOWCASE_ENTRIES;
     const dismissedSet = new Set(dismissedRepos.map((d) => d.toLowerCase()));
-    const visible = base.filter((item) => {
+    let visible = base.filter((item) => {
       const idMatch = item.id && dismissedSet.has(item.id.toLowerCase());
       const labelMatch = item.repoLabel && dismissedSet.has(item.repoLabel.toLowerCase());
       const urlMatch = item.repoUrl && dismissedSet.has(item.repoUrl.toLowerCase());
       return !idMatch && !labelMatch && !urlMatch;
     });
+
+    if (langFilter !== "ALL") {
+      visible = visible.filter((item) =>
+        Object.keys(item.meta?.languages || {}).some(
+          (l) => l.toLowerCase() === langFilter.toLowerCase()
+        )
+      );
+    }
 
     if (!repoFilter.trim()) return visible;
     const q = repoFilter.trim().toLowerCase();
@@ -270,7 +290,7 @@ function DashboardPage() {
         item.repoUrl.toLowerCase().includes(q) ||
         Object.keys(item.meta?.languages || {}).some((l) => l.toLowerCase().includes(q))
     );
-  }, [history, dismissedRepos, repoFilter]);
+  }, [history, dismissedRepos, repoFilter, langFilter]);
 
   const { user, isAuthenticated, loginWithGitHub, loginWithToken, logout } = useAuth();
   const [showTokenModal, setShowTokenModal] = useState(false);
@@ -313,140 +333,6 @@ function DashboardPage() {
     }
   };
 
-  if (previewLoading) {
-    return (
-      <div style={{ position: "relative", width: "100%", height: "100%" }}>
-        {/* Floating Developer Preview Control Bar (Bottom-docked so header stays clean) */}
-        <div
-          style={{
-            position: "fixed",
-            bottom: 64,
-            left: "50%",
-            transform: "translateX(-50%)",
-            zIndex: 150,
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            background: "rgba(10, 10, 10, 0.92)",
-            border: "1px solid rgba(10, 10, 10, 0.15)",
-            backdropFilter: "blur(14px)",
-            borderRadius: 999,
-            padding: "7px 14px",
-            boxShadow: "0 16px 40px rgba(0, 0, 0, 0.16)",
-            fontFamily: "var(--mf-mono, monospace)",
-            fontSize: "0.7rem",
-            color: "#ffffff",
-            flexWrap: "wrap",
-            maxWidth: "96vw",
-          }}
-        >
-          <span style={{ color: "#10b981", fontWeight: 600, letterSpacing: "0.05em" }}>
-            PREVIEW
-          </span>
-          {[15, 35, 55, 75, 95].map((pct) => (
-            <button
-              key={pct}
-              type="button"
-              onClick={() => {
-                setPreviewAuto(false);
-                setPreviewProgress(pct);
-              }}
-              style={{
-                background: previewProgress === pct ? "#ffffff" : "rgba(255,255,255,0.1)",
-                color: previewProgress === pct ? "#0a0a0a" : "#ffffff",
-                border: "none",
-                borderRadius: 999,
-                padding: "3px 9px",
-                fontSize: "0.68rem",
-                cursor: "pointer",
-                fontWeight: 600,
-              }}
-            >
-              {pct}%
-            </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => setPreviewAuto((v) => !v)}
-            style={{
-              background: previewAuto ? "#10b981" : "rgba(255,255,255,0.1)",
-              color: previewAuto ? "#000000" : "#ffffff",
-              border: "none",
-              borderRadius: 999,
-              padding: "3px 10px",
-              fontSize: "0.68rem",
-              cursor: "pointer",
-              fontWeight: 600,
-            }}
-          >
-            {previewAuto ? "❚❚ Pause" : "▶ Loop"}
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              setPreviewError((prev) =>
-                prev ? null : "Repository tree exceeds memory quota or GitHub rate limit reached."
-              )
-            }
-            style={{
-              background: previewError ? "#ef4444" : "rgba(255,255,255,0.1)",
-              color: "#ffffff",
-              border: "none",
-              borderRadius: 999,
-              padding: "3px 10px",
-              fontSize: "0.68rem",
-              cursor: "pointer",
-            }}
-          >
-            {previewError ? "Clear Error" : "Error State"}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setPreviewLoading(false);
-              navigate({ search: (prev) => ({ ...prev, previewLoading: undefined }) });
-            }}
-            style={{
-              background: "#ffffff",
-              color: "#0a0a0a",
-              border: "none",
-              borderRadius: 999,
-              padding: "3px 11px",
-              fontSize: "0.68rem",
-              fontWeight: 600,
-              cursor: "pointer",
-              marginLeft: 4,
-            }}
-          >
-            Exit ✕
-          </button>
-        </div>
-
-        <TelemetryModal
-          repoUrl="https://github.com/facebook/react"
-          steps={currentPreviewSteps}
-          progressPct={previewProgress}
-          repoMeta={{
-            stars: 228400,
-            files: 1420,
-            languages: { TypeScript: 76, JavaScript: 18, CSS: 6 },
-            sizeKb: 34800,
-          }}
-          jobId="job_devlens_scan_981a4b"
-          error={previewError}
-          onRetry={() => {
-            setPreviewError(null);
-            setPreviewProgress(15);
-          }}
-          onCancel={() => {
-            setPreviewLoading(false);
-            navigate({ search: (prev) => ({ ...prev, previewLoading: undefined }) });
-          }}
-        />
-      </div>
-    );
-  }
-
   if (repo) {
     return (
       <StudioWorkspace
@@ -457,9 +343,6 @@ function DashboardPage() {
       />
     );
   }
-
-  const done = history.filter((h) => h.status === "complete").length;
-  const totalFiles = history.reduce((s, h) => s + (h.meta?.files ?? 0), 0);
 
   const menuLinks: MotionMenuLink[] = useMemo(
     () => [
@@ -482,11 +365,11 @@ function DashboardPage() {
           ]
         : [
             {
-              label: "Connect GitHub ↗",
+              label: "Connect GitHub",
               onClick: loginWithGitHub,
             },
             {
-              label: "GitHub PAT Token",
+              label: "Personal Access Token",
               onClick: () => setShowTokenModal(true),
             },
           ]),
@@ -625,10 +508,9 @@ function DashboardPage() {
               cursor: "pointer",
               transition: "transform 0.15s ease",
             }}
-            title="Connect GitHub for private repo access & higher rate limits"
+            title="Connect GitHub for private repo access and higher rate limits"
           >
             <span>Connect GitHub</span>
-            <span style={{ fontSize: "0.75rem" }}>↗</span>
           </button>
         </div>
       )}
@@ -647,10 +529,10 @@ function DashboardPage() {
       />
       <span>
         {health === "ok"
-          ? "DevLens AI Engine Online · AST Parser & pgvector Ready"
+          ? "Backend connected. Ready to index repositories."
           : health === "down"
-            ? "DevLens AI Engine Offline · Retrying connection..."
-            : "Checking DevLens AI Engine Status..."}
+            ? "Backend offline. Start the API server to index new repositories."
+            : "Checking backend connection..."}
       </span>
     </div>
   );
@@ -761,7 +643,7 @@ function DashboardPage() {
                       fontFamily: "var(--mf-mono, monospace)",
                     }}
                   >
-                    ⚠ {patError}
+                    {patError}
                   </div>
                 )}
 
@@ -788,7 +670,7 @@ function DashboardPage() {
         )}
       </AnimatePresence>
 
-      {/* Floating Top Navbar (Framer MotionOverlayMenu — Kept Intact) */}
+      {/* Floating Top Navbar */}
       <div className="mf-dashboard-nav-wrap">
         <MotionOverlayMenu
           links={menuLinks}
@@ -803,7 +685,7 @@ function DashboardPage() {
           }
           brandLink="/"
           headerColor="var(--mf-ink, #0a0a0a)"
-          barBackground="rgba(255, 255, 255, 0.78)"
+          barBackground="rgba(255, 255, 255, 0.82)"
           barBorder="rgba(0, 0, 0, 0.08)"
           barRadius="999px"
           barBlur={18}
@@ -811,285 +693,381 @@ function DashboardPage() {
         />
       </div>
 
-      {/* ── Architectural Studio Dashboard ──────────────────────────────── */}
-      <main className="mf-dashboard-main dx-studio">
-        {/* 1. Top Studio Telemetry Strip */}
-        <motion.div
-          className="dx-studio-bar"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <div className="dx-studio-bar-left">
-            <span className="mf-pill">
-              <span className="mf-dot live" />
-              Studio Workspace
-            </span>
-            <span className="mf-mono mf-muted">
-              {new Date().toLocaleDateString(undefined, {
-                weekday: "short",
-                month: "short",
-                day: "numeric",
-              })}
-            </span>
-          </div>
-
-          <div className="dx-studio-bar-right">
-            <div className="dx-inline-metrics">
-              <span className="dx-inline-metric">
-                <strong>{history.length}</strong> Indexed
-              </span>
-              <span className="dx-inline-sep">·</span>
-              <span className="dx-inline-metric">
-                <strong>{done}</strong> Ready
-              </span>
-              <span className="dx-inline-sep">·</span>
-              <span className="dx-inline-metric">
-                <strong>{(totalFiles || 7442).toLocaleString()}</strong> Files Mapped
-              </span>
-            </div>
-
-            <button
-              type="button"
-              className="dx-preview-pill"
-              onClick={() => setPreviewLoading(true)}
-              title="Preview the repository analysis loading screen"
-            >
-              ⚡ Preview Loading
-            </button>
-          </div>
-        </motion.div>
-
-        {/* 2. Asymmetric 12-Column Editorial Hero Grid */}
-        <section className="dx-hero-grid">
-          {/* Left 7 Columns: Headline + Interactive Command Console */}
-          <motion.div
-            className="dx-hero-left"
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45, delay: 0.04, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <h1 className="mf-h1 dx-hero-h1">
-              What are we <span className="mf-serif-i">mapping</span> today?
-            </h1>
-
-            <p className="dx-hero-lead">
-              Paste any GitHub repository below. DevLens builds an interactive architecture map,
-              traces file connections, and answers questions in plain English.
-            </p>
-
-            {/* Elevated Multi-Layer Command Dock */}
-            <div className="dx-dock">
-              <form
-                className="dx-dock-form"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  open(inputRepo);
-                }}
+      {/* Full-Bleed Studio Dashboard Main */}
+      <main className="dx-page-main">
+        {/* 01. Command Workspace Hero */}
+        <section className="dx-hero-section">
+          <div className="mf-wrap">
+            {/* Asymmetric 2-Column Command Split */}
+            <div className="dx-command-split">
+              {/* Left Column: Headline + Repository Command Launcher */}
+              <motion.div
+                className="dx-command-col"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.45, delay: 0.04, ease: [0.16, 1, 0.3, 1] }}
               >
-                <span className="dx-dock-prefix">github.com/</span>
-                <input
-                  ref={commandInputRef}
-                  value={inputRepo}
-                  onChange={(e) => setInputRepo(e.target.value)}
-                  placeholder={`try ${QUICK[phIdx].label}`}
-                  aria-label="Repository URL or owner/repo"
-                  spellCheck={false}
-                  autoFocus
-                />
-                <kbd className="mf-kbd dx-dock-kbd" title="Press / to focus">
-                  /
-                </kbd>
-                <motion.button
-                  className="mf-btn dx-dock-submit"
-                  type="submit"
-                  whileHover={{ scale: 1.015 }}
-                  whileTap={{ scale: 0.98 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                >
-                  Analyze <span className="mf-arrow">↗</span>
-                </motion.button>
-              </form>
+                <h1 className="dx-command-title">
+                  Read any codebase <span className="dx-muted-word">without</span>
+                  <br />
+                  getting lost.
+                </h1>
 
-              {/* Attached Quick-Pick Tray */}
-              <div className="dx-dock-tray">
-                <span className="dx-dock-tray-label">Instant presets</span>
-                <div className="dx-dock-presets">
-                  {QUICK.map((q) => (
-                    <button
-                      key={q.label}
-                      type="button"
-                      className="dx-preset-chip"
-                      onClick={() => open(q.label)}
+                <p className="dx-command-lead">
+                  Paste a GitHub URL to see how files connect and how requests move through the
+                  code. Every answer links back to the exact file and line number.
+                </p>
+
+                {/* Command Input Console */}
+                <div className="dx-dock">
+                  <form
+                    className="dx-dock-form"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      open(inputRepo || QUICK[phIdx].label);
+                    }}
+                  >
+                    <span className="dx-dock-prefix">github.com/</span>
+                    <input
+                      ref={commandInputRef}
+                      value={inputRepo}
+                      onChange={(e) => setInputRepo(e.target.value)}
+                      placeholder={`owner/repo, e.g. ${QUICK[phIdx].label}`}
+                      aria-label="Repository URL or owner/repo"
+                      spellCheck={false}
+                      autoFocus
+                    />
+                    <kbd className="mf-kbd dx-dock-kbd" title="Press / to focus">
+                      /
+                    </kbd>
+                    <motion.button
+                      className="mf-btn dx-dock-submit"
+                      type="submit"
+                      whileHover={{ scale: 1.015 }}
+                      whileTap={{ scale: 0.98 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 25 }}
                     >
-                      <span
-                        className="dx-preset-dot"
-                        style={{ backgroundColor: LANG_COLORS[q.lang] || "#0a0a0a" }}
-                      />
-                      <span>{q.label}</span>
+                      Open repo
+                    </motion.button>
+                  </form>
+
+                  {/* Quick-Pick Presets & Private Repo Trigger */}
+                  <div className="dx-dock-tray">
+                    <div className="dx-dock-tray-left">
+                      <span className="dx-dock-tray-label">Examples</span>
+                      <div className="dx-dock-presets">
+                        {QUICK.map((q) => (
+                          <button
+                            key={q.label}
+                            type="button"
+                            className="dx-preset-chip"
+                            onClick={() => open(q.label)}
+                          >
+                            <span
+                              className="dx-preset-dot"
+                              style={{ backgroundColor: LANG_COLORS[q.lang] || "#0a0a0a" }}
+                            />
+                            <span>{q.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="dx-private-trigger"
+                      onClick={() => setShowTokenModal(true)}
+                    >
+                      Private repo token
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Right Column: Hover-Expandable Feature List (Initially Closed) */}
+              <motion.aside
+                className="dx-kinetic-ledger"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.45, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+              >
+                <div className="dx-ledger-head">
+                  <span className="mf-mono mf-muted">What you get</span>
+                  <Link to="/how-it-works" className="dx-ledger-guide mf-mono">
+                    How it works
+                  </Link>
+                </div>
+
+                <div
+                  className="dx-ledger-stack"
+                  onMouseLeave={() => setActiveLensIdx(null)}
+                >
+                  {STUDIO_LENSES.map((lens, idx) => {
+                    const isActive = idx === activeLensIdx;
+                    return (
+                      <div
+                        key={lens.id}
+                        role="button"
+                        tabIndex={0}
+                        aria-expanded={isActive}
+                        className={`dx-ledger-item ${isActive ? "is-active" : ""}`}
+                        onMouseEnter={() => setActiveLensIdx(idx)}
+                        onFocus={() => setActiveLensIdx(idx)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            open(lens.sampleRepo);
+                          }
+                        }}
+                      >
+                        <div className="dx-ledger-row-top">
+                          <div className="dx-ledger-title-wrap">
+                            <span className="dx-ledger-num mf-mono">{lens.num}</span>
+                            <span className="dx-ledger-label">{lens.label}</span>
+                          </div>
+                          <span className="dx-ledger-tag mf-mono">{lens.tag}</span>
+                        </div>
+
+                        <AnimatePresence initial={false}>
+                          {isActive && (
+                            <motion.div
+                              className="dx-ledger-expand"
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                            >
+                              <div className="dx-ledger-expand-inner">
+                                <p className="dx-ledger-summary">{lens.summary}</p>
+                                <div>
+                                  <button
+                                    type="button"
+                                    className="dx-ledger-launch mf-mono"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      open(lens.sampleRepo);
+                                    }}
+                                  >
+                                    Open {lens.sampleRepo}
+                                  </button>
+                                </div>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    );
+                  })}
+                </div>
+              </motion.aside>
+            </div>
+          </div>
+        </section>
+
+        {/* 02. Sliding Repository Showcase */}
+        <section className="dx-showcase-wrap">
+          <div className="mf-wrap">
+            <div className="dx-showcase-bar">
+              <div className="dx-showcase-title-group">
+                <div className="dx-showcase-heading-row">
+                  <h2 className="mf-h2 dx-showcase-h2">
+                    Recent <span className="dx-muted-word">repositories</span>
+                  </h2>
+                </div>
+              </div>
+
+              <div className="dx-showcase-controls">
+                {/* Language Filter Pills */}
+                <div className="dx-lang-pills">
+                  {["ALL", "TypeScript", "Python", "Rust"].map((lang) => (
+                    <button
+                      key={lang}
+                      type="button"
+                      className={`dx-lang-pill ${langFilter === lang ? "is-active" : ""}`}
+                      onClick={() => setLangFilter(lang)}
+                    >
+                      {lang === "ALL" ? "All" : lang}
                     </button>
                   ))}
                 </div>
-                <button
-                  type="button"
-                  className="dx-private-trigger"
-                  onClick={() => setShowTokenModal(true)}
-                >
-                  🔒 Private repo
-                </button>
-              </div>
-            </div>
-          </motion.div>
 
-          {/* Right 5 Columns: Architectural Studio Blueprint Card */}
-          <motion.aside
-            className="dx-blueprint"
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <div className="dx-blueprint-head">
-              <span className="mf-mono">STUDIO PIPELINE // 03 STAGES</span>
-              <Link to="/how-it-works" className="dx-blueprint-link">
-                Interactive guide ↗
-              </Link>
-            </div>
-
-            <div className="dx-blueprint-list">
-              {[
-                {
-                  num: "01",
-                  title: "Interactive Architecture Map",
-                  desc: "Visual module clusters, dependency edges & blast radius.",
-                  badge: "Tree-sitter AST",
-                },
-                {
-                  num: "02",
-                  title: "Cited Codebase Q&A",
-                  desc: "Ask in plain English and jump to exact file & line numbers.",
-                  badge: "Symbol RAG",
-                },
-                {
-                  num: "03",
-                  title: "Auto-Onboarding Dossier",
-                  desc: "Instant architectural summary, entry points & Mermaid export.",
-                  badge: "1-Click Docs",
-                },
-              ].map((item) => (
-                <div key={item.num} className="dx-blueprint-row">
-                  <span className="dx-blueprint-num">{item.num}</span>
-                  <div className="dx-blueprint-body">
-                    <div className="dx-blueprint-title-row">
-                      <span className="dx-blueprint-title">{item.title}</span>
-                      <span className="dx-blueprint-badge">{item.badge}</span>
-                    </div>
-                    <p className="dx-blueprint-desc">{item.desc}</p>
-                  </div>
+                {/* Search / Filter Input */}
+                <div className="dx-filter-box">
+                  <input
+                    type="text"
+                    value={repoFilter}
+                    onChange={(e) => setRepoFilter(e.target.value)}
+                    placeholder="Filter by name or language..."
+                    aria-label="Filter repositories"
+                  />
+                  {repoFilter && (
+                    <button
+                      type="button"
+                      className="dx-filter-clear"
+                      onClick={() => setRepoFilter("")}
+                      aria-label="Clear filter"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
-              ))}
-            </div>
 
-            <div className="dx-blueprint-foot">
-              <span>EPHEMERAL SANDBOX</span>
-              <span>·</span>
-              <span>ZERO CODE RETENTION</span>
-            </div>
-          </motion.aside>
-        </section>
-
-        {/* 3. Full-Width Sliding Repository Showcase */}
-        <motion.section
-          className="dx-showcase-section"
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.14, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <div className="dx-showcase-bar">
-            <div className="dx-showcase-title-group">
-              <div className="dx-showcase-heading-row">
-                <h2 className="mf-h2 dx-showcase-h2">
-                  Workspace repositories.
-                </h2>
-              </div>
-            </div>
-
-            <div className="dx-showcase-controls">
-              <div className="dx-filter-box">
-                <input
-                  type="text"
-                  value={repoFilter}
-                  onChange={(e) => setRepoFilter(e.target.value)}
-                  placeholder="Filter repositories..."
-                  aria-label="Filter repositories"
-                />
-                {repoFilter && (
+                {dismissedRepos.length > 0 && (
                   <button
                     type="button"
-                    className="dx-filter-clear"
-                    onClick={() => setRepoFilter("")}
-                    aria-label="Clear filter"
+                    className="mf-btn ghost sm"
+                    onClick={handleRestoreStarters}
                   >
-                    ✕
+                    Reset sample repos
+                  </button>
+                )}
+
+                {activeShowcaseEntries.length > 0 && (
+                  <button
+                    type="button"
+                    className="mf-btn ghost sm"
+                    onClick={() => {
+                      history.forEach((h) => repoHistory.remove(h.id, h.repoLabel, h.repoUrl));
+                      const allIds = activeShowcaseEntries.flatMap((e) =>
+                        [e.id, e.repoLabel, e.repoUrl].filter(Boolean)
+                      ) as string[];
+                      setDismissedRepos((prev) => {
+                        const next = Array.from(new Set([...prev, ...allIds]));
+                        try {
+                          localStorage.setItem("devlens_dismissed_repos", JSON.stringify(next));
+                        } catch {
+                          // ignore
+                        }
+                        return next;
+                      });
+                      setVersion((v) => v + 1);
+                    }}
+                  >
+                    Clear list
                   </button>
                 )}
               </div>
-
-              {activeShowcaseEntries.length > 0 && (
-                <button
-                  type="button"
-                  className="mf-btn ghost sm"
-                  onClick={() => {
-                    history.forEach((h) => repoHistory.remove(h.id, h.repoLabel, h.repoUrl));
-                    const allIds = activeShowcaseEntries.flatMap((e) =>
-                      [e.id, e.repoLabel, e.repoUrl].filter(Boolean)
-                    ) as string[];
-                    setDismissedRepos((prev) => {
-                      const next = Array.from(new Set([...prev, ...allIds]));
-                      try {
-                        localStorage.setItem("devlens_dismissed_repos", JSON.stringify(next));
-                      } catch {
-                        // ignore
-                      }
-                      return next;
-                    });
-                    setVersion((v) => v + 1);
-                  }}
-                >
-                  Clear all
-                </button>
-              )}
             </div>
-          </div>
 
-          {activeShowcaseEntries.length > 0 ? (
-            <CurvyShowcase
-              entries={activeShowcaseEntries}
-              onOpen={(entry) => {
-                const target = entry.repoUrl || entry.repoLabel;
-                const normalized = normalizeRepoUrl(target);
-                if (!normalized) return;
-                navigate({
-                  search: {
-                    repo: normalized,
-                    sessionId: entry.id && !entry.id.startsWith("starter-") ? entry.id : undefined,
-                  },
-                });
-              }}
-              onDelete={handleDeleteRepo}
-            />
-          ) : (
-            <div className="dx-empty">
-              <span className="dx-empty-icon">◎</span>
-              <div>
-                <h3 className="mf-h3">No matching repositories</h3>
-                <p className="mf-body">
-                  No repositories matched &ldquo;{repoFilter}&rdquo;. Clear the filter or paste a
-                  GitHub URL above to analyze a new codebase.
-                </p>
+            {activeShowcaseEntries.length > 0 ? (
+              <CurvyShowcase
+                entries={activeShowcaseEntries}
+                onOpen={(entry) => {
+                  const target = entry.repoUrl || entry.repoLabel;
+                  const normalized = normalizeRepoUrl(target);
+                  if (!normalized) return;
+                  navigate({
+                    search: {
+                      repo: normalized,
+                      sessionId:
+                        entry.id && !entry.id.startsWith("starter-") ? entry.id : undefined,
+                    },
+                  });
+                }}
+                onDelete={handleDeleteRepo}
+              />
+            ) : (
+              <div className="dx-empty">
+                <div style={{ flex: 1 }}>
+                  <h3 className="mf-h3">No matching repositories</h3>
+                  <p className="mf-body">
+                    {repoFilter || langFilter !== "ALL"
+                      ? "No repositories matched your filter. Clear the filter or reset the sample repositories."
+                      : "You cleared the sample repositories. Paste a GitHub URL above, or bring back the sample list."}
+                  </p>
+                </div>
+                <button type="button" className="mf-btn sm" onClick={handleRestoreStarters}>
+                  Reset sample repos
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* 03. Workflow Cards */}
+        <section className="dx-bento-wrap">
+          <div className="mf-wrap">
+            <div className="dx-bento-grid">
+              <div className="dx-bento-card">
+                <div className="dx-bento-top">
+                  <div className="dx-bento-num-badge">
+                    <span className="dx-bento-dot" />
+                    <span className="dx-bento-num mf-mono">01</span>
+                  </div>
+                  <span className="dx-bento-pill mf-mono">Dependencies</span>
+                </div>
+                <div className="dx-bento-body">
+                  <h3 className="dx-bento-title">Spot tightly coupled files</h3>
+                  <p className="dx-bento-desc">
+                    Click any file in the graph to highlight its imports and dependents. Find
+                    bottleneck modules before refactoring.
+                  </p>
+                </div>
+                <div className="dx-bento-foot mf-mono">
+                  <button
+                    type="button"
+                    className="dx-bento-link"
+                    onClick={() => open("facebook/react")}
+                  >
+                    Inspect facebook/react
+                  </button>
+                </div>
+              </div>
+
+              <div className="dx-bento-card">
+                <div className="dx-bento-top">
+                  <div className="dx-bento-num-badge">
+                    <span className="dx-bento-dot" />
+                    <span className="dx-bento-num mf-mono">02</span>
+                  </div>
+                  <span className="dx-bento-pill mf-mono">Execution</span>
+                </div>
+                <div className="dx-bento-body">
+                  <h3 className="dx-bento-title">Follow a request end to end</h3>
+                  <p className="dx-bento-desc">
+                    Pick an endpoint or worker task and step through each function call in order,
+                    without grepping across ten folders.
+                  </p>
+                </div>
+                <div className="dx-bento-foot mf-mono">
+                  <button
+                    type="button"
+                    className="dx-bento-link"
+                    onClick={() => open("fastapi/fastapi")}
+                  >
+                    Inspect fastapi/fastapi
+                  </button>
+                </div>
+              </div>
+
+              <div className="dx-bento-card">
+                <div className="dx-bento-top">
+                  <div className="dx-bento-num-badge">
+                    <span className="dx-bento-dot" />
+                    <span className="dx-bento-num mf-mono">03</span>
+                  </div>
+                  <span className="dx-bento-pill mf-mono">Search &amp; Docs</span>
+                </div>
+                <div className="dx-bento-body">
+                  <h3 className="dx-bento-title">Get answers backed by code</h3>
+                  <p className="dx-bento-desc">
+                    Ask where authentication, caching, or routing lives and jump straight to the
+                    source lines that implement it.
+                  </p>
+                </div>
+                <div className="dx-bento-foot mf-mono">
+                  <button
+                    type="button"
+                    className="dx-bento-link"
+                    onClick={() => open("vercel/next.js")}
+                  >
+                    Inspect vercel/next.js
+                  </button>
+                </div>
               </div>
             </div>
-          )}
-        </motion.section>
+          </div>
+        </section>
       </main>
     </div>
   );

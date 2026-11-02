@@ -88,36 +88,36 @@ function AnimatedNumber({
 
 export const DEFAULT_DEVLENS_STATS: StatMetric[] = [
   {
-    value: 14,
+    value: 8,
     prefix: "",
-    suffix: "×",
+    suffix: " languages",
     decimals: 0,
-    label: "Faster Codebase Comprehension",
-    description: "Average onboarding acceleration to inherited repositories compared to manual file traversal.",
+    label: "Tree-sitter AST support",
+    description: "Resolves imports and symbols across TypeScript, JavaScript, Python, Go, Java, Rust, Ruby, and PHP.",
+  },
+  {
+    value: 5,
+    prefix: "",
+    suffix: " views",
+    decimals: 0,
+    label: "One shared graph",
+    description: "Switch between the dependency map, request tracer, commit history, Q&A, and onboarding notes.",
   },
   {
     value: 100,
     prefix: "",
     suffix: "%",
     decimals: 0,
-    label: "Deterministic AST Parsing",
-    description: "Zero-hallucination Tree-sitter symbol graphs across TypeScript, Python, Go, and Rust.",
-  },
-  {
-    value: 8400,
-    prefix: "",
-    suffix: "+",
-    decimals: 0,
-    label: "Dependency Edges Mapped",
-    description: "Cross-file symbol connections and call hierarchies indexed per analyzed repository.",
+    label: "Answers linked to code",
+    description: "Every Q&A response cites the exact file path and line range it used.",
   },
   {
     value: 0,
     prefix: "",
-    suffix: " LOC",
+    suffix: " MB",
     decimals: 0,
-    label: "Persistent Disk Retention",
-    description: "Source code is processed in ephemeral sandboxes and discarded immediately upon session close.",
+    label: "Code kept on disk",
+    description: "Repositories are cloned into a temporary directory for parsing and deleted when your session ends.",
   },
 ];
 

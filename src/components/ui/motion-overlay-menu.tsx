@@ -415,7 +415,7 @@ export function MotionOverlayMenu({
   logoSize = 20,
   links = DEFAULT_LINKS,
   secondary = DEFAULT_SECONDARY,
-  note = "DevLens AI // Intelligent Cognitive Architecture Engine",
+  note = "DevLens AI · Cognitive Architecture Engine",
   noteLink,
   noteNewTab = false,
   actions,
@@ -941,8 +941,8 @@ export function MotionOverlayMenu({
                           padding: "2px 8px",
                           borderRadius: 999,
                           background: "rgba(255, 255, 255, 0.1)",
-                          color: "#10b981",
-                          border: "1px solid rgba(16, 185, 129, 0.2)",
+                          color: "#ffffff",
+                          border: "1px solid rgba(255, 255, 255, 0.25)",
                           verticalAlign: "middle",
                         }}
                       >

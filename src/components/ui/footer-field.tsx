@@ -349,7 +349,7 @@ export function FooterField({
             </h3>
             <div style={{ marginTop: 28 }}>
               <Link to="/dashboard" className="mf-btn inv">
-                Start mapping <span className="mf-arrow">↗</span>
+                Open dashboard
               </Link>
             </div>
           </div>

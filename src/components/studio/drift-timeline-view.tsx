@@ -174,7 +174,7 @@ export function DriftTimelineView({
                 color: "rgba(255, 255, 255, 0.45)",
               }}
             >
-              {commits.length} commits indexed // {repoLabel}
+              {commits.length} commits indexed · {repoLabel}
             </div>
           </div>
           {loading && (

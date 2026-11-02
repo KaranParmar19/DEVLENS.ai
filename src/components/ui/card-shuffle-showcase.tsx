@@ -155,7 +155,7 @@ export function CardShuffleShowcase({
           style={{
             position: "absolute",
             inset: 0,
-            background: "radial-gradient(ellipse 65% 55% at 50% 50%, rgba(16, 185, 129, 0.035), transparent 70%)",
+            background: "radial-gradient(ellipse 65% 55% at 50% 50%, rgba(255, 255, 255, 0.04), transparent 70%)",
             pointerEvents: "none",
           }}
         />
@@ -252,20 +252,18 @@ export function CardShuffleShowcase({
                         fontFamily: "var(--mf-mono)",
                         fontSize: isMobile ? "0.72rem" : "0.78rem",
                         letterSpacing: "0.08em",
-                        color: isSelected ? "#10b981" : "var(--mf-ink-3)",
+                        color: isSelected ? "#ffffff" : "var(--mf-ink-3)",
                       }}
                     >
-                      <span style={{ fontWeight: 600 }}>STEP {hop.step}</span>
+                      <span style={{ fontWeight: 600 }}>Step {hop.step}</span>
                       <span
                         style={{
-                          textTransform: "uppercase",
                           padding: "4px 12px",
                           borderRadius: 999,
-                          backgroundColor: isSelected ? "rgba(16, 185, 129, 0.15)" : "#f5f5f5",
-                          color: isSelected ? "#10b981" : "var(--mf-ink-2)",
+                          backgroundColor: isSelected ? "rgba(255, 255, 255, 0.12)" : "#f5f5f5",
+                          color: isSelected ? "#ffffff" : "var(--mf-ink-2)",
                           fontWeight: 500,
-                          fontSize: isMobile ? "0.65rem" : "0.72rem",
-                          letterSpacing: "0.06em",
+                          fontSize: isMobile ? "0.68rem" : "0.75rem",
                         }}
                       >
                         {hop.role}
@@ -310,11 +308,11 @@ export function CardShuffleShowcase({
                       }}
                     >
                       <span style={{ color: isSelected ? "rgba(255, 255, 255, 0.5)" : "var(--mf-ink-3)" }}>
-                        ↳ AST CITATION
+                        Source line
                       </span>
                       <strong
                         style={{
-                          color: isSelected ? "#10b981" : "var(--mf-ink)",
+                          color: isSelected ? "#ffffff" : "var(--mf-ink)",
                           fontWeight: 600,
                           fontSize: isMobile ? "0.78rem" : "0.86rem",
                         }}

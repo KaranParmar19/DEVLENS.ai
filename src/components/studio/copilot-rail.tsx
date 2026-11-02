@@ -541,7 +541,7 @@ export function CopilotRail({
               width: 6,
               height: 6,
               borderRadius: "50%",
-              backgroundColor: isStreaming ? "#ffffff" : "#10b981",
+              backgroundColor: isStreaming ? "#ffffff" : "rgba(255, 255, 255, 0.4)",
               boxShadow: isStreaming ? "0 0 8px #ffffff" : "none",
             }}
           />
@@ -597,8 +597,8 @@ export function CopilotRail({
               width: 7,
               height: 7,
               borderRadius: "50%",
-              backgroundColor: isStreaming ? "#ffffff" : "#10b981",
-              boxShadow: isStreaming ? "0 0 10px #ffffff" : "0 0 6px rgba(16,185,129,0.5)",
+              backgroundColor: isStreaming ? "#ffffff" : "rgba(255, 255, 255, 0.4)",
+              boxShadow: isStreaming ? "0 0 10px #ffffff" : "none",
               animation: isStreaming ? "mf-pulse 1s infinite" : "none",
             }}
           />

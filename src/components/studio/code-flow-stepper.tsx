@@ -258,7 +258,7 @@ export function CodeFlowStepper({ onAskCopilot, onSelectFile }: CodeFlowStepperP
       {/* Stepper Navigation Strip */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <span style={{ fontFamily: "var(--mf-mono, monospace)", fontSize: "0.75rem", color: "rgba(255, 255, 255, 0.5)" }}>
-          Hop {activeStepIdx + 1} of {currentFlow.steps.length} // {current.stage}
+          Hop {activeStepIdx + 1} of {currentFlow.steps.length} · {current.stage}
         </span>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <button
@@ -361,7 +361,7 @@ export function CodeFlowStepper({ onAskCopilot, onSelectFile }: CodeFlowStepperP
       >
         <div>
           <span style={{ fontFamily: "var(--mf-mono, monospace)", fontSize: "0.75rem", color: "rgba(255, 255, 255, 0.5)" }}>
-            STAGE {current.stepNumber} // EXECUTION HOP
+            STAGE {current.stepNumber} · EXECUTION HOP
           </span>
           <h3 style={{ fontSize: "1.75rem", fontWeight: 500, margin: "8px 0 12px", letterSpacing: "-0.03em" }}>
             {current.stage}

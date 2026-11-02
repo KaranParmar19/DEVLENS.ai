@@ -18,7 +18,7 @@ const LENS_ITEMS = [
     cluster: "Checks passwords",
     x: 18,
     y: 26,
-    color: "#10b981",
+    color: "#ffffff",
   },
   {
     id: "n2",
@@ -27,7 +27,7 @@ const LENS_ITEMS = [
     cluster: "Welcomes new users",
     x: 34,
     y: 62,
-    color: "#10b981",
+    color: "#ffffff",
   },
   {
     id: "n3",
@@ -174,9 +174,9 @@ const THREAD_CHAINS = [
       {
         step: "04",
         role: "Grounded Synthesis",
-        name: "Zero-Hallucination Dossier",
+        name: "Line-Cited Answer",
         line: "backend/agent/synthesizer.py:210",
-        note: "Streams verified answer over WebSocket, grounding every architectural explanation with clickable file and line links.",
+        note: "Streams the answer over WebSocket and links every explanation to clickable file and line numbers.",
       },
     ],
   },
@@ -187,25 +187,25 @@ const BEGINNER_FAQS: FAQItemData[] = [
     id: "01",
     question: "Do I need to install anything to use DevLens?",
     answer:
-      "Not at all. Everything runs right in your browser. Just copy a GitHub link, paste it in, and your visual map is ready in about 7 seconds.",
+      "No. Everything runs in your browser. Paste a GitHub link and your dependency map is ready in a few seconds.",
   },
   {
     id: "02",
-    question: "I'm new to coding—will this help me understand a big project?",
+    question: "I'm new to coding. Will this help me understand a big project?",
     answer:
-      "Yes! That is exactly why DevLens exists. Instead of opening hundreds of confusing folders, you get a clean visual map and a chat helper that explains how things work in plain English.",
+      "Yes. Instead of clicking through dozens of folders by hand, you get a visual map of how files connect and a Q&A view that explains features in plain English.",
   },
   {
     id: "03",
     question: "Does DevLens keep or save my code?",
     answer:
-      "No. DevLens only reads your project long enough to draw your visual map, and then immediately clears the files from memory.",
+      "No. DevLens clones your repository into a temporary folder to build the map and deletes the files when your session ends.",
   },
   {
     id: "04",
     question: "What programming languages work with DevLens?",
     answer:
-      "All popular languages—including JavaScript, TypeScript, Python, Java, Go, Rust, Ruby, and PHP—work right out of the box.",
+      "JavaScript, TypeScript, Python, Java, Go, Rust, Ruby, and PHP resolve imports and symbols out of the box.",
   },
 ];
 
@@ -255,9 +255,9 @@ function InteractiveXRayLens() {
       {/* Top Friendly Instruction Pill */}
       <div className="hwc-xray-bar">
         <span className="mf-mono">
-          <span className="hwc-pulse-dot" /> MOVE YOUR MOUSE HERE TO TURN MESSY FILES INTO A VISUAL MAP
+          <span className="hwc-pulse-dot" /> Move your cursor here to preview the dependency map
         </span>
-        <span className="mf-mono hwc-xray-coords">MAGIC LENS ACTIVE</span>
+        <span className="mf-mono hwc-xray-coords">Interactive preview</span>
       </div>
 
       {/* LAYER 1: Confusing File Names (Outside the Lens) */}
@@ -290,7 +290,7 @@ function InteractiveXRayLens() {
               y1={LENS_ITEMS[a].y}
               x2={LENS_ITEMS[b].x}
               y2={LENS_ITEMS[b].y}
-              stroke="#10b981"
+              stroke="#ffffff"
               strokeWidth="0.45"
               strokeDasharray="1.2 1.2"
             />
@@ -317,7 +317,7 @@ function InteractiveXRayLens() {
         className="hwc-lens-ring"
         style={{ left: `${lensPos.x}%`, top: `${lensPos.y}%` }}
       >
-        <span className="hwc-lens-badge mf-mono">DEVLENS VIEW</span>
+        <span className="hwc-lens-badge mf-mono">DevLens view</span>
       </div>
     </div>
   );
@@ -330,11 +330,8 @@ function InteractiveXRayLens() {
 export function HowItWorksPage() {
   return (
     <SiteLayout>
-      {/* ═══════════════════════════════════════════════════════════════════
-          00 · EDITORIAL HERO + INTERACTIVE MAGIC LENS
-          ═══════════════════════════════════════════════════════════════════ */}
+      {/* 00. Hero + Interactive Lens */}
       <section className="mf-hero" data-theme="light" style={{ paddingBottom: "clamp(20px, 2.5vw, 36px)" }}>
-        <div className="mf-hero-grid-bg" />
         <div className="mf-wrap">
           <motion.div
             className="mf-hero-top"
@@ -342,8 +339,8 @@ export function HowItWorksPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
           >
-            <Pill live>How DevLens Works · Ready in 7 Seconds</Pill>
-            <span className="mf-mono mf-muted">PASTE A LINK // GET A VISUAL MAP</span>
+            <Pill live>How DevLens works</Pill>
+            <span className="mf-mono mf-muted">From GitHub URL to interactive map</span>
           </motion.div>
 
           <div className="hwc-hero-split">
@@ -354,14 +351,12 @@ export function HowItWorksPage() {
               transition={{ duration: 0.5, delay: 0.06, ease: [0.16, 1, 0.3, 1] }}
             >
               Turn messy code into{" "}
-              <span className="mf-serif-i">
-                <MorphText
-                  words={["clarity.", "pictures.", "answers.", "stories."]}
-                  morphTime={1.1}
-                  holdTime={1.9}
-                  strength={8}
-                />
-              </span>
+              <MorphText
+                words={["clarity.", "pictures.", "answers.", "stories."]}
+                morphTime={1.1}
+                holdTime={1.9}
+                strength={8}
+              />
             </motion.h1>
 
             <motion.div
@@ -373,7 +368,7 @@ export function HowItWorksPage() {
               <p className="mf-lead mf-scribble mf-serif-i" style={{ margin: 0 }}>
                 <span className="hwc-scribble-q">New to a codebase?</span>
                 <span className="hwc-scribble-a">
-                  Move your mouse over the box below—DevLens works like a magic magnifying glass, turning hundreds of confusing files into a clean visual map anyone can understand.
+                  Move your cursor over the box below to see how DevLens groups raw files into a readable dependency map.
                 </span>
               </p>
             </motion.div>
@@ -390,55 +385,53 @@ export function HowItWorksPage() {
         </div>
       </section>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          01 · "FOLLOW ANY ACTION" — STEP-BY-STEP STORY (LIGHT)
-          ═══════════════════════════════════════════════════════════════════ */}
+      {/* 01. Step-by-Step Story */}
       <section className="mf-section" data-theme="light" style={{ paddingTop: "clamp(20px, 2.5vw, 36px)", paddingBottom: 0 }}>
         <div className="mf-wrap">
           <div className="hwc-thread-head" style={{ textAlign: "center", maxWidth: "44em", margin: "0 auto clamp(24px, 3.5vw, 36px)" }}>
             <Reveal>
               <div style={{ display: "inline-flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                <Pill live>Architecture Trace</Pill>
-                <span className="mf-mono" style={{ fontSize: "0.72rem", color: "var(--mf-ink-3)", letterSpacing: "0.08em" }}>
-                  TRUE CODE EXECUTION
+                <Pill live>Request trace</Pill>
+                <span className="mf-mono" style={{ fontSize: "0.72rem", color: "var(--mf-ink-3)" }}>
+                  Step-by-step call path
                 </span>
               </div>
               <h2 className="mf-h1" style={{ margin: "0 auto", fontSize: "clamp(2rem, 3.8vw, 3.2rem)", lineHeight: 1.15 }}>
                 Pick an everyday action.{" "}
                 <span className="mf-serif-i" style={{ fontWeight: 400, color: "var(--mf-ink-3, #767676)" }}>
-                  Watch how it executes.
+                  Watch how it runs.
                 </span>
               </h2>
             </Reveal>
           </div>
         </div>
 
-        {/* Full-Screen Card Shuffle on Scroll: takes entire page during animation, returns to default size when scrolling past */}
+        {/* Full-Screen Card Shuffle on Scroll */}
         <CardShuffleShowcase chains={THREAD_CHAINS} />
 
         <div className="mf-wrap" style={{ marginTop: "clamp(24px, 3.5vw, 44px)", marginBottom: 0 }}>
-          {/* 2 Simple, Friendly Promise Cards */}
+          {/* 2 Promise Cards */}
           <div className="hwc-promise-grid">
             <Reveal>
               <div className="hwc-promise-card hwc-promise-card--dark">
-                <span className="mf-mono" style={{ fontSize: "0.68rem", color: "#10b981" }}>
-                  100% SAFE &amp; PRIVATE
+                <span className="mf-mono" style={{ fontSize: "0.72rem", color: "#ffffff" }}>
+                  Temporary clone
                 </span>
                 <h3>Your code stays private and temporary.</h3>
                 <p>
-                  We only read your project long enough to draw your visual map, then immediately clear it from memory. Nothing is saved on our computers—ever.
+                  We only read your project long enough to draw your dependency map, then delete the temporary clone when your session ends. Nothing is kept on disk.
                 </p>
               </div>
             </Reveal>
 
             <Reveal>
               <div className="hwc-promise-card hwc-promise-card--light">
-                <span className="mf-mono" style={{ fontSize: "0.68rem", color: "var(--mf-ink-3)" }}>
-                  NO GUESSWORK
+                <span className="mf-mono" style={{ fontSize: "0.72rem", color: "var(--mf-ink-3)" }}>
+                  Line-level links
                 </span>
-                <h3>Real answers, never made up.</h3>
+                <h3>Backed by your actual source lines.</h3>
                 <p>
-                  Every time DevLens explains how a feature works, it points you to the exact file and line number so you can see the real code for yourself.
+                  Every time DevLens explains how a feature works, it points to the exact file and line number so you can check the source code yourself.
                 </p>
               </div>
             </Reveal>

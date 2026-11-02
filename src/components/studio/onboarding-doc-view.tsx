@@ -77,7 +77,7 @@ npm run test
         {/* Actions Bar */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32, borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: 16 }}>
           <span style={{ fontFamily: "var(--mf-mono, monospace)", fontSize: "0.6875rem", textTransform: "uppercase", color: "rgba(255,255,255,0.45)", letterSpacing: "0.08em" }}>
-            Generated Walkthrough // Live AST Grounded
+            Generated Walkthrough · Live AST Grounded
           </span>
           <button
             type="button"
