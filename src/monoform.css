@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Titan+One&family=Lilita+One&family=Bowlby+One+SC&family=Fredoka:wght@600;700;900&display=swap');
+
 /* ═══════════════════════════════════════════════════════════════════════
    DEVLENS — MONOFORM DESIGN SYSTEM
    Editorial monochrome · Geist + IBM Plex Mono · pill outlines · hairlines
@@ -1996,13 +1998,17 @@ button.mf-btn.sm {
   background: rgba(255, 255, 255, 0.15);
 }
 
+/* ── Playful Rounded Bubble Wordmark ("DEVLENS" Footer Display) ───────── */
 .fffp-wm {
   position: relative;
   width: 100%;
-  margin: 16px 0 -0.06em;
+  margin: 24px 0 0;
+  padding: 0;
+  background: transparent;
   user-select: none;
   overflow: visible;
-  line-height: 0.8;
+  line-height: 0.85;
+  box-sizing: border-box;
 }
 
 .fffp-sr {
@@ -2020,29 +2026,38 @@ button.mf-btn.sm {
 .fffp-wm-line {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   width: 100%;
   white-space: nowrap;
-  font-family: "Playfair Display", Georgia, "Times New Roman", serif;
-  font-size: clamp(4rem, 20vw, 22rem);
-  font-weight: 700;
+  font-family: 'Lilita One', 'Fredoka', cursive, sans-serif;
+  font-size: clamp(3.5rem, 16vw, 15rem);
+  font-weight: 400;
   line-height: 0.85;
-  letter-spacing: -0.065em;
-  color: #ffffff;
+  letter-spacing: -0.02em;
+  color: #FFFDF5; /* Warm Cream / Off-White */
+  text-transform: uppercase;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.4));
 }
 
 .fffp-l {
   display: inline-block;
   cursor: grab;
-  transition: color 0.15s ease;
   will-change: transform;
+  transition: color 0.2s ease;
 }
 
 .fffp-l:hover {
-  color: rgba(255, 255, 255, 0.85);
+  color: #8b9cff;
 }
 
 .fffp-l:active {
   cursor: grabbing;
+}
+
+.fffp-l-char {
+  display: inline-block;
 }
 
 .fffp-bottom {

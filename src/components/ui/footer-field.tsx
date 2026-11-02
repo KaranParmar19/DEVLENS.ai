@@ -19,14 +19,14 @@ export interface FooterFieldProps {
 }
 
 export function FooterField({
-  wordmark = "devlens",
+  wordmark = "DEVLENS",
   radius = 150,
   strength = 1,
   stiffness = 170,
   damping = 16,
   touchRipple = true,
 }: FooterFieldProps) {
-  const letters = Array.from(wordmark);
+  const letters = Array.from(wordmark.toUpperCase());
   const rootRef = useRef<HTMLElement>(null);
   const wmRef = useRef<HTMLDivElement>(null);
   const letterEls = useRef<(HTMLSpanElement | null)[]>([]);
@@ -410,17 +410,17 @@ export function FooterField({
 
         {/* Live Magnetic Kinetic Typography Wordmark */}
         <div className="fffp-wm" ref={wmRef} aria-label="DevLens interactive footer wordmark">
-          <span className="fffp-sr">devlens</span>
+          <span className="fffp-sr">DEVLENS</span>
           <div className="fffp-wm-line" aria-hidden="true">
             {letters.map((ch, i) => (
               <span
                 key={i}
-                className="fffp-l"
+                className={`fffp-l fffp-l-${i}`}
                 ref={(el) => {
                   letterEls.current[i] = el;
                 }}
               >
-                {ch}
+                <span className="fffp-l-char">{ch}</span>
               </span>
             ))}
           </div>
