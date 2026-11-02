@@ -6,6 +6,7 @@ import {
   useRouter,
   HeadContent,
   Scripts,
+  type ErrorComponentProps,
 } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
@@ -21,9 +22,15 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error, reset }: ErrorComponentProps) {
   console.error("DevLens Route Error:", error);
   const router = useRouter();
+  const errorMessage =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : (error as any)?.message;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -38,10 +45,10 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
           Something went wrong on our end. You can try refreshing or head back home.
         </p>
 
-        {error?.message && (
+        {errorMessage && (
           <div className="mt-4 p-3 rounded-lg bg-muted border border-border text-xs font-mono text-left text-foreground/80 overflow-auto max-h-36">
             <span className="text-muted-foreground select-none">&gt; </span>
-            {error.message}
+            {errorMessage}
           </div>
         )}
 
