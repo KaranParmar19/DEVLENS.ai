@@ -1,6 +1,22 @@
 @import url('https://fonts.googleapis.com/css2?family=Titan+One&family=Lilita+One&family=Bowlby+One+SC&family=Fredoka:wght@600;700;900&display=swap');
 
 @font-face {
+  font-family: 'Qilka';
+  src: url('/fonts/Qilka-Bold.otf') format('opentype');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Qilka';
+  src: url('/fonts/Qilka-Bold.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
   font-family: 'Allay';
   src: url('/fonts/Allay-PersonalUse.otf') format('opentype');
   font-weight: normal;
@@ -2037,9 +2053,9 @@ button.mf-btn.sm {
   align-items: center;
   width: 100%;
   white-space: nowrap;
-  font-family: 'Allay', 'Lilita One', 'Fredoka', cursive, sans-serif;
+  font-family: 'Qilka', 'Allay', 'Lilita One', cursive, sans-serif;
   font-size: clamp(3.5rem, 16vw, 15.5rem);
-  font-weight: 400;
+  font-weight: bold;
   line-height: 0.85;
   letter-spacing: -0.01em;
   color: #FFFDF5; /* Warm Cream / Off-White */
