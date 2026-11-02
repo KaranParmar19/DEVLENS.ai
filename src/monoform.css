@@ -1967,23 +1967,38 @@ button.mf-btn.sm {
 }
 
 .fffp-cols {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr;
-  gap: 32px 48px;
-}
-
-.fffp-col {
-  min-width: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 32px clamp(32px, 5vw, 64px);
+  flex-wrap: wrap;
 }
 
 .fffp-col-lead {
-  max-width: 440px;
+  max-width: 400px;
+}
+
+.fffp-lead-h2 {
+  font-size: clamp(1.4rem, 2.2vw, 2rem) !important;
+  line-height: 1.15 !important;
+  margin: 0;
+}
+
+.fffp-links-wrap {
+  display: flex;
+  gap: clamp(32px, 5vw, 64px);
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.fffp-col {
+  min-width: 100px;
 }
 
 .fffp-h {
-  margin: 0 0 14px;
+  margin: 0 0 12px;
   font-family: var(--mf-mono, monospace);
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1996,7 +2011,7 @@ button.mf-btn.sm {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .fffp-list li {
@@ -2006,7 +2021,7 @@ button.mf-btn.sm {
 .fffp-list a {
   color: #bfbfbf;
   text-decoration: none;
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   letter-spacing: -0.01em;
   transition: color 0.2s ease;
 }
@@ -2018,20 +2033,20 @@ button.mf-btn.sm {
 .fffp-rule {
   height: 1px;
   border: 0;
-  margin: 48px 0 0;
-  background: rgba(255, 255, 255, 0.15);
+  margin: 32px 0 0;
+  background: rgba(255, 255, 255, 0.12);
 }
 
 /* ── Playful Rounded Bubble Wordmark ("DEVLENS" Footer Display) ───────── */
 .fffp-wm {
   position: relative;
   width: 100%;
-  margin: 24px 0 0;
+  margin: 20px 0 0;
   padding: 0;
   background: transparent;
   user-select: none;
   overflow: visible;
-  line-height: 0.85;
+  line-height: 0.88;
   box-sizing: border-box;
 }
 
@@ -2049,14 +2064,15 @@ button.mf-btn.sm {
 
 .fffp-wm-line {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
+  gap: clamp(6px, 1.2vw, 22px);
   width: 100%;
   white-space: nowrap;
   font-family: 'Qilka', 'Allay', 'Lilita One', cursive, sans-serif;
-  font-size: clamp(3.5rem, 16vw, 15.5rem);
+  font-size: clamp(2.8rem, 10vw, 8.5rem);
   font-weight: bold;
-  line-height: 0.85;
+  line-height: 0.88;
   letter-spacing: -0.01em;
   color: #FFFDF5; /* Warm Cream / Off-White */
   text-transform: uppercase;
@@ -2090,8 +2106,8 @@ button.mf-btn.sm {
   align-items: center;
   justify-content: space-between;
   gap: 16px 32px;
-  margin: 20px 0 0;
-  padding: 20px 0 8px;
+  margin: 16px 0 0;
+  padding: 16px 0 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 

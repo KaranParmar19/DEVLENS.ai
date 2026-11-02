@@ -332,8 +332,8 @@ export function FooterField({
       className="mf-dark fffp-root"
       data-theme="dark"
       style={{
-        paddingTop: "clamp(64px, 8vw, 112px)",
-        paddingBottom: "clamp(24px, 4vw, 48px)",
+        paddingTop: "clamp(40px, 5vw, 64px)",
+        paddingBottom: "clamp(20px, 3vw, 36px)",
         background: "var(--mf-dark, #0a0a0a)",
         color: "#ffffff",
         overflow: "hidden",
@@ -344,65 +344,67 @@ export function FooterField({
         <div className="fffp-cols">
           {/* Main CTA */}
           <div className="fffp-col fffp-col-lead">
-            <h3 className="mf-h2" style={{ maxWidth: "11em", lineHeight: 1.05 }}>
+            <h3 className="mf-h2 fffp-lead-h2">
               Read any codebase like you wrote it.
             </h3>
-            <div style={{ marginTop: 28 }}>
-              <Link to="/dashboard" className="mf-btn inv">
+            <div style={{ marginTop: 20 }}>
+              <Link to="/dashboard" className="mf-btn inv sm">
                 Open dashboard
               </Link>
             </div>
           </div>
 
-          {/* Product Links */}
-          <div className="fffp-col">
-            <div className="fffp-h">Product</div>
-            <ul className="fffp-list">
-              <li>
-                <Link to="/features">Features</Link>
-              </li>
-              <li>
-                <Link to="/how-it-works">How it works</Link>
-              </li>
-              <li>
-                <Link to="/dashboard">Dashboard</Link>
-              </li>
-            </ul>
-          </div>
+          <div className="fffp-links-wrap">
+            {/* Product Links */}
+            <div className="fffp-col">
+              <div className="fffp-h">Product</div>
+              <ul className="fffp-list">
+                <li>
+                  <Link to="/features">Features</Link>
+                </li>
+                <li>
+                  <Link to="/how-it-works">How it works</Link>
+                </li>
+                <li>
+                  <Link to="/dashboard">Dashboard</Link>
+                </li>
+              </ul>
+            </div>
 
-          {/* Views Links */}
-          <div className="fffp-col">
-            <div className="fffp-h">Views</div>
-            <ul className="fffp-list">
-              <li>
-                <Link to="/dashboard">Architecture map</Link>
-              </li>
-              <li>
-                <Link to="/dashboard">Code flow</Link>
-              </li>
-              <li>
-                <Link to="/dashboard">Onboarding doc</Link>
-              </li>
-              <li>
-                <Link to="/dashboard">Ask DevLens</Link>
-              </li>
-            </ul>
-          </div>
+            {/* Views Links */}
+            <div className="fffp-col">
+              <div className="fffp-h">Views</div>
+              <ul className="fffp-list">
+                <li>
+                  <Link to="/dashboard">Architecture map</Link>
+                </li>
+                <li>
+                  <Link to="/dashboard">Code flow</Link>
+                </li>
+                <li>
+                  <Link to="/dashboard">Onboarding doc</Link>
+                </li>
+                <li>
+                  <Link to="/dashboard">Ask DevLens</Link>
+                </li>
+              </ul>
+            </div>
 
-          {/* Elsewhere Links */}
-          <div className="fffp-col">
-            <div className="fffp-h">Elsewhere</div>
-            <ul className="fffp-list">
-              <li>
-                <a
-                  href="https://github.com/KaranParmar19/devlens-AI"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  GitHub ↗
-                </a>
-              </li>
-            </ul>
+            {/* Elsewhere Links */}
+            <div className="fffp-col">
+              <div className="fffp-h">Elsewhere</div>
+              <ul className="fffp-list">
+                <li>
+                  <a
+                    href="https://github.com/KaranParmar19/devlens-AI"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    GitHub ↗
+                  </a>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
 
