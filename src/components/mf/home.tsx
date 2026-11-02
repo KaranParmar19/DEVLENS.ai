@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { Pill, Reveal, SiteLayout } from "./site-layout";
 import { StatsSection } from "@/components/ui/stats-section";
+import { PolaroidLineCarousel } from "@/components/ui/polaroid-carousel";
 import { FAQSection } from "@/components/ui/faq-section";
 import { MorphText } from "@/components/ui/morph-text";
 import { PlumblinePipeline } from "@/components/ui/plumbline";
@@ -791,11 +792,20 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* Stats Section (Framer StatsSection Feature) */}
-      <section className="mf-section" data-theme="light" style={{ paddingTop: 0 }}>
+      {/* Hanging Polaroid Line Carousel (Framer Feature) */}
+      <section className="mf-section pl-section-wrap" data-theme="light" style={{ paddingTop: 0 }}>
         <div className="mf-wrap">
           <Reveal>
-            <StatsSection />
+            <div className="pl-deck-header">
+              <div className="pl-deck-eyebrow">
+                <span className="pl-deck-live-dot" />
+                <span className="pl-deck-label mf-mono">ENGINE BENCHMARKS // ARCHITECTURAL GUARANTEES</span>
+              </div>
+              <span className="pl-deck-hint mf-mono">
+                Drag to swing &bull; 4 system guarantees
+              </span>
+            </div>
+            <PolaroidLineCarousel />
           </Reveal>
         </div>
       </section>

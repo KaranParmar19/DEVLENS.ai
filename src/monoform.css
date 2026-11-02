@@ -4589,4 +4589,443 @@ button.mf-btn.sm {
   }
 }
 
+/* ── Polaroid Hanging Line Carousel (Framer Feature) ──────────────────── */
+.pl-section-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.pl-deck-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 20px;
+  border-radius: 14px;
+  background: var(--mf-soft, #f7f7f6);
+  border: 1px solid var(--mf-line, #e5e5e5);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  margin-bottom: 20px;
+}
+
+.pl-deck-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.pl-deck-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
+  animation: mfPulse 2.4s ease-in-out infinite;
+}
+
+.pl-deck-label {
+  font-weight: 600;
+  color: var(--mf-ink, #0a0a0a);
+}
+
+.pl-deck-hint {
+  font-size: 0.7rem;
+  color: var(--mf-ink-3, #767676);
+  letter-spacing: 0.02em;
+}
+
+.pl-root {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: var(--mf-soft, #f7f7f6);
+  border: 1px solid var(--mf-line, #e5e5e5);
+  border-radius: 24px;
+  color: var(--mf-ink, #0a0a0a);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: pan-y;
+  outline: none;
+  cursor: grab;
+  box-sizing: border-box;
+}
+
+.pl-root[data-drag="1"] {
+  cursor: grabbing;
+}
+
+.pl-root:focus-visible {
+  box-shadow: 0 0 0 2px var(--mf-ink, #0a0a0a);
+}
+
+.pl-string {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.pl-card {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--pl-cw, 320px);
+  transform-origin: 50% 0;
+  will-change: transform;
+  cursor: inherit;
+}
+
+/* Precision matte clip peg */
+.pl-peg {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 12px;
+  height: 28px;
+  margin-left: -6px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #333333, #0a0a0a);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.35);
+  z-index: 10;
+}
+
+.pl-peg::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 9px;
+  width: 4px;
+  height: 9px;
+  background: #555555;
+  border-radius: 1px;
+}
+
+/* Polaroid Spec Card */
+.pl-print {
+  margin-top: 14px;
+  background: #ffffff;
+  border: 1px solid var(--mf-line, #dedede);
+  border-radius: 20px;
+  padding: 24px 22px 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04), 0 18px 36px -15px rgba(0, 0, 0, 0.12);
+  transition: transform 0.4s cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 0.4s ease, opacity 0.4s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 330px;
+  box-sizing: border-box;
+}
+
+.pl-card[data-on="0"] .pl-print {
+  transform: scale(0.92);
+  opacity: 0.78;
+  filter: saturate(0.85);
+}
+
+.pl-card[data-on="1"] .pl-print {
+  transform: scale(1);
+  opacity: 1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06), 0 24px 48px -16px rgba(0, 0, 0, 0.18);
+}
+
+.pl-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.pl-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.pl-card-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mf-ink, #0a0a0a);
+}
+
+.pl-card-index {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--mf-ink-3, #7a7a7a);
+  letter-spacing: 0.04em;
+}
+
+.pl-card-pill {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--mf-soft, #f4f4f4);
+  border: 1px solid var(--mf-line, #dedede);
+  color: var(--mf-ink-2, #555555);
+}
+
+.pl-card-metric-row {
+  line-height: 1;
+}
+
+.pl-card-number {
+  display: inline-flex;
+  align-items: baseline;
+  font-size: clamp(2.6rem, 4vw, 3.8rem);
+  font-weight: 600;
+  letter-spacing: -0.045em;
+  line-height: 1;
+  color: var(--mf-ink, #0a0a0a);
+  font-family: var(--mf-font);
+  font-variant-numeric: tabular-nums;
+}
+
+.pl-card-suffix {
+  font-size: 0.52em;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--mf-ink-2, #595959);
+  margin-left: 0.12em;
+}
+
+.pl-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pl-card-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: var(--mf-ink, #0a0a0a);
+  margin: 0;
+}
+
+.pl-card-desc {
+  font-size: 0.83rem;
+  line-height: 1.45;
+  color: var(--mf-ink-2, #555555);
+  margin: 0;
+}
+
+.pl-card-foot {
+  padding-top: 14px;
+  border-top: 1px solid var(--mf-line, #ececec);
+  margin-top: auto;
+}
+
+/* Chips / Badges */
+.pl-chips-rack,
+.pl-lenses-rack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.pl-chip {
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 5px;
+  background: var(--mf-soft, #f4f4f4);
+  border: 1px solid var(--mf-line, #dfdfdf);
+  color: var(--mf-ink, #222222);
+}
+
+.pl-lens-tag {
+  font-size: 0.65rem;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--mf-soft, #f4f4f4);
+  border: 1px solid var(--mf-line, #dfdfdf);
+  color: var(--mf-ink-2, #555555);
+}
+
+.pl-cite-box,
+.pl-sec-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pl-cite-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  width: fit-content;
+}
+
+.pl-cite-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.pl-sec-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: var(--mf-soft, #f4f4f4);
+  border: 1px solid var(--mf-line, #dfdfdf);
+  color: var(--mf-ink, #1f1f1f);
+  width: fit-content;
+}
+
+.pl-sec-lock {
+  font-size: 0.72rem;
+}
+
+.pl-micro-sub {
+  font-size: 0.68rem;
+  color: var(--mf-ink-3, #7a7a7a);
+}
+
+/* Bottom Bar Controls */
+.pl-bar {
+  position: absolute;
+  left: 28px;
+  right: 28px;
+  bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  cursor: default;
+  z-index: 25;
+  padding-top: 12px;
+  border-top: 1px solid var(--mf-line, #e2e2e2);
+}
+
+.pl-cap {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pl-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--mf-ink, #0a0a0a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pl-sub {
+  font-size: 0.78rem;
+  color: var(--mf-ink-2, #555555);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pl-count-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.pl-count {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  color: var(--mf-ink-3, #7a7a7a);
+}
+
+.pl-count b {
+  color: var(--mf-ink, #0a0a0a);
+  font-weight: 600;
+}
+
+.pl-btn-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pl-btn {
+  appearance: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--mf-line, #d4d4d4);
+  background: #ffffff;
+  color: var(--mf-ink, #0a0a0a);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pl-btn:hover {
+  background: var(--mf-ink, #0a0a0a);
+  color: #ffffff;
+  border-color: var(--mf-ink, #0a0a0a);
+  transform: scale(1.05);
+}
+
+.pl-btn:active {
+  transform: scale(0.95);
+}
+
+.pl-floating-btn {
+  position: absolute;
+  top: 48%;
+  transform: translateY(-50%);
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  z-index: 30;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  background: #ffffff;
+}
+
+.pl-floating-prev {
+  left: 20px;
+}
+
+.pl-floating-next {
+  right: 20px;
+}
+
+@media (max-width: 768px) {
+  .pl-floating-btn {
+    display: none;
+  }
+  .pl-deck-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .pl-bar {
+    left: 16px;
+    right: 16px;
+    bottom: 14px;
+  }
+}
+
 
