@@ -654,7 +654,7 @@ export function FeaturesPage() {
                     </div>
                   </div>
 
-                  <div style={{ marginTop: 28, display: "grid", gridTemplateColumns: "1.1fr 1fr", gap: 28, alignItems: "end" }}>
+                  <div className="feat-card-intro">
                     <h2 className="mf-h1" style={{ margin: 0 }}>
                       Code flow <span className="dx-muted-word">tracer.</span>
                     </h2>
@@ -746,7 +746,7 @@ export function FeaturesPage() {
                     </div>
                   </div>
 
-                  <div style={{ marginTop: 28, display: "grid", gridTemplateColumns: "0.95fr 1.15fr", gap: 28, alignItems: "end" }}>
+                  <div className="feat-card-intro">
                     <h2 className="mf-h1" style={{ margin: 0 }}>
                       Drift <span className="dx-muted-word">timeline.</span>
                     </h2>
@@ -757,7 +757,7 @@ export function FeaturesPage() {
                   </div>
 
                   {/* Commit Scrubber Selector */}
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginTop: 28 }}>
+                  <div className="feat-commit-track">
                     {DRIFT_COMMITS.map((c, idx) => (
                       <button
                         key={c.sha}
@@ -765,11 +765,11 @@ export function FeaturesPage() {
                         className={`feat-hop-btn ${idx === activeCommit ? "active" : ""}`}
                         onClick={() => setActiveCommit(idx)}
                       >
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <span className="mf-mono" style={{ fontWeight: 600 }}>#{c.sha}</span>
-                          <span className="mf-mono" style={{ fontSize: "0.62rem", opacity: 0.75 }}>{c.time}</span>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, minWidth: 0 }}>
+                          <span className="mf-mono" style={{ fontWeight: 600, flexShrink: 0 }}>#{c.sha}</span>
+                          <span className="mf-mono" style={{ fontSize: "0.62rem", opacity: 0.75, flexShrink: 0 }}>{c.time}</span>
                         </div>
-                        <div style={{ fontSize: "0.8rem", marginTop: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <div style={{ fontSize: "0.8rem", marginTop: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", width: "100%" }}>
                           {c.title}
                         </div>
                       </button>

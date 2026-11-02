@@ -2988,11 +2988,43 @@ button.mf-btn.sm {
   overflow: hidden;
 }
 
+.feat-card-intro {
+  margin-top: 28px;
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  gap: 28px;
+  align-items: end;
+}
+
+@media (max-width: 768px) {
+  .feat-card-intro {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
 .feat-hop-track {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
   margin-top: 28px;
+  width: 100%;
+}
+
+.feat-commit-track {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 28px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .feat-commit-track {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
 }
 
 .feat-hop-btn {
@@ -3005,6 +3037,9 @@ button.mf-btn.sm {
   cursor: pointer;
   font-family: inherit;
   transition: all 0.25s var(--mf-ease);
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .feat-hop-btn:hover {
