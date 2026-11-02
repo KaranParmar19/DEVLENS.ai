@@ -495,29 +495,6 @@ export function PolaroidLineCarousel({
         </div>
       ))}
 
-      {/* Floating Side Nav Buttons */}
-      <button
-        type="button"
-        className="pl-btn pl-floating-btn pl-floating-prev"
-        aria-label="Previous card"
-        onClick={() => step(-1)}
-      >
-        <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path d="M10 3 5 8l5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
-
-      <button
-        type="button"
-        className="pl-btn pl-floating-btn pl-floating-next"
-        aria-label="Next card"
-        onClick={() => step(1)}
-      >
-        <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path d="m6 3 5 5-5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
-
       {/* Bottom Status Control Bar */}
       <div className="pl-bar">
         <div className="pl-cap" key={active}>
@@ -529,29 +506,6 @@ export function PolaroidLineCarousel({
           <span className="pl-count">
             <b>{pad2(active + 1)}</b> / {pad2(n)}
           </span>
-
-          <div className="pl-btn-group">
-            <button
-              type="button"
-              className="pl-btn pl-btn-sm"
-              aria-label="Previous card"
-              onClick={() => step(-1)}
-            >
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <path d="M10 3 5 8l5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              className="pl-btn pl-btn-sm"
-              aria-label="Next card"
-              onClick={() => step(1)}
-            >
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <path d="m6 3 5 5-5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          </div>
         </div>
       </div>
     </div>
