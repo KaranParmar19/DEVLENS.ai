@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@700;800;900&family=Nunito:wght@800;900&display=swap');
+
 /* ═══════════════════════════════════════════════════════════════════════
    DEVLENS — MONOFORM DESIGN SYSTEM
    Editorial monochrome · Geist + IBM Plex Mono · pill outlines · hairlines
@@ -2022,22 +2024,28 @@ button.mf-btn.sm {
   justify-content: space-between;
   width: 100%;
   white-space: nowrap;
-  font-size: clamp(4rem, 20vw, 22rem);
-  font-weight: 700;
-  line-height: 0.8;
-  letter-spacing: -0.05em;
-  color: #ffffff;
+  font-family: 'Fredoka', 'Nunito', 'Arial Rounded MT Bold', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: clamp(3.75rem, 16.5vw, 19.5rem);
+  font-weight: 900;
+  line-height: 0.85;
+  letter-spacing: -0.015em;
+  text-transform: uppercase;
+  color: #fffefb;
 }
 
 .fffp-l {
   display: inline-block;
   cursor: grab;
-  transition: color 0.15s ease;
+  transition: color 0.15s ease, filter 0.2s ease;
   will-change: transform;
+  transform-origin: center bottom;
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
 }
 
 .fffp-l:hover {
-  color: #8b9cff;
+  color: #ffffff;
+  filter: drop-shadow(0 8px 24px rgba(255, 255, 255, 0.28));
 }
 
 .fffp-l:active {
