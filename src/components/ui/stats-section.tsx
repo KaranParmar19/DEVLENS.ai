@@ -79,9 +79,9 @@ function AnimatedNumber({
 
   return (
     <span className="mf-stat-number" style={{ fontVariantNumeric: "tabular-nums" }}>
-      {prefix}
-      {display}
-      {suffix}
+      {prefix && <span className="mf-stat-prefix">{prefix}</span>}
+      <span className="mf-stat-digits">{display}</span>
+      {suffix && <span className="mf-stat-suffix">{suffix}</span>}
     </span>
   );
 }
@@ -90,17 +90,17 @@ export const DEFAULT_DEVLENS_STATS: StatMetric[] = [
   {
     value: 8,
     prefix: "",
-    suffix: " languages",
+    suffix: "",
     decimals: 0,
-    label: "Tree-sitter AST support",
+    label: "Languages supported",
     description: "Resolves imports and symbols across TypeScript, JavaScript, Python, Go, Java, Rust, Ruby, and PHP.",
   },
   {
     value: 5,
     prefix: "",
-    suffix: " views",
+    suffix: "",
     decimals: 0,
-    label: "One shared graph",
+    label: "Interactive views",
     description: "Switch between the dependency map, request tracer, commit history, Q&A, and onboarding notes.",
   },
   {

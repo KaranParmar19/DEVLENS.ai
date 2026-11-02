@@ -448,7 +448,7 @@ export function FeaturesPage() {
               </div>
 
               <h2 className="mf-h1" style={{ margin: 0 }}>
-                Architecture <span className="mf-serif-i">map.</span>
+                Architecture <span className="dx-muted-word">map.</span>
               </h2>
 
               <p className="mf-lead" style={{ margin: 0 }}>
@@ -656,7 +656,7 @@ export function FeaturesPage() {
 
                   <div style={{ marginTop: 28, display: "grid", gridTemplateColumns: "1.1fr 1fr", gap: 28, alignItems: "end" }}>
                     <h2 className="mf-h1" style={{ margin: 0 }}>
-                      Code flow <span className="mf-serif-i">tracer.</span>
+                      Code flow <span className="dx-muted-word">tracer.</span>
                     </h2>
                     <p className="mf-body" style={{ margin: 0, fontSize: "1rem" }}>
                       Pick any HTTP route, CLI command, or worker queue and scrub forward or backward
@@ -748,7 +748,7 @@ export function FeaturesPage() {
 
                   <div style={{ marginTop: 28, display: "grid", gridTemplateColumns: "0.95fr 1.15fr", gap: 28, alignItems: "end" }}>
                     <h2 className="mf-h1" style={{ margin: 0 }}>
-                      Drift <span className="mf-serif-i">timeline.</span>
+                      Drift <span className="dx-muted-word">timeline.</span>
                     </h2>
                     <p className="mf-body" style={{ margin: 0, fontSize: "1rem" }}>
                       Scrub across Git history to measure structural erosion, new circular imports,
@@ -843,7 +843,7 @@ export function FeaturesPage() {
                   </div>
                 </div>
                 <h2 className="mf-h1" style={{ margin: 0 }}>
-                  Ask DevLens <span className="mf-serif-i">Copilot.</span>
+                  Ask DevLens <span className="dx-muted-word">Copilot.</span>
                 </h2>
               </div>
 
@@ -1045,7 +1045,7 @@ export function FeaturesPage() {
               </div>
 
               <h2 className="mf-h1" style={{ margin: 0 }}>
-                Onboarding <span className="mf-serif-i">doc.</span>
+                Onboarding <span className="dx-muted-word">doc.</span>
               </h2>
 
               <p className="mf-lead" style={{ margin: 0 }}>
@@ -1085,7 +1085,7 @@ export function FeaturesPage() {
                 <div>
                   <Pill>Comparison</Pill>
                   <h2 className="mf-h2" style={{ marginTop: 16 }}>
-                    Why static grep &amp; generic chat <span className="mf-serif-i">fall short.</span>
+                    Why static grep &amp; generic chat <span className="dx-muted-word">fall short.</span>
                   </h2>
                 </div>
                 <span className="mf-mono mf-muted">How AST parsing compares to text search and generic chat</span>

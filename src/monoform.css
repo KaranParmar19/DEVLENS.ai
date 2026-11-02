@@ -859,14 +859,37 @@ button.mf-btn.sm {
 }
 
 .mf-stat-number {
-  font-size: clamp(2.75rem, 5vw, 4.5rem);
+  display: inline-flex;
+  align-items: baseline;
+  font-size: clamp(2.5rem, 4.2vw, 4rem);
   font-weight: 600;
-  letter-spacing: -0.045em;
+  letter-spacing: -0.04em;
   line-height: 1;
   color: var(--mf-ink);
   white-space: nowrap;
   font-family: var(--mf-font);
   transition: color 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+  max-width: 100%;
+}
+
+.mf-stat-digits {
+  font-variant-numeric: tabular-nums;
+}
+
+.mf-stat-prefix,
+.mf-stat-suffix {
+  font-size: 0.52em;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--mf-ink-2, #595959);
+}
+
+.mf-stat-suffix {
+  margin-left: 0.12em;
+}
+
+.mf-stat-prefix {
+  margin-right: 0.12em;
 }
 
 .mf-stat-label {
