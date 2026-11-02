@@ -19,14 +19,14 @@ export interface FooterFieldProps {
 }
 
 export function FooterField({
-  wordmark = "DEVLENS",
+  wordmark = "devlens",
   radius = 150,
   strength = 1,
   stiffness = 170,
   damping = 16,
   touchRipple = true,
 }: FooterFieldProps) {
-  const letters = Array.from(wordmark.toUpperCase());
+  const letters = Array.from(wordmark);
   const rootRef = useRef<HTMLElement>(null);
   const wmRef = useRef<HTMLDivElement>(null);
   const letterEls = useRef<(HTMLSpanElement | null)[]>([]);
