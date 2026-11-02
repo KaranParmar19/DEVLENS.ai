@@ -2,6 +2,9 @@
 
 > An intelligent cognitive layer for software codebases. Ingest any GitHub repository to generate interactive dependency graphs, blast-radius impact analysis, and AST-grounded code intelligence.
 
+**Live Deployment:** [devlens-ai.kp5336464.workers.dev](https://devlens-ai.kp5336464.workers.dev/)
+
+[![Live Deployment](https://img.shields.io/badge/Live_Deployment-Cloudflare_Workers-F38020.svg?style=flat-square&logo=cloudflare&logoColor=white)](https://devlens-ai.kp5336464.workers.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-black.svg?style=flat-square)](LICENSE)
 [![Python: 3.11](https://img.shields.io/badge/Python-3.11-3776AB.svg?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![FastAPI: 0.115](https://img.shields.io/badge/FastAPI-0.115-009688.svg?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
@@ -139,6 +142,14 @@ sequenceDiagram
 | **AI & LLM** | LangChain ReAct, OpenAI GPT-4o | Autonomous multi-tool code reasoning and citation generation |
 | **Embeddings** | OpenAI `text-embedding-3-small` | Token-efficient code chunk vectorization (1536 dimensions) |
 | **Graph Analysis**| NetworkX (Python) | Directed import graphs and Fruchterman-Reingold layout generation |
+
+---
+
+## Live Demo & Deployment
+
+- **Production URL:** [https://devlens-ai.kp5336464.workers.dev/](https://devlens-ai.kp5336464.workers.dev/)
+- **Infrastructure:** Deployed on Cloudflare Workers (SSR) and Pages (Global Edge CDN)
+- **Status:** Live
 
 ---
 
