@@ -1,5 +1,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Titan+One&family=Lilita+One&family=Bowlby+One+SC&family=Fredoka:wght@600;700;900&display=swap');
 
+@font-face {
+  font-family: 'Allay';
+  src: url('/fonts/Allay-PersonalUse.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════
    DEVLENS — MONOFORM DESIGN SYSTEM
    Editorial monochrome · Geist + IBM Plex Mono · pill outlines · hairlines
@@ -2029,16 +2037,16 @@ button.mf-btn.sm {
   align-items: center;
   width: 100%;
   white-space: nowrap;
-  font-family: 'Lilita One', 'Fredoka', cursive, sans-serif;
-  font-size: clamp(3.5rem, 16vw, 15rem);
+  font-family: 'Allay', 'Lilita One', 'Fredoka', cursive, sans-serif;
+  font-size: clamp(3.5rem, 16vw, 15.5rem);
   font-weight: 400;
   line-height: 0.85;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
   color: #FFFDF5; /* Warm Cream / Off-White */
   text-transform: uppercase;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.4));
+  filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.45));
 }
 
 .fffp-l {
