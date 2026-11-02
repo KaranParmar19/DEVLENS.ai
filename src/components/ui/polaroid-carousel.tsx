@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 
 export interface PolaroidSlide {
   index: string;
-  pill: string;
+  pill?: string;
   value: string | number;
   suffix?: string;
   label: string;
@@ -17,47 +17,43 @@ export interface PolaroidSlide {
 export const DEVLENS_POLAROID_SLIDES: PolaroidSlide[] = [
   {
     index: "01",
-    pill: "PARSERS",
     value: 8,
     suffix: "",
     label: "Languages supported",
-    description: "Resolves imports and symbols across backends and frontends down to function definitions.",
+    description: "Resolves imports and symbols across TypeScript, JavaScript, Python, Go, Java, Rust, Ruby, and PHP.",
     snippetType: "chips",
     snippetItems: ["TS", "JS", "PY", "GO", "RS", "JAVA", "RUBY", "PHP"],
-    snippetSubtext: "Native Tree-sitter grammars",
+    snippetSubtext: "Tree-sitter AST support",
   },
   {
     index: "02",
-    pill: "LENSES",
     value: 5,
     suffix: "",
     label: "Interactive views",
-    description: "Switch seamlessly between graph, request trace, commit drift, Q&A, and onboarding dossier.",
+    description: "Switch between the dependency map, request tracer, commit history, Q&A, and onboarding notes.",
     snippetType: "lenses",
-    snippetItems: ["Map", "Flow", "Drift", "Copilot", "Dossier"],
+    snippetItems: ["Dependency Map", "Request Tracer", "Commit History", "Code Q&A", "Onboarding Notes"],
     snippetSubtext: "One shared syntax graph",
   },
   {
     index: "03",
-    pill: "VERIFIED",
     value: "100%",
     suffix: "",
     label: "Answers linked to code",
-    description: "Every architectural insight and Copilot response cites the exact repository file and line range.",
+    description: "Every Q&A response cites the exact repository file path and line range it used.",
     snippetType: "citation",
     snippetText: "src/auth.ts:42-88",
-    snippetSubtext: "Deterministic AST grounding",
+    snippetSubtext: "Exact file and line citations",
   },
   {
     index: "04",
-    pill: "SECURITY",
     value: "0 MB",
     suffix: "",
     label: "Code kept on disk",
-    description: "Repositories clone into a temporary in-memory container and are completely wiped after indexing.",
+    description: "Repositories clone into a temporary directory for parsing and are deleted when your session ends.",
     snippetType: "security",
-    snippetText: "Ephemeral RAM sandbox",
-    snippetSubtext: "Auto-purged on disconnect",
+    snippetText: "Temporary parse directory",
+    snippetSubtext: "Deleted when session ends",
   },
 ];
 
@@ -401,8 +397,6 @@ export function PolaroidLineCarousel({
           strokeWidth="1.5"
           strokeLinecap="round"
         />
-        <circle cx="2" cy="34" r="3" fill="var(--mf-ink, #0a0a0a)" opacity="0.38" />
-        <circle cx={Math.max(0, size.w - 2)} cy="34" r="3" fill="var(--mf-ink, #0a0a0a)" opacity="0.38" />
       </svg>
 
       {/* Hanging Spec Cards */}
@@ -422,13 +416,9 @@ export function PolaroidLineCarousel({
 
           {/* Polaroid Spec Card Content */}
           <div className="pl-print">
-            {/* Top Row: Index & Category Pill */}
+            {/* Top Row: Index */}
             <div className="pl-card-top">
-              <div className="pl-card-badge">
-                <span className="pl-card-dot" />
-                <span className="pl-card-index mf-mono">{sl.index}</span>
-              </div>
-              <span className="pl-card-pill mf-mono">{sl.pill}</span>
+              <span className="pl-card-index mf-mono">{sl.index}</span>
             </div>
 
             {/* Giant Metric Row */}
@@ -470,7 +460,6 @@ export function PolaroidLineCarousel({
               {sl.snippetType === "citation" && (
                 <div className="pl-cite-box">
                   <span className="pl-cite-pill mf-mono">
-                    <span className="pl-cite-dot" />
                     {sl.snippetText}
                   </span>
                   {sl.snippetSubtext && (
@@ -482,7 +471,6 @@ export function PolaroidLineCarousel({
               {sl.snippetType === "security" && (
                 <div className="pl-sec-box">
                   <span className="pl-sec-pill mf-mono">
-                    <span className="pl-sec-lock">🔒</span>
                     {sl.snippetText}
                   </span>
                   {sl.snippetSubtext && (

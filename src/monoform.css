@@ -4612,16 +4612,6 @@ button.mf-btn.sm {
 .pl-deck-eyebrow {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
-}
-
-.pl-deck-live-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #10b981;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
-  animation: mfPulse 2.4s ease-in-out infinite;
 }
 
 .pl-deck-label {
@@ -4735,40 +4725,15 @@ button.mf-btn.sm {
 
 .pl-card-top {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
-  gap: 12px;
-}
-
-.pl-card-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.pl-card-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--mf-ink, #0a0a0a);
 }
 
 .pl-card-index {
   font-size: 0.72rem;
   font-weight: 600;
   color: var(--mf-ink-3, #7a7a7a);
-  letter-spacing: 0.04em;
-}
-
-.pl-card-pill {
-  font-size: 0.65rem;
-  font-weight: 600;
   letter-spacing: 0.08em;
-  padding: 3px 9px;
-  border-radius: 999px;
-  background: var(--mf-soft, #f4f4f4);
-  border: 1px solid var(--mf-line, #dedede);
-  color: var(--mf-ink-2, #555555);
 }
 
 .pl-card-metric-row {
@@ -4861,7 +4826,6 @@ button.mf-btn.sm {
 .pl-cite-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
   font-size: 0.72rem;
   font-weight: 600;
   padding: 4px 9px;
@@ -4872,17 +4836,9 @@ button.mf-btn.sm {
   width: fit-content;
 }
 
-.pl-cite-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
 .pl-sec-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
   font-size: 0.72rem;
   font-weight: 600;
   padding: 4px 9px;
@@ -4891,10 +4847,6 @@ button.mf-btn.sm {
   border: 1px solid var(--mf-line, #dfdfdf);
   color: var(--mf-ink, #1f1f1f);
   width: fit-content;
-}
-
-.pl-sec-lock {
-  font-size: 0.72rem;
 }
 
 .pl-micro-sub {

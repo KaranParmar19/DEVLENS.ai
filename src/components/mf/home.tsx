@@ -798,11 +798,10 @@ export function HomePage() {
           <Reveal>
             <div className="pl-deck-header">
               <div className="pl-deck-eyebrow">
-                <span className="pl-deck-live-dot" />
-                <span className="pl-deck-label mf-mono">ENGINE BENCHMARKS // ARCHITECTURAL GUARANTEES</span>
+                <span className="pl-deck-label mf-mono">TECHNICAL SPECIFICATIONS</span>
               </div>
               <span className="pl-deck-hint mf-mono">
-                Drag to swing &bull; 4 system guarantees
+                Drag or click cards to explore
               </span>
             </div>
             <PolaroidLineCarousel />
