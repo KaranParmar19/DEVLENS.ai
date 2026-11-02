@@ -4600,13 +4600,13 @@ button.mf-btn.sm {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 12px 20px;
-  border-radius: 14px;
-  background: var(--mf-soft, #f7f7f6);
-  border: 1px solid var(--mf-line, #e5e5e5);
-  font-size: 0.72rem;
+  padding: 24px 0 16px;
+  border-top: 1px solid var(--mf-line, #e5e5e5);
+  background: transparent;
+  border-radius: 0;
+  font-size: 0.74rem;
   letter-spacing: 0.04em;
-  margin-bottom: 20px;
+  margin-bottom: 8px;
 }
 
 .pl-deck-eyebrow {
@@ -4639,9 +4639,10 @@ button.mf-btn.sm {
   position: relative;
   width: 100%;
   overflow: hidden;
-  background: var(--mf-soft, #f7f7f6);
-  border: 1px solid var(--mf-line, #e5e5e5);
-  border-radius: 24px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
   color: var(--mf-ink, #0a0a0a);
   user-select: none;
   -webkit-user-select: none;
@@ -4904,17 +4905,18 @@ button.mf-btn.sm {
 /* Bottom Bar Controls */
 .pl-bar {
   position: absolute;
-  left: 28px;
-  right: 28px;
-  bottom: 20px;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   cursor: default;
   z-index: 25;
-  padding-top: 12px;
+  padding: 16px 0 6px;
   border-top: 1px solid var(--mf-line, #e2e2e2);
+  background: transparent;
 }
 
 .pl-cap {
@@ -4994,22 +4996,30 @@ button.mf-btn.sm {
 
 .pl-floating-btn {
   position: absolute;
-  top: 48%;
+  top: 45%;
   transform: translateY(-50%);
   width: 42px;
   height: 42px;
   border-radius: 50%;
+  border: 1px solid var(--mf-line, #d8d8d8);
   z-index: 30;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-  background: #ffffff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--mf-ink, #0a0a0a);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .pl-floating-prev {
-  left: 20px;
+  left: 4px;
 }
 
 .pl-floating-next {
-  right: 20px;
+  right: 4px;
 }
 
 @media (max-width: 768px) {
@@ -5020,11 +5030,16 @@ button.mf-btn.sm {
     flex-direction: column;
     align-items: flex-start;
     gap: 6px;
+    padding: 18px 0 12px;
   }
   .pl-bar {
-    left: 16px;
-    right: 16px;
-    bottom: 14px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 14px 0 4px;
+  }
+  .pl-sub {
+    display: none;
   }
 }
 

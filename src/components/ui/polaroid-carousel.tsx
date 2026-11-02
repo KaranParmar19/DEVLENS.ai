@@ -104,13 +104,13 @@ function pad2(n: number): string {
 
 export function PolaroidLineCarousel({
   slides = DEVLENS_POLAROID_SLIDES,
-  height = "clamp(480px, 58vh, 580px)",
+  height = "clamp(530px, 60vh, 590px)",
   cardWidth = 320,
-  sag = 42,
+  sag = 28,
   swing = 1,
   autoplay = 0,
-  stringColor = "rgba(10, 10, 10, 0.28)",
-  backgroundColor = "var(--mf-soft, #f7f7f6)",
+  stringColor = "rgba(10, 10, 10, 0.24)",
+  backgroundColor = "transparent",
   inkColor = "var(--mf-ink, #0a0a0a)",
   className = "",
 }: PolaroidLineCarouselProps) {
@@ -167,7 +167,7 @@ export function PolaroidLineCarousel({
 
     const ro = new ResizeObserver(() => {
       const r = root.getBoundingClientRect();
-      const cw = Math.round(Math.max(220, Math.min(cardWidth, r.width * 0.44, r.height * 0.65)));
+      const cw = Math.round(Math.max(260, Math.min(cardWidth, r.width - 48, r.height * 0.62)));
       setSize({ w: r.width, h: r.height, cw });
     });
 
@@ -202,7 +202,7 @@ export function PolaroidLineCarousel({
       prev = now;
 
       const { w, h, cw } = size;
-      const y0 = Math.max(38, h * 0.14);
+      const y0 = Math.max(28, Math.min(38, Math.round(h * 0.065)));
       const d = drag.current;
       let lineVel: number;
 
@@ -398,9 +398,11 @@ export function PolaroidLineCarousel({
           ref={pathRef}
           fill="none"
           stroke={stringColor}
-          strokeWidth="1.6"
+          strokeWidth="1.5"
           strokeLinecap="round"
         />
+        <circle cx="2" cy="34" r="3" fill="var(--mf-ink, #0a0a0a)" opacity="0.38" />
+        <circle cx={Math.max(0, size.w - 2)} cy="34" r="3" fill="var(--mf-ink, #0a0a0a)" opacity="0.38" />
       </svg>
 
       {/* Hanging Spec Cards */}
