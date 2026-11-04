@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 export interface PolaroidSlide {
   index: string;
   pill?: string;
+  prefix?: string;
   value: string | number;
   suffix?: string;
   label: string;
@@ -37,8 +38,8 @@ export const DEVLENS_POLAROID_SLIDES: PolaroidSlide[] = [
   },
   {
     index: "03",
-    value: "100%",
-    suffix: "",
+    value: 100,
+    suffix: "%",
     label: "Answers linked to code",
     description: "Every Q&A response cites the exact repository file path and line range it used.",
     snippetType: "citation",
@@ -47,13 +48,34 @@ export const DEVLENS_POLAROID_SLIDES: PolaroidSlide[] = [
   },
   {
     index: "04",
-    value: "0 MB",
-    suffix: "",
+    value: 0,
+    suffix: "MB",
     label: "Code kept on disk",
     description: "Repositories clone into a temporary directory for parsing and are deleted when your session ends.",
     snippetType: "security",
     snippetText: "Temporary parse directory",
     snippetSubtext: "Deleted when session ends",
+  },
+  {
+    index: "05",
+    value: 14,
+    suffix: "+",
+    label: "Transitive blast radius",
+    description: "Traces reverse dependency paths before PRs merge to predict cascading breakage across shared modules.",
+    snippetType: "security",
+    snippetText: "HIGH BLAST: +14 sinks",
+    snippetSubtext: "Downstream sink impact audit",
+  },
+  {
+    index: "06",
+    prefix: "< ",
+    value: 2,
+    suffix: "s",
+    label: "Deterministic AST parsing",
+    description: "Tree-sitter syntax engines extract callers, callees, and type definitions without compiling the project.",
+    snippetType: "chips",
+    snippetItems: ["Tree-sitter", "Symbol Graph", "Call Trees", "Zero Build Step"],
+    snippetSubtext: "Sub-second syntax indexing",
   },
 ];
 
@@ -98,10 +120,40 @@ function pad2(n: number): string {
   return n < 10 ? "0" + n : String(n);
 }
 
+function parseMetric(val: string | number, suff?: string, pref?: string) {
+  let raw = String(val).trim();
+  let prefix = pref || "";
+  let suffix = suff || "";
+
+  if (!prefix && raw.startsWith("<")) {
+    prefix = "< ";
+    raw = raw.replace(/^<\s*/, "");
+  }
+
+  if (!suffix) {
+    const match = raw.match(/^([0-9]+)(.*)$/);
+    if (match) {
+      raw = match[1];
+      suffix = match[2].trim();
+    }
+  } else {
+    const match = raw.match(/^([0-9]+)(.*)$/);
+    if (match) {
+      raw = match[1];
+      const extra = match[2].trim();
+      if (extra && !suffix.startsWith(extra)) {
+        suffix = extra + suffix;
+      }
+    }
+  }
+
+  return { prefix, digits: raw, suffix };
+}
+
 export function PolaroidLineCarousel({
   slides = DEVLENS_POLAROID_SLIDES,
-  height = "clamp(530px, 60vh, 590px)",
-  cardWidth = 320,
+  height = "clamp(500px, 58vh, 560px)",
+  cardWidth = 330,
   sag = 28,
   swing = 1,
   autoplay = 0,
@@ -368,122 +420,141 @@ export function PolaroidLineCarousel({
   const currentSlide = slides[active] ?? slides[0];
 
   return (
-    <div
-      ref={rootRef}
-      className={`pl-root ${className}`}
-      style={{
-        height,
-        ["--pl-bg" as any]: backgroundColor,
-        ["--pl-ink" as any]: inkColor,
-        ["--pl-cw" as any]: `${size.cw}px`,
-      }}
-      data-drag={dragging ? "1" : "0"}
-      role="region"
-      aria-roledescription="carousel"
-      aria-label="DevLens Architecture Line Carousel"
-      tabIndex={0}
-      onKeyDown={onKey}
-      onPointerDown={onDown}
-      onPointerMove={onMove}
-      onPointerUp={onUp}
-      onPointerCancel={onUp}
-    >
-      {/* Hanging Suspension Wire String */}
-      <svg className="pl-string" aria-hidden="true">
-        <path
-          ref={pathRef}
-          fill="none"
-          stroke={stringColor}
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        />
-      </svg>
+    <div className={`pl-carousel-section ${className}`}>
+      {/* Hanging Stage with Wire & Cards */}
+      <div
+        ref={rootRef}
+        className="pl-root"
+        style={{
+          height,
+          ["--pl-bg" as any]: backgroundColor,
+          ["--pl-ink" as any]: inkColor,
+          ["--pl-cw" as any]: `${size.cw}px`,
+        }}
+        data-drag={dragging ? "1" : "0"}
+        role="region"
+        aria-roledescription="carousel"
+        aria-label="DevLens Architecture Line Carousel"
+        tabIndex={0}
+        onKeyDown={onKey}
+        onPointerDown={onDown}
+        onPointerMove={onMove}
+        onPointerUp={onUp}
+        onPointerCancel={onUp}
+      >
+        {/* Hanging Suspension Wire String */}
+        <svg className="pl-string" aria-hidden="true">
+          <path
+            ref={pathRef}
+            fill="none"
+            stroke={stringColor}
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+        </svg>
 
-      {/* Hanging Spec Cards */}
-      {slides.map((sl, i) => (
-        <div
-          key={sl.index}
-          className="pl-card"
-          data-i={i}
-          data-on={i === active ? "1" : "0"}
-          ref={(el) => {
-            cards.current[i] = el;
-          }}
-          aria-hidden={i === active ? undefined : true}
-        >
-          {/* Hanging Clothespin Peg */}
-          <div className="pl-peg" aria-hidden="true" />
+        {/* Hanging Spec Cards */}
+        {slides.map((sl, i) => (
+          <div
+            key={sl.index}
+            className="pl-card"
+            data-i={i}
+            data-on={i === active ? "1" : "0"}
+            ref={(el) => {
+              cards.current[i] = el;
+            }}
+            aria-hidden={i === active ? undefined : true}
+          >
+            {/* Hanging Clothespin Peg */}
+            <div className="pl-peg" aria-hidden="true" />
 
-          {/* Polaroid Spec Card Content */}
-          <div className="pl-print">
-            {/* Top Row: Index */}
-            <div className="pl-card-top">
-              <span className="pl-card-index mf-mono">{sl.index}</span>
-            </div>
+            {/* Polaroid Spec Card Content */}
+            <div className="pl-print">
+              {/* Top Row: Index */}
+              <div className="pl-card-top">
+                <span className="pl-card-index">{sl.index}</span>
+              </div>
 
-            {/* Giant Metric Row */}
-            <div className="pl-card-metric-row">
-              <span className="pl-card-number">
-                {sl.value}
-                {sl.suffix && <span className="pl-card-suffix">{sl.suffix}</span>}
-              </span>
-            </div>
-
-            {/* Label and Narrative */}
-            <div className="pl-card-text">
-              <h4 className="pl-card-title">{sl.label}</h4>
-              <p className="pl-card-desc">{sl.description}</p>
-            </div>
-
-            {/* Bottom Micro-Component Rack */}
-            <div className="pl-card-foot">
-              {sl.snippetType === "chips" && sl.snippetItems && (
-                <div className="pl-chips-rack">
-                  {sl.snippetItems.map((chip) => (
-                    <span key={chip} className="pl-chip mf-mono">
-                      {chip}
+              {/* Giant Metric Row with Handwritten Caveat Numerals */}
+              <div className="pl-card-metric-row">
+                {(() => {
+                  const { prefix, digits, suffix } = parseMetric(sl.value, sl.suffix, sl.prefix);
+                  return (
+                    <span className="pl-card-number">
+                      {prefix && <span className="pl-card-prefix">{prefix}</span>}
+                      <span className="pl-card-metric-val">{digits}</span>
+                      {suffix && <span className="pl-card-suffix">{suffix}</span>}
                     </span>
-                  ))}
-                </div>
-              )}
+                  );
+                })()}
+              </div>
 
-              {sl.snippetType === "lenses" && sl.snippetItems && (
-                <div className="pl-lenses-rack">
-                  {sl.snippetItems.map((lens) => (
-                    <span key={lens} className="pl-lens-tag mf-mono">
-                      {lens}
+              {/* Label and Narrative */}
+              <div className="pl-card-text">
+                <h4 className="pl-card-title">{sl.label}</h4>
+                <p className="pl-card-desc">{sl.description}</p>
+              </div>
+
+              {/* Bottom Micro-Component Rack */}
+              <div className="pl-card-foot">
+                {sl.snippetType === "chips" && sl.snippetItems && (
+                  <div className="pl-chips-rack">
+                    <div className="pl-chips-row">
+                      {sl.snippetItems.map((chip) => (
+                        <span key={chip} className="pl-chip">
+                          {chip}
+                        </span>
+                      ))}
+                    </div>
+                    {sl.snippetSubtext && (
+                      <span className="pl-micro-sub">{sl.snippetSubtext}</span>
+                    )}
+                  </div>
+                )}
+
+                {sl.snippetType === "lenses" && sl.snippetItems && (
+                  <div className="pl-lenses-rack">
+                    <div className="pl-lenses-row">
+                      {sl.snippetItems.map((lens) => (
+                        <span key={lens} className="pl-lens-tag">
+                          {lens}
+                        </span>
+                      ))}
+                    </div>
+                    {sl.snippetSubtext && (
+                      <span className="pl-micro-sub">{sl.snippetSubtext}</span>
+                    )}
+                  </div>
+                )}
+
+                {sl.snippetType === "citation" && (
+                  <div className="pl-cite-box">
+                    <span className="pl-cite-pill">
+                      {sl.snippetText}
                     </span>
-                  ))}
-                </div>
-              )}
+                    {sl.snippetSubtext && (
+                      <span className="pl-micro-sub">{sl.snippetSubtext}</span>
+                    )}
+                  </div>
+                )}
 
-              {sl.snippetType === "citation" && (
-                <div className="pl-cite-box">
-                  <span className="pl-cite-pill mf-mono">
-                    {sl.snippetText}
-                  </span>
-                  {sl.snippetSubtext && (
-                    <span className="pl-micro-sub mf-mono">{sl.snippetSubtext}</span>
-                  )}
-                </div>
-              )}
-
-              {sl.snippetType === "security" && (
-                <div className="pl-sec-box">
-                  <span className="pl-sec-pill mf-mono">
-                    {sl.snippetText}
-                  </span>
-                  {sl.snippetSubtext && (
-                    <span className="pl-micro-sub mf-mono">{sl.snippetSubtext}</span>
-                  )}
-                </div>
-              )}
+                {sl.snippetType === "security" && (
+                  <div className="pl-sec-box">
+                    <span className="pl-sec-pill">
+                      {sl.snippetText}
+                    </span>
+                    {sl.snippetSubtext && (
+                      <span className="pl-micro-sub">{sl.snippetSubtext}</span>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
 
-      {/* Bottom Status Control Bar */}
+      {/* Bottom Status Control Bar — Positioned cleanly below the hanging stage */}
       <div className="pl-bar">
         <div className="pl-cap" key={active}>
           <span className="pl-title">{currentSlide.label}</span>

@@ -1,0 +1,1055 @@
+<!doctype html>
+<html lang="en" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>DevLens Launch Video</title>
+    <!-- GSAP for seekable frame-by-frame timeline control -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: 'Qilka';
+        src: url('assets/fonts/Qilka-Bold.otf') format('opentype');
+        font-weight: bold;
+        font-display: block;
+      }
+
+      :root {
+        --bg: #09090b;
+        --card-bg: rgba(22, 22, 26, 0.75);
+        --card-border: rgba(255, 255, 255, 0.12);
+        --mint: #10b981;
+        --mint-glow: rgba(16, 185, 129, 0.35);
+        --amber: #f59e0b;
+        --amber-glow: rgba(245, 158, 11, 0.35);
+        --text: #f5f5f3;
+        --muted: #8e8e93;
+        --font-mono: 'JetBrains Mono', monospace;
+        --font-sans: 'Space Grotesk', -apple-system, sans-serif;
+        --font-body: 'Inter', sans-serif;
+        --font-display: 'Qilka', 'Space Grotesk', sans-serif;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html, body {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-body);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      #root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: radial-gradient(circle at 50% 40%, #15151c 0%, #09090b 100%);
+      }
+
+      /* Subtle engineering ambient grid background */
+      .bg-grid {
+        position: absolute;
+        inset: 0;
+        background-size: 64px 64px;
+        background-image: 
+          linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+        mask-image: radial-gradient(circle at 50% 50%, black 40%, transparent 80%);
+        pointer-events: none;
+      }
+
+      /* Global Header Watermark */
+      .top-nav {
+        position: absolute;
+        top: 48px;
+        left: 64px;
+        right: 64px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        z-index: 100;
+        font-family: var(--font-mono);
+        font-size: 13px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .top-nav .brand-pill {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 16px;
+        border-radius: 9999px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: var(--text);
+      }
+
+      .top-nav .brand-pill .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--mint);
+        box-shadow: 0 0 10px var(--mint);
+      }
+
+      /* The Continuous Unifying Luminous Thread SVG */
+      #thread-layer {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 60;
+      }
+
+      /* Shared scene clip base */
+      .clip {
+        position: absolute;
+        inset: 0;
+        width: 1920px;
+        height: 1080px;
+      }
+
+      /* ─── SCENE 1: HOOK & INGESTION ─── */
+      #scene-hook {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+      }
+
+      .hook-tagline {
+        font-family: var(--font-mono);
+        font-size: 14px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--mint);
+        margin-bottom: 24px;
+        opacity: 0;
+      }
+
+      .hook-headline {
+        font-family: var(--font-sans);
+        font-size: 64px;
+        font-weight: 600;
+        letter-spacing: -0.03em;
+        line-height: 1.1;
+        text-align: center;
+        max-width: 960px;
+        margin-bottom: 48px;
+        opacity: 0;
+      }
+
+      .hook-headline span {
+        color: var(--mint);
+      }
+
+      .input-bar-wrap {
+        position: relative;
+        width: 780px;
+        height: 72px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        display: flex;
+        align-items: center;
+        padding: 0 24px;
+        gap: 16px;
+        opacity: 0;
+      }
+
+      .input-bar-wrap .gh-icon {
+        width: 28px;
+        height: 28px;
+        fill: var(--text);
+        flex-shrink: 0;
+      }
+
+      .input-bar-wrap .url-text {
+        font-family: var(--font-mono);
+        font-size: 20px;
+        color: var(--text);
+        white-space: nowrap;
+        overflow: hidden;
+      }
+
+      .input-bar-wrap .cursor-caret {
+        width: 2px;
+        height: 26px;
+        background: var(--mint);
+        box-shadow: 0 0 8px var(--mint);
+      }
+
+      .input-bar-wrap .cta-chip {
+        margin-left: auto;
+        font-family: var(--font-mono);
+        font-size: 13px;
+        font-weight: 600;
+        padding: 8px 16px;
+        border-radius: 10px;
+        background: var(--mint);
+        color: #052e16;
+        letter-spacing: 0.04em;
+      }
+
+      /* ─── SCENE 2: TOPOLOGICAL MAP (CAPABILITY 1) ─── */
+      #scene-map {
+        perspective: 1400px;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .stage-header {
+        position: absolute;
+        top: 100px;
+        left: 64px;
+        z-index: 30;
+      }
+
+      .stage-header .num-tag {
+        font-family: var(--font-mono);
+        font-size: 13px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--mint);
+        margin-bottom: 8px;
+      }
+
+      .stage-header .stage-title {
+        font-family: var(--font-sans);
+        font-size: 38px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+
+      .stage-header .stage-sub {
+        font-family: var(--font-body);
+        font-size: 16px;
+        color: var(--muted);
+        margin-top: 6px;
+      }
+
+      .graph-viewport {
+        position: relative;
+        width: 1400px;
+        height: 720px;
+        transform-style: preserve-3d;
+      }
+
+      .graph-node {
+        position: absolute;
+        border-radius: 16px;
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        box-shadow: 0 18px 36px rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(14px);
+        padding: 18px 24px;
+        font-family: var(--font-mono);
+        color: var(--text);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .graph-node .node-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+      }
+
+      .graph-node .node-name {
+        font-size: 17px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+
+      .graph-node .node-badge {
+        font-size: 12px;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--muted);
+      }
+
+      .graph-node.active-root {
+        border-color: var(--mint);
+        box-shadow: 0 0 28px var(--mint-glow), 0 18px 36px rgba(0, 0, 0, 0.6);
+      }
+
+      .graph-node.active-root .node-name {
+        color: var(--mint);
+      }
+
+      .graph-node .node-meta {
+        font-size: 13px;
+        color: #a1a1aa;
+        display: flex;
+        gap: 16px;
+      }
+
+      /* ─── SCENE 3: TRACE & BLAST RADIUS (CAPABILITY 2) ─── */
+      #scene-trace {
+        z-index: 30;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .trace-layout {
+        position: relative;
+        width: 1360px;
+        display: grid;
+        grid-template-columns: 1.1fr 1fr;
+        gap: 48px;
+        align-items: center;
+      }
+
+      .hop-stepper {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .hop-card {
+        padding: 16px 20px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-family: var(--font-mono);
+      }
+
+      .hop-card.active {
+        background: rgba(16, 185, 129, 0.08);
+        border-color: var(--mint);
+        box-shadow: 0 0 20px var(--mint-glow);
+      }
+
+      .hop-card .step-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      .hop-card .step-latency {
+        font-size: 12px;
+        color: var(--mint);
+      }
+
+      .blast-card {
+        padding: 32px;
+        border-radius: 20px;
+        background: rgba(245, 158, 11, 0.06);
+        border: 1px solid rgba(245, 158, 11, 0.35);
+        box-shadow: 0 0 35px var(--amber-glow);
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .blast-badge-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .blast-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 14px;
+        border-radius: 9999px;
+        background: var(--amber);
+        color: #451a03;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+      }
+
+      .blast-metric {
+        font-family: var(--font-mono);
+        font-size: 13px;
+        color: var(--amber);
+      }
+
+      .blast-main-text {
+        font-family: var(--font-sans);
+        font-size: 26px;
+        font-weight: 600;
+        line-height: 1.3;
+        color: var(--text);
+      }
+
+      .blast-audit-box {
+        padding: 16px;
+        border-radius: 12px;
+        background: rgba(0, 0, 0, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        font-family: var(--font-mono);
+        font-size: 13px;
+        color: #d1d5db;
+        line-height: 1.6;
+      }
+
+      .blast-audit-box strong {
+        color: var(--text);
+      }
+
+      /* ─── SCENE 4: VERIFY WITH AST CITATIONS (CAPABILITY 3) ─── */
+      #scene-verify {
+        z-index: 40;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .verify-card {
+        width: 1080px;
+        border-radius: 24px;
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        box-shadow: 0 32px 64px rgba(0, 0, 0, 0.6);
+        padding: 44px;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        backdrop-filter: blur(16px);
+      }
+
+      .verify-prompt {
+        font-family: var(--font-mono);
+        font-size: 15px;
+        color: var(--muted);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .verify-prompt .prompt-prefix {
+        color: var(--mint);
+        font-weight: 700;
+      }
+
+      .verify-query {
+        font-family: var(--font-sans);
+        font-size: 32px;
+        font-weight: 600;
+        color: var(--text);
+        letter-spacing: -0.02em;
+      }
+
+      .verify-response {
+        font-family: var(--font-body);
+        font-size: 20px;
+        line-height: 1.6;
+        color: #d1d5db;
+        padding-top: 12px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .citation-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-top: 8px;
+      }
+
+      .citation-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 18px;
+        border-radius: 10px;
+        background: rgba(16, 185, 129, 0.14);
+        border: 1px solid var(--mint);
+        box-shadow: 0 0 16px var(--mint-glow);
+        font-family: var(--font-mono);
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--mint);
+      }
+
+      .citation-badge .cite-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--mint);
+      }
+
+      .verified-stamp {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--muted);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      /* ─── SCENE 5: LOGO & BRAND RESOLUTION ─── */
+      #scene-logo {
+        z-index: 50;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .logo-display {
+        font-family: var(--font-display);
+        font-size: 140px;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        line-height: 1;
+        color: var(--text);
+        text-transform: uppercase;
+        margin-bottom: 24px;
+        text-shadow: 0 0 60px rgba(255, 255, 255, 0.15);
+      }
+
+      .logo-tagline {
+        font-family: var(--font-sans);
+        font-size: 34px;
+        font-weight: 500;
+        color: #e5e5e5;
+        margin-bottom: 36px;
+        letter-spacing: -0.01em;
+      }
+
+      .logo-pill-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 26px;
+        border-radius: 9999px;
+        background: rgba(16, 185, 129, 0.08);
+        border: 1px solid rgba(16, 185, 129, 0.4);
+        font-family: var(--font-mono);
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        color: #34d399;
+        box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="20"
+      data-width="1920"
+      data-height="1080"
+      data-fps="60"
+    >
+      <!-- Procedurally Synthesized Audio Track -->
+      <audio id="soundtrack" src="assets/audio/soundtrack.wav" data-start="0" data-duration="20"></audio>
+
+      <div class="bg-grid"></div>
+
+      <!-- Top Nav Header -->
+      <header class="top-nav">
+        <div class="brand-pill">
+          <div class="dot"></div>
+          <span>DEVLENS COGNITIVE ENGINE</span>
+        </div>
+        <div id="nav-step">01 // REPOSITORY INGESTION</div>
+      </header>
+
+      <!-- SVG Layer for the Unifying Luminous Thread & Graph Vectors -->
+      <svg id="thread-layer" viewBox="0 0 1920 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="glow-mint" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="6" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          <filter id="glow-amber" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="8" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        <!-- Static Graph Connection Lines -->
+        <g id="graph-edges" opacity="0">
+          <line x1="960" y1="520" x2="620" y2="340" stroke="rgba(255,255,255,0.12)" stroke-width="2" stroke-dasharray="4 4" />
+          <line x1="960" y1="520" x2="1300" y2="360" stroke="rgba(255,255,255,0.12)" stroke-width="2" stroke-dasharray="4 4" />
+          <line x1="960" y1="520" x2="1260" y2="680" stroke="rgba(255,255,255,0.12)" stroke-width="2" stroke-dasharray="4 4" />
+          <line x1="960" y1="520" x2="640" y2="690" stroke="rgba(16,185,129,0.3)" stroke-width="3" />
+          <!-- Animated pulse marker along edge -->
+          <circle id="edge-pulse" cx="960" cy="520" r="4" fill="#10B981" filter="url(#glow-mint)" />
+        </g>
+
+        <!-- Dynamic Luminous Thread -->
+        <path
+          id="luminous-thread"
+          d="M 590 540 L 1330 540"
+          stroke="#10B981"
+          stroke-width="3"
+          stroke-linecap="round"
+          filter="url(#glow-mint)"
+          opacity="0"
+        />
+
+        <!-- Blast Radius Expanding Pulse Ring (hidden until triggered) -->
+        <circle
+          id="blast-ring"
+          cx="640"
+          cy="690"
+          r="40"
+          stroke="#F59E0B"
+          stroke-width="3"
+          fill="rgba(245, 158, 11, 0.08)"
+          filter="url(#glow-amber)"
+          opacity="0"
+          visibility="hidden"
+        />
+      </svg>
+
+      <!-- ─── SCENE 1: HOOK & REPO INGESTION ─── -->
+      <div id="scene-hook" class="clip" data-start="0" data-duration="4.2">
+        <div class="hook-tagline">AST SYNTAX INTELLIGENCE</div>
+        <h1 class="hook-headline">Read any codebase<br /><span>like you wrote it.</span></h1>
+        
+        <div class="input-bar-wrap" id="hook-input-bar">
+          <svg class="gh-icon" viewBox="0 0 24 24">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+          </svg>
+          <div class="url-text" id="typewriter-text">https://github.com/</div>
+          <div class="cursor-caret" id="hook-cursor"></div>
+          <div class="cta-chip">ANALYZE AST</div>
+        </div>
+      </div>
+
+      <!-- ─── SCENE 2: TOPOLOGICAL MAP ─── -->
+      <div id="scene-map" class="clip" data-start="3.6" data-duration="5.2" style="opacity: 0;">
+        <div class="stage-header" id="map-header" data-layout-allow-overlap>
+          <div class="num-tag" data-layout-ignore>CAPABILITY 01 // TOPOLOGY</div>
+          <h2 class="stage-title">Interactive Dependency Graph</h2>
+          <p class="stage-sub">Fruchterman-Reingold layout resolving circular edges and coupling scores</p>
+        </div>
+
+        <div class="graph-viewport" id="graph-plane">
+          <!-- Center Root Node -->
+          <div class="graph-node active-root" id="node-root" style="left: 960px; top: 520px;">
+            <div class="node-head">
+              <span class="node-name">src/api/gateway.ts</span>
+              <span class="node-badge" data-layout-ignore style="background: rgba(16,185,129,0.18); color: #10B981;">ENTRY POINT</span>
+            </div>
+            <div class="node-meta" data-layout-ignore>
+              <span>Coupling: 0.94</span>
+              <span>19 Dependents</span>
+            </div>
+          </div>
+
+          <!-- Node: Auth -->
+          <div class="graph-node" id="node-auth" style="left: 620px; top: 340px; border-color: rgba(56, 189, 248, 0.4); box-shadow: 0 0 20px rgba(56, 189, 248, 0.15);">
+            <div class="node-head">
+              <span class="node-name">src/auth/jwt-guard.ts</span>
+              <span class="node-badge" data-layout-ignore style="color: #38bdf8;">SECURITY</span>
+            </div>
+            <div class="node-meta" data-layout-ignore>
+              <span>Coupling: 0.72</span>
+              <span>9 Dependents</span>
+            </div>
+          </div>
+
+          <!-- Node: Worker -->
+          <div class="graph-node" id="node-worker" style="left: 1300px; top: 360px; border-color: rgba(168, 85, 247, 0.4); box-shadow: 0 0 20px rgba(168, 85, 247, 0.15);">
+            <div class="node-head">
+              <span class="node-name">src/workers/tree_sitter.py</span>
+              <span class="node-badge" data-layout-ignore style="color: #c084fc;">AST WORKER</span>
+            </div>
+            <div class="node-meta" data-layout-ignore>
+              <span>Coupling: 0.88</span>
+              <span>12 Dependents</span>
+            </div>
+          </div>
+
+          <!-- Node: Graph Solver -->
+          <div class="graph-node" id="node-solver" style="left: 1260px; top: 680px; border-color: rgba(99, 102, 241, 0.4); box-shadow: 0 0 20px rgba(99, 102, 241, 0.15);">
+            <div class="node-head">
+              <span class="node-name">src/graph/solver.py</span>
+              <span class="node-badge" data-layout-ignore style="color: #818cf8;">TOPOLOGY</span>
+            </div>
+            <div class="node-meta" data-layout-ignore>
+              <span>Coupling: 0.91</span>
+              <span>7 Dependents</span>
+            </div>
+          </div>
+
+          <!-- Target Node: Vector Store -->
+          <div class="graph-node" id="node-storage" style="left: 640px; top: 690px; border-color: rgba(245, 158, 11, 0.6); box-shadow: 0 0 24px rgba(245, 158, 11, 0.25);">
+            <div class="node-head">
+              <span class="node-name">src/storage/pgvector.ts</span>
+              <span class="node-badge" data-layout-ignore style="background: rgba(245,158,11,0.18); color: #F59E0B;">CRITICAL SINK</span>
+            </div>
+            <div class="node-meta" data-layout-ignore>
+              <span>Coupling: 0.96</span>
+              <span>14 Dependents</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── SCENE 3: TRACE & BLAST RADIUS ─── -->
+      <div id="scene-trace" class="clip" data-start="8.2" data-duration="5.4" style="opacity: 0;">
+        <div class="stage-header" id="trace-header" data-layout-allow-overlap>
+          <div class="num-tag" data-layout-ignore style="color: var(--amber);">CAPABILITY 02 // BLAST RADIUS</div>
+          <h2 class="stage-title">Execution Hop & Impact Analysis</h2>
+          <p class="stage-sub">Transitive reverse-dependency BFS traversal down to storage</p>
+        </div>
+
+        <div class="trace-layout">
+          <!-- Hop Stepper -->
+          <div class="hop-stepper" id="trace-stepper">
+            <div class="hop-card" id="hop-1">
+              <div>
+                <div style="font-size: 11px; color: var(--muted);">HOP 01 // ENTRY</div>
+                <div class="step-title">POST /api/v1/repos/analyze</div>
+              </div>
+              <div class="step-latency">45ms</div>
+            </div>
+
+            <div class="hop-card" id="hop-2">
+              <div>
+                <div style="font-size: 11px; color: var(--muted);">HOP 02 // DISPATCH</div>
+                <div class="step-title">cloneWorker.spawn(repoUrl)</div>
+              </div>
+              <div class="step-latency">110ms</div>
+            </div>
+
+            <div class="hop-card" id="hop-3">
+              <div>
+                <div style="font-size: 11px; color: var(--muted);">HOP 03 // AST PARSER</div>
+                <div class="step-title">treeSitter.parseSyntaxTree()</div>
+              </div>
+              <div class="step-latency">220ms</div>
+            </div>
+
+            <div class="hop-card active" id="hop-4">
+              <div>
+                <div style="font-size: 11px; color: var(--mint);">HOP 04 // PERSISTENCE</div>
+                <div class="step-title">pgvector.batch_upsert()</div>
+              </div>
+              <div class="step-latency" style="color: var(--mint); font-weight: 700;">390ms</div>
+            </div>
+          </div>
+
+          <!-- Blast Radius Warning Card -->
+          <div class="blast-card" id="trace-blast-card">
+            <div class="blast-badge-row">
+              <div class="blast-pill">
+                <span style="font-size: 14px;">●</span> HIGH BLAST RADIUS
+              </div>
+              <div class="blast-metric">19 FILES · +640 / -210</div>
+            </div>
+
+            <div class="blast-main-text">
+              modifies src/storage/pgvector.ts
+            </div>
+
+            <div class="blast-audit-box">
+              <strong>Risk:</strong> Modifying pgvector schema directly breaks 14 downstream analysis pipelines.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── SCENE 4: VERIFY WITH AST CITATIONS ─── -->
+      <div id="scene-verify" class="clip" data-start="13.0" data-duration="4.6" style="opacity: 0;">
+        <div class="stage-header" id="verify-header" data-layout-allow-overlap>
+          <div class="num-tag" data-layout-ignore>CAPABILITY 03 // AST CITATION</div>
+          <h2 class="stage-title">Deterministic Code Intelligence</h2>
+          <p class="stage-sub">Synthesized answers backed by exact repository file and line citations</p>
+        </div>
+
+        <div class="verify-card" id="verify-panel">
+          <div class="verify-prompt">
+            <span class="prompt-prefix">COPILOT AUDIT</span>
+            <span>querying active commit ast</span>
+          </div>
+
+          <div class="verify-query" id="verify-query-text">
+            "What breaks if we change vector dimensions in storage?"
+          </div>
+
+          <div class="verify-response" id="verify-answer-text">
+            Modifies schema in pgvector.ts affecting 7 downstream sinks. Run migration 004_vector_dims.
+          </div>
+
+          <div class="citation-row" id="verify-citation-row">
+            <div class="citation-badge">
+              <span class="cite-dot"></span>
+              <span>src/storage/pgvector.ts:44-98</span>
+            </div>
+            <div class="citation-badge" style="border-color: rgba(255,255,255,0.2); color: var(--text);">
+              <span>src/chat/retriever.py:63</span>
+            </div>
+            <div class="verified-stamp">● 100% Deterministic AST Grounding</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── SCENE 5: LOGO & BRAND RESOLUTION ─── -->
+      <div id="scene-logo" class="clip" data-start="17.2" data-duration="2.8" style="opacity: 0;">
+        <div class="logo-display" id="logo-wordmark">DEVLENS</div>
+        <div class="logo-tagline" id="logo-sub">See the shape of any codebase.</div>
+        <div class="logo-pill-badge" id="logo-badge">
+          <span>LIVE AT DEVLENS-AI.KP5336464.WORKERS.DEV</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- GSAP Master Animation Timeline -->
+    <script>
+      const tl = gsap.timeline({ paused: true });
+
+      // Ensure graph nodes center accurately without CSS transform conflicts
+      gsap.set(".graph-node", { xPercent: -50, yPercent: -50 });
+      gsap.set("#blast-ring", { visibility: "hidden", opacity: 0 });
+
+      // ─── 0.0s — 3.8s: SCENE 1 (HOOK & INGESTION) ───
+      tl.fromTo(".hook-tagline", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 0.2);
+      tl.fromTo(".hook-headline", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, 0.4);
+      tl.fromTo("#hook-input-bar", { opacity: 0, scale: 0.96 }, { opacity: 1, scale: 1, duration: 0.6, ease: "back.out(1.2)" }, 0.6);
+
+      // Unifying Luminous Thread: Scene 1 Underline Beam
+      tl.fromTo("#luminous-thread",
+        { opacity: 0, strokeDasharray: 780, strokeDashoffset: 780, attr: { d: "M 570 610 L 1350 610" } },
+        { opacity: 0.9, strokeDashoffset: 0, duration: 1.2, ease: "power2.out" },
+        0.8
+      );
+
+      // Typewriter simulation of GitHub repo URL
+      const urlText = "github.com/ast/fastapi-core";
+      const typewriterObj = { len: 0 };
+      tl.to(typewriterObj, {
+        len: urlText.length,
+        duration: 1.4,
+        ease: "none",
+        onUpdate: () => {
+          const count = Math.floor(typewriterObj.len);
+          document.getElementById("typewriter-text").textContent = "https://" + urlText.slice(0, count);
+        }
+      }, 0.8);
+
+      // Blinking cursor effect
+      tl.to("#hook-cursor", { opacity: 0, repeat: 5, yoyo: true, duration: 0.22 }, 0.8);
+
+      // Click pulse on CTA button
+      tl.to("#hook-input-bar .cta-chip", { scale: 0.94, duration: 0.1, yoyo: true, repeat: 1 }, 2.4);
+
+      // Morphing Transition 1: Input bar collapses inward into root node
+      tl.to("#scene-hook", {
+        scale: 0.6,
+        opacity: 0,
+        filter: "blur(8px)",
+        duration: 0.8,
+        ease: "power3.in"
+      }, 3.0);
+
+      // ─── 3.5s — 8.5s: SCENE 2 (TOPOLOGICAL ARCHITECTURE MAP) ───
+      tl.to("#nav-step", { textContent: "02 // TOPOLOGICAL DEPENDENCY GRAPH", duration: 0.1 }, 3.5);
+      tl.to("#scene-map", { opacity: 1, duration: 0.6, ease: "power2.out" }, 3.5);
+
+      // Luminous Thread flows from center into the graph
+      tl.to("#luminous-thread", {
+        attr: { d: "M 960 520 L 640 690" },
+        duration: 0.8,
+        ease: "power2.inOut"
+      }, 3.5);
+
+      // 3D Parallax tilt of the graph plane (duration 4.1s ends at 7.6s)
+      tl.fromTo("#graph-plane", 
+        { rotateX: 18, rotateY: -12, scale: 0.88, z: -100 },
+        { rotateX: 6, rotateY: -2, scale: 1, z: 0, duration: 4.1, ease: "power1.out" },
+        3.5
+      );
+
+      // Graph edges fade and draw
+      tl.to("#graph-edges", { opacity: 1, duration: 0.6 }, 3.6);
+
+      // Pop in graph nodes radially from center root
+      tl.fromTo("#node-root", { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.4)" }, 3.6);
+      tl.fromTo("#node-auth", { scale: 0, opacity: 0, x: 100, y: 80 }, { scale: 1, opacity: 1, x: 0, y: 0, duration: 0.6, ease: "back.out(1.2)" }, 3.8);
+      tl.fromTo("#node-worker", { scale: 0, opacity: 0, x: -100, y: 60 }, { scale: 1, opacity: 1, x: 0, y: 0, duration: 0.6, ease: "back.out(1.2)" }, 4.0);
+      tl.fromTo("#node-solver", { scale: 0, opacity: 0, x: -80, y: -60 }, { scale: 1, opacity: 1, x: 0, y: 0, duration: 0.6, ease: "back.out(1.2)" }, 4.2);
+      tl.fromTo("#node-storage", { scale: 0, opacity: 0, x: 90, y: -80 }, { scale: 1, opacity: 1, x: 0, y: 0, duration: 0.6, ease: "back.out(1.3)" }, 4.4);
+
+      // Pulse along the edge from root (960, 520) to storage (640, 690)
+      tl.fromTo("#edge-pulse", 
+        { cx: 960, cy: 520, opacity: 1 },
+        { cx: 640, cy: 690, opacity: 1, duration: 1.4, ease: "power2.inOut" },
+        5.2
+      );
+      tl.to("#edge-pulse", { opacity: 0, duration: 0.4 }, 7.0);
+
+      // Camera zooms toward the critical storage node
+      tl.to("#graph-plane", {
+        scale: 1.4,
+        x: 320,
+        y: -180,
+        opacity: 0,
+        filter: "blur(6px)",
+        duration: 0.9,
+        ease: "power3.in"
+      }, 7.6);
+      tl.to("#map-header", { opacity: 0, y: -20, duration: 0.5 }, 7.6);
+      tl.to("#graph-edges", { opacity: 0, duration: 0.5 }, 7.6);
+
+      // ─── 8.2s — 13.5s: SCENE 3 (TRACE & BLAST RADIUS) ───
+      tl.to("#nav-step", { textContent: "03 // TRANSITIVE BLAST RADIUS", duration: 0.1 }, 8.2);
+      tl.to("#scene-trace", { opacity: 1, duration: 0.5, ease: "power2.out" }, 8.2);
+
+      // Thread flows into the trace pane
+      tl.to("#luminous-thread", {
+        attr: { d: "M 520 680 L 1280 680" },
+        opacity: 0.85,
+        duration: 0.6,
+        ease: "power2.out"
+      }, 8.4);
+
+      // Hop stepper items cascade in
+      tl.fromTo("#hop-1", { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.35, ease: "power2.out" }, 8.4);
+      tl.fromTo("#hop-2", { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.35, ease: "power2.out" }, 8.7);
+      tl.fromTo("#hop-3", { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.35, ease: "power2.out" }, 9.0);
+      tl.fromTo("#hop-4", { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.35, ease: "power2.out" }, 9.3);
+
+      // Blast radius card explosive impact
+      tl.fromTo("#trace-blast-card", 
+        { scale: 0.88, opacity: 0, y: 20 },
+        { scale: 1, opacity: 1, y: 0, duration: 0.6, ease: "back.out(1.4)" },
+        9.5
+      );
+
+      // Amber blast ring expands across screen (cleanly shown only here)
+      tl.set("#blast-ring", { visibility: "visible" }, 9.5);
+      tl.fromTo("#blast-ring",
+        { opacity: 0.9, r: 30 },
+        { opacity: 0, r: 360, duration: 1.4, ease: "power2.out" },
+        9.5
+      );
+      tl.set("#blast-ring", { visibility: "hidden" }, 11.0);
+
+      // Morphing Transition 3: Trace and blast compress into citation badge
+      tl.to("#scene-trace", {
+        scale: 0.92,
+        opacity: 0,
+        y: -15,
+        duration: 0.7,
+        ease: "power2.in"
+      }, 12.5);
+      tl.to("#luminous-thread", { opacity: 0, duration: 0.4 }, 12.5);
+
+      // ─── 13.0s — 17.5s: SCENE 4 (VERIFY WITH AST CITATION) ───
+      tl.to("#nav-step", { textContent: "04 // AST GROUNDED VERIFICATION", duration: 0.1 }, 13.0);
+      tl.to("#scene-verify", { opacity: 1, duration: 0.5, ease: "power2.out" }, 13.0);
+
+      tl.fromTo("#verify-panel",
+        { scale: 0.92, opacity: 0, y: 30 },
+        { scale: 1, opacity: 1, y: 0, duration: 0.6, ease: "back.out(1.15)" },
+        13.2
+      );
+
+      tl.fromTo("#verify-query-text",
+        { opacity: 0, y: 10 },
+        { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" },
+        13.5
+      );
+
+      tl.fromTo("#verify-answer-text",
+        { opacity: 0 },
+        { opacity: 1, duration: 0.5, ease: "power2.out" },
+        13.9
+      );
+
+      tl.fromTo("#verify-citation-row",
+        { opacity: 0, scale: 0.94 },
+        { opacity: 1, scale: 1, duration: 0.45, ease: "back.out(1.3)" },
+        14.3
+      );
+
+      // Thread neatly underlines verified citation badge
+      tl.fromTo("#luminous-thread",
+        { attr: { d: "M 460 610 L 685 610" }, opacity: 0, strokeDasharray: 240, strokeDashoffset: 240 },
+        { opacity: 1, strokeDashoffset: 0, duration: 0.6, ease: "power2.out", immediateRender: false },
+        14.3
+      );
+
+      // Morphing Transition 4: Citation blossoms into final logo
+      tl.to("#scene-verify", {
+        scale: 1.15,
+        opacity: 0,
+        filter: "blur(12px)",
+        duration: 0.8,
+        ease: "power2.in"
+      }, 16.8);
+      tl.to("#luminous-thread", { opacity: 0, duration: 0.4 }, 16.8);
+
+      // ─── 17.2s — 20.0s: SCENE 5 (LOGO & RESOLUTION) ───
+      tl.to("#nav-step", { textContent: "DEVLENS ARCHITECTURE", duration: 0.1 }, 17.2);
+      tl.to("#scene-logo", { opacity: 1, duration: 0.6, ease: "power2.out" }, 17.2);
+
+      // Animate transform & opacity only - no letterSpacing to avoid sub-pixel layout snapping
+      tl.fromTo("#logo-wordmark",
+        { scale: 0.85, opacity: 0, filter: "blur(10px)" },
+        { scale: 1, opacity: 1, filter: "blur(0px)", duration: 0.8, ease: "power3.out" },
+        17.3
+      );
+
+      tl.fromTo("#logo-sub",
+        { opacity: 0, y: 12 },
+        { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" },
+        17.6
+      );
+
+      tl.fromTo("#logo-badge",
+        { opacity: 0, scale: 0.9 },
+        { opacity: 1, scale: 1, duration: 0.5, ease: "back.out(1.2)" },
+        18.0
+      );
+
+      // Unifying thread sweeps across in a luminous line under DEVLENS wordmark
+      tl.fromTo("#luminous-thread",
+        { opacity: 0, strokeDasharray: 800, strokeDashoffset: 800, attr: { d: "M 660 620 L 1260 620" } },
+        { opacity: 1, strokeDashoffset: 0, duration: 1.0, ease: "power2.out", immediateRender: false },
+        17.5
+      );
+
+      // Register master timeline with HyperFrames
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>

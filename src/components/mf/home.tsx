@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import {
@@ -84,123 +84,557 @@ function Marquee() {
 }
 
 /* Interactive Mini graph used inside the product frame */
-const GRAPH_NODES = [
-  { id: 0, label: "server.ts", x: 60, y: 70, coupling: 0.92, complexity: 12 },
-  { id: 1, label: "router.ts", x: 150, y: 40, coupling: 0.88, complexity: 16 },
-  { id: 2, label: "middleware.ts", x: 150, y: 120, coupling: 0.65, complexity: 8 },
-  { id: 3, label: "app-render.tsx", x: 250, y: 80, coupling: 0.95, complexity: 22 },
-  { id: 4, label: "context.ts", x: 250, y: 170, coupling: 0.45, complexity: 6 },
-  { id: 5, label: "response.ts", x: 340, y: 40, coupling: 0.52, complexity: 9 },
-  { id: 6, label: "stream.ts", x: 340, y: 130, coupling: 0.74, complexity: 14 },
-  { id: 7, label: "db.ts", x: 430, y: 90, coupling: 0.82, complexity: 11 },
-  { id: 8, label: "auth.ts", x: 120, y: 200, coupling: 0.61, complexity: 7 },
-  { id: 9, label: "session.ts", x: 220, y: 250, coupling: 0.55, complexity: 8 },
+interface DemoGraphNode {
+  id: number;
+  label: string;
+  x: number;
+  y: number;
+  coupling: number;
+  complexity: number;
+  sinks: number;
+  loc: number;
+  zone: "ingress" | "router" | "render" | "data";
+  role: string;
+  tag: string;
+}
+
+const GRAPH_NODES: DemoGraphNode[] = [
+  {
+    id: 0,
+    label: "server.ts",
+    x: 145,
+    y: 130,
+    coupling: 0.92,
+    complexity: 12,
+    sinks: 18,
+    loc: 145,
+    zone: "ingress",
+    role: "HTTP Ingress Listener",
+    tag: "ENTRYPOINT",
+  },
+  {
+    id: 1,
+    label: "router.ts",
+    x: 405,
+    y: 130,
+    coupling: 0.88,
+    complexity: 16,
+    sinks: 14,
+    loc: 284,
+    zone: "router",
+    role: "API Dispatch Kernel",
+    tag: "HIGH FAN-OUT",
+  },
+  {
+    id: 2,
+    label: "middleware.ts",
+    x: 145,
+    y: 280,
+    coupling: 0.65,
+    complexity: 8,
+    sinks: 12,
+    loc: 98,
+    zone: "ingress",
+    role: "Pipeline & Security Interceptor",
+    tag: "INTERCEPTOR",
+  },
+  {
+    id: 3,
+    label: "app-render.tsx",
+    x: 665,
+    y: 130,
+    coupling: 0.95,
+    complexity: 22,
+    sinks: 11,
+    loc: 410,
+    zone: "render",
+    role: "RSC Streaming Engine",
+    tag: "CRITICAL CORE",
+  },
+  {
+    id: 4,
+    label: "context.ts",
+    x: 405,
+    y: 280,
+    coupling: 0.45,
+    complexity: 6,
+    sinks: 6,
+    loc: 64,
+    zone: "router",
+    role: "Async Request Context",
+    tag: "STATE",
+  },
+  {
+    id: 5,
+    label: "response.ts",
+    x: 665,
+    y: 430,
+    coupling: 0.52,
+    complexity: 9,
+    sinks: 5,
+    loc: 92,
+    zone: "render",
+    role: "HTTP Response Formatter",
+    tag: "SERIALIZER",
+  },
+  {
+    id: 6,
+    label: "stream.ts",
+    x: 665,
+    y: 280,
+    coupling: 0.74,
+    complexity: 14,
+    sinks: 8,
+    loc: 185,
+    zone: "render",
+    role: "Chunked Stream Pipeline",
+    tag: "TRANSPORT",
+  },
+  {
+    id: 7,
+    label: "db.ts",
+    x: 890,
+    y: 195,
+    coupling: 0.82,
+    complexity: 11,
+    sinks: 4,
+    loc: 215,
+    zone: "data",
+    role: "Postgres Connection Pool",
+    tag: "DATABASE",
+  },
+  {
+    id: 8,
+    label: "auth.ts",
+    x: 145,
+    y: 430,
+    coupling: 0.61,
+    complexity: 7,
+    sinks: 9,
+    loc: 112,
+    zone: "ingress",
+    role: "JWT Verification & Crypt",
+    tag: "SECURITY",
+  },
+  {
+    id: 9,
+    label: "session.ts",
+    x: 405,
+    y: 430,
+    coupling: 0.55,
+    complexity: 8,
+    sinks: 8,
+    loc: 130,
+    zone: "router",
+    role: "Cookie Session Hydrator",
+    tag: "AUTH SINK",
+  },
+  {
+    id: 10,
+    label: "cache.ts",
+    x: 890,
+    y: 365,
+    coupling: 0.48,
+    complexity: 5,
+    sinks: 3,
+    loc: 84,
+    zone: "data",
+    role: "Redis Distributed KV",
+    tag: "CACHE",
+  },
 ];
 
 const GRAPH_EDGES: [number, number][] = [
-  [0, 1],
-  [0, 2],
-  [1, 3],
-  [2, 3],
-  [2, 4],
-  [3, 5],
-  [3, 6],
-  [6, 7],
-  [4, 6],
-  [2, 8],
-  [8, 9],
-  [4, 9],
+  [0, 1], // server -> router
+  [0, 2], // server -> middleware
+  [2, 1], // middleware -> router
+  [2, 8], // middleware -> auth
+  [8, 9], // auth -> session
+  [1, 3], // router -> app-render
+  [1, 4], // router -> context
+  [9, 4], // session -> context
+  [4, 3], // context -> app-render
+  [4, 6], // context -> stream
+  [3, 5], // app-render -> response
+  [3, 6], // app-render -> stream
+  [3, 7], // app-render -> db
+  [6, 5], // stream -> response
+  [7, 10], // db -> cache
+  [4, 10], // context -> cache
+];
+
+const ARCH_ZONES = [
+  { id: "ingress", label: "01 / EDGE INGRESS", x: 40, y: 35, width: 215, height: 490 },
+  { id: "router", label: "02 / RUNTIME ROUTING", x: 295, y: 35, width: 220, height: 490 },
+  { id: "render", label: "03 / STREAM PIPELINE", x: 555, y: 35, width: 220, height: 490 },
+  { id: "data", label: "04 / PERSISTENCE", x: 815, y: 35, width: 150, height: 490 },
 ];
 
 function MiniGraph({
   selectedNodeId,
   onSelectNode,
+  blastMode,
+  zoom,
+  pan,
+  isDragging,
+  onMouseDown,
+  onMouseMove,
+  onMouseUp,
+  onWheel,
 }: {
   selectedNodeId: number;
   onSelectNode: (id: number) => void;
+  blastMode: boolean;
+  zoom: number;
+  pan: { x: number; y: number };
+  isDragging: boolean;
+  onMouseDown: (e: React.MouseEvent) => void;
+  onMouseMove: (e: React.MouseEvent) => void;
+  onMouseUp: () => void;
+  onWheel: (e: React.WheelEvent) => void;
 }) {
+  const [hoveredNodeId, setHoveredNodeId] = useState<number | null>(null);
+
+  // Direct connected edges
   const connectedEdges = GRAPH_EDGES.filter(
     ([a, b]) => a === selectedNodeId || b === selectedNodeId,
   );
   const connectedNodeIds = new Set(connectedEdges.flatMap(([a, b]) => [a, b]));
 
+  // Downstream sinks (blast radius cascade)
+  const downstreamSinks = new Set<number>();
+  if (blastMode) {
+    const queue = [selectedNodeId];
+    while (queue.length > 0) {
+      const curr = queue.shift()!;
+      GRAPH_EDGES.forEach(([u, v]) => {
+        if (u === curr && !downstreamSinks.has(v)) {
+          downstreamSinks.add(v);
+          queue.push(v);
+        }
+      });
+    }
+  }
+
+  const hoveredNode = hoveredNodeId !== null ? GRAPH_NODES[hoveredNodeId] : null;
+
   return (
     <svg
-      viewBox="0 0 500 300"
+      viewBox="0 0 1000 560"
       width="100%"
       height="100%"
       role="img"
-      aria-label="Interactive Sample Dependency Graph"
-      style={{ cursor: "crosshair" }}
+      aria-label="Interactive Architecture Intelligence Dependency Graph"
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+      onMouseUp={onMouseUp}
+      onWheel={onWheel}
+      style={{
+        cursor: isDragging ? "grabbing" : "grab",
+        userSelect: "none",
+        display: "block",
+      }}
     >
-      {/* Background grid dots */}
       <defs>
-        <pattern id="graph-grid" width="20" height="20" patternUnits="userSpaceOnUse">
-          <circle cx="2" cy="2" r="1" fill="rgba(255,255,255,0.08)" />
+        {/* Subtle grid pattern */}
+        <pattern id="mini-graph-grid" width="24" height="24" patternUnits="userSpaceOnUse">
+          <circle cx="2" cy="2" r="0.8" fill="rgba(255,255,255,0.07)" />
         </pattern>
+
+        {/* Directional arrowhead markers */}
+        <marker
+          id="arrow-white"
+          viewBox="0 0 10 10"
+          refX="9"
+          refY="5"
+          markerWidth="6"
+          markerHeight="6"
+          orient="auto-start-reverse"
+        >
+          <path d="M 0 1.5 L 8.5 5 L 0 8.5 z" fill="#ffffff" />
+        </marker>
+        <marker
+          id="arrow-amber"
+          viewBox="0 0 10 10"
+          refX="9"
+          refY="5"
+          markerWidth="6"
+          markerHeight="6"
+          orient="auto-start-reverse"
+        >
+          <path d="M 0 1.5 L 8.5 5 L 0 8.5 z" fill="#f59e0b" />
+        </marker>
+        <marker
+          id="arrow-idle"
+          viewBox="0 0 10 10"
+          refX="9"
+          refY="5"
+          markerWidth="5"
+          markerHeight="5"
+          orient="auto-start-reverse"
+        >
+          <path d="M 0 2 L 7 5 L 0 8 z" fill="rgba(255,255,255,0.2)" />
+        </marker>
       </defs>
-      <rect width="100%" height="100%" fill="url(#graph-grid)" />
 
-      {/* Edges */}
-      {GRAPH_EDGES.map(([a, b], i) => {
-        const isConnected = a === selectedNodeId || b === selectedNodeId;
-        return (
-          <line
-            key={i}
-            x1={GRAPH_NODES[a].x}
-            y1={GRAPH_NODES[a].y}
-            x2={GRAPH_NODES[b].x}
-            y2={GRAPH_NODES[b].y}
-            stroke={isConnected ? "#ffffff" : "rgba(255,255,255,0.2)"}
-            strokeWidth={isConnected ? 2 : 1}
-            strokeDasharray={isConnected ? "none" : "3 3"}
-            style={{ transition: "all 0.3s" }}
-          />
-        );
-      })}
+      {/* Background Dot Grid */}
+      <rect width="100%" height="100%" fill="url(#mini-graph-grid)" />
 
-      {/* Nodes */}
-      {GRAPH_NODES.map((n) => {
-        const isSelected = n.id === selectedNodeId;
-        const isConnected = connectedNodeIds.has(n.id);
+      {/* Scalable & Pannable Scene */}
+      <g
+        transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}
+        style={{
+          transformOrigin: "500px 280px",
+          transition: isDragging ? "none" : "transform 0.15s ease-out",
+        }}
+      >
+        {/* Architectural Module Clusters / Zone Boundaries */}
+        {ARCH_ZONES.map((zone) => (
+          <g key={zone.id}>
+            <rect
+              x={zone.x}
+              y={zone.y}
+              width={zone.width}
+              height={zone.height}
+              rx="12"
+              fill="rgba(255,255,255,0.012)"
+              stroke="rgba(255,255,255,0.05)"
+              strokeDasharray="4 4"
+            />
+            <text
+              x={zone.x + 14}
+              y={zone.y + 22}
+              fill="rgba(255,255,255,0.3)"
+              fontSize="9"
+              fontFamily="var(--mf-mono, monospace)"
+              letterSpacing="0.08em"
+              fontWeight="600"
+            >
+              {zone.label}
+            </text>
+          </g>
+        ))}
 
-        return (
-          <g key={n.id} onClick={() => onSelectNode(n.id)} style={{ cursor: "pointer" }}>
-            {isSelected && (
+        {/* Directed Topological Edges with Smooth Bezier Curves */}
+        {GRAPH_EDGES.map(([a, b], i) => {
+          const source = GRAPH_NODES[a];
+          const target = GRAPH_NODES[b];
+          const isSourceSelected = a === selectedNodeId;
+          const isTargetSelected = b === selectedNodeId;
+          const isConnected = isSourceSelected || isTargetSelected;
+          const isBlastPath = blastMode && (a === selectedNodeId || downstreamSinks.has(a)) && downstreamSinks.has(b);
+
+          // Smooth cubic bezier curve
+          const dx = Math.abs(target.x - source.x) * 0.45;
+          const pathD = `M ${source.x} ${source.y} C ${source.x + dx} ${source.y}, ${target.x - dx} ${target.y}, ${target.x} ${target.y}`;
+
+          if (isBlastPath) {
+            return (
+              <g key={`edge-${i}`}>
+                <path
+                  d={pathD}
+                  fill="none"
+                  stroke="#f59e0b"
+                  strokeWidth="1.5"
+                  strokeDasharray="4 4"
+                  markerEnd="url(#arrow-amber)"
+                />
+              </g>
+            );
+          }
+
+          if (isConnected) {
+            return (
+              <g key={`edge-${i}`}>
+                <path
+                  d={pathD}
+                  fill="none"
+                  stroke="#ffffff"
+                  strokeWidth="1.5"
+                  markerEnd="url(#arrow-white)"
+                />
+              </g>
+            );
+          }
+
+          return (
+            <path
+              key={`edge-${i}`}
+              d={pathD}
+              fill="none"
+              stroke="rgba(255,255,255,0.12)"
+              strokeWidth="1"
+              strokeDasharray="3 3"
+              markerEnd="url(#arrow-idle)"
+            />
+          );
+        })}
+
+        {/* Graph Nodes */}
+        {GRAPH_NODES.map((n) => {
+          const isSelected = n.id === selectedNodeId;
+          const isConnected = connectedNodeIds.has(n.id);
+          const isBlastSink = blastMode && downstreamSinks.has(n.id);
+          const isHovered = hoveredNodeId === n.id;
+
+          return (
+            <g
+              key={n.id}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectNode(n.id);
+              }}
+              onMouseEnter={() => setHoveredNodeId(n.id)}
+              onMouseLeave={() => setHoveredNodeId(null)}
+              style={{ cursor: "pointer" }}
+            >
+              {/* Selected Node: Clean architectural focus ring (no glowing halo) */}
+              {isSelected && (
+                <circle
+                  cx={n.x}
+                  cy={n.y}
+                  r="13"
+                  fill="none"
+                  stroke={blastMode ? "#f59e0b" : "#ffffff"}
+                  strokeWidth="1.2"
+                  strokeDasharray="3 3"
+                />
+              )}
+
+              {/* Blast sink outline */}
+              {isBlastSink && !isSelected && (
+                <circle
+                  cx={n.x}
+                  cy={n.y}
+                  r="11"
+                  fill="none"
+                  stroke="#f59e0b"
+                  strokeWidth="1"
+                  strokeDasharray="2 2"
+                />
+              )}
+
+              {/* Core Node Circle */}
               <circle
                 cx={n.x}
                 cy={n.y}
-                r="24"
-                fill="none"
-                stroke="#ffffff"
-                strokeWidth="1.5"
-                opacity="0.4"
-                strokeDasharray="4 4"
+                r={isSelected ? 6.5 : isHovered ? 6 : 5}
+                fill={isSelected ? (blastMode ? "#f59e0b" : "#ffffff") : isConnected ? "#ffffff" : "#0d0e14"}
+                stroke={isSelected ? "#ffffff" : isConnected ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.25)"}
+                strokeWidth={isSelected ? 2 : 1.2}
+                style={{ transition: "all 0.15s ease-out" }}
               />
-            )}
-            <circle
-              cx={n.x}
-              cy={n.y}
-              r={isSelected ? 14 : isConnected ? 9 : 7}
-              fill={isSelected ? "#ffffff" : isConnected ? "rgba(255,255,255,0.8)" : "#0c0c0f"}
-              stroke="#ffffff"
-              strokeWidth={isSelected ? 2.5 : 1.5}
-              style={{ transition: "all 0.25s" }}
+
+              {/* Inner depth dot */}
+              <circle
+                cx={n.x}
+                cy={n.y}
+                r={isSelected ? 2.5 : 2}
+                fill={isSelected ? "#09090b" : isConnected ? "#09090b" : "rgba(255,255,255,0.4)"}
+              />
+
+              {/* Monospace Pill Badge for Node Label */}
+              <g transform={`translate(${n.x - 48}, ${n.y + 12})`}>
+                <rect
+                  width="96"
+                  height="22"
+                  rx="5"
+                  fill="#09090b"
+                  stroke={
+                    isSelected
+                      ? (blastMode ? "#f59e0b" : "#ffffff")
+                      : isHovered
+                        ? "rgba(255,255,255,0.6)"
+                        : isConnected || isBlastSink
+                          ? "rgba(255,255,255,0.3)"
+                          : "rgba(255,255,255,0.12)"
+                  }
+                  strokeWidth={isSelected || isHovered ? 1.2 : 1}
+                  style={{ transition: "stroke 0.15s ease" }}
+                />
+                {/* Subtle neutral indicator dot */}
+                <circle
+                  cx="12"
+                  cy="11"
+                  r="2"
+                  fill={
+                    isSelected
+                      ? (blastMode ? "#f59e0b" : "#ffffff")
+                      : isConnected || isBlastSink
+                        ? "rgba(255,255,255,0.6)"
+                        : "rgba(255,255,255,0.25)"
+                  }
+                />
+                {/* File label */}
+                <text
+                  x="20"
+                  y="14.5"
+                  fill={isSelected ? "#ffffff" : isConnected || isBlastSink ? "#f4f4f5" : "rgba(255,255,255,0.65)"}
+                  fontSize="9.5"
+                  fontFamily="var(--mf-mono, monospace)"
+                  fontWeight={isSelected ? 600 : 400}
+                >
+                  {n.label}
+                </text>
+              </g>
+
+              {/* In Blast Mode only: Clean minimal sink indicator tag */}
+              {isBlastSink && !isSelected && (
+                <g transform={`translate(${n.x - 20}, ${n.y - 24})`}>
+                  <rect
+                    width="40"
+                    height="13"
+                    rx="3"
+                    fill="rgba(245, 158, 11, 0.15)"
+                    stroke="#f59e0b"
+                    strokeWidth="0.8"
+                  />
+                  <text
+                    x="20"
+                    y="9.5"
+                    textAnchor="middle"
+                    fill="#f59e0b"
+                    fontSize="7"
+                    fontWeight="600"
+                    fontFamily="var(--mf-mono, monospace)"
+                  >
+                    SINK
+                  </text>
+                </g>
+              )}
+            </g>
+          );
+        })}
+
+        {/* Hover Tooltip Overlay in SVG */}
+        {hoveredNode && hoveredNode.id !== selectedNodeId && (
+          <g
+            transform={`translate(${Math.min(760, hoveredNode.x + 20)}, ${Math.max(45, hoveredNode.y - 45)})`}
+            style={{ pointerEvents: "none" }}
+          >
+            <rect
+              width="180"
+              height="72"
+              rx="8"
+              fill="rgba(10, 11, 16, 0.96)"
+              stroke="rgba(255,255,255,0.2)"
+              strokeWidth="1"
             />
-            <text
-              x={n.x}
-              y={n.y + (isSelected ? 26 : 20)}
-              textAnchor="middle"
-              fill={isSelected ? "#ffffff" : "rgba(255,255,255,0.6)"}
-              fontSize={isSelected ? "11" : "9"}
-              fontFamily="var(--mf-mono, monospace)"
-              fontWeight={isSelected ? 600 : 400}
-            >
-              {n.label}
+            <text x="12" y="18" fill="#ffffff" fontWeight="600" fontSize="10" fontFamily="var(--mf-mono)">
+              {hoveredNode.label}
+            </text>
+            <text x="12" y="32" fill="rgba(255,255,255,0.7)" fontSize="8" fontFamily="var(--mf-mono)">
+              {hoveredNode.role}
+            </text>
+            <text x="12" y="48" fill="rgba(255,255,255,0.5)" fontSize="8" fontFamily="var(--mf-mono)">
+              Coupling: {hoveredNode.coupling} · Complexity: {hoveredNode.complexity}
+            </text>
+            <text x="12" y="62" fill="#ffffff" fontSize="8" fontFamily="var(--mf-mono)">
+              Blast Radius: +{hoveredNode.sinks} downstream sinks
             </text>
           </g>
-        );
-      })}
+        )}
+      </g>
     </svg>
   );
 }
@@ -216,10 +650,50 @@ const COPILOT_PREVIEWS: Record<number, { q: string; a: string; sources: string }
     a: "14 direct imports break. AppRouter and DevServer lose their routing layer; 9 of 14 consumer paths have no tests.",
     sources: "server/router.ts · app-render.tsx",
   },
+  2: {
+    q: "What does middleware.ts intercept?",
+    a: "middleware.ts applies security headers, validates CORS preflights, and forwards auth credentials to auth.ts before requests hit the router.",
+    sources: "middleware.ts:14-68 · auth.ts:22",
+  },
   3: {
     q: "What is the blast radius of app-render.tsx?",
     a: "Modifying app-render.tsx impacts 8 downstream rendering sinks including stream.ts, response.ts, and db.ts. Cyclomatic complexity is 22.",
     sources: "app-render.tsx:44-180 · stream.ts",
+  },
+  4: {
+    q: "How is context.ts populated across async boundaries?",
+    a: "context.ts leverages Node AsyncLocalStorage to propagate request-scoped traces, user IDs, and telemetry spans from session.ts into app-render.tsx.",
+    sources: "context.ts:8-52 · session.ts:31",
+  },
+  5: {
+    q: "What protocols does response.ts support?",
+    a: "response.ts formats standard HTTP/1.1 and HTTP/2 stream responses, setting content-type headers, cache headers, and chunked transfer encodings.",
+    sources: "response.ts:1-74 · stream.ts:40",
+  },
+  6: {
+    q: "How does stream.ts handle client backpressure?",
+    a: "stream.ts creates a ReadableStream pipe to the client socket, pausing RSC chunk serialization when high water mark is exceeded.",
+    sources: "stream.ts:18-95 · response.ts:12",
+  },
+  7: {
+    q: "Where is the database connection pool defined?",
+    a: "db.ts manages the Postgres connection pool with keep-alive timeouts and integrates with cache.ts for read-through query memoization.",
+    sources: "db.ts:10-85 · cache.ts:14",
+  },
+  8: {
+    q: "How are JWT tokens verified in auth.ts?",
+    a: "auth.ts validates Ed25519 signatures, checks expiry timestamps, and hydrates user claims into session.ts. Invalids return 401 Unauthorized.",
+    sources: "auth.ts:24-102 · session.ts:18",
+  },
+  9: {
+    q: "What is stored in session.ts?",
+    a: "session.ts decrypts signed session cookies and stores ephemeral user identity, permissions, and organization tenant ID for context.ts.",
+    sources: "session.ts:12-78 · context.ts:19",
+  },
+  10: {
+    q: "How does cache.ts handle cache invalidation?",
+    a: "cache.ts utilizes Redis tagged keys with 300s TTL. DB write mutations trigger selective cache key invalidation across the cluster.",
+    sources: "cache.ts:5-62 · db.ts:48",
   },
 };
 
@@ -228,8 +702,57 @@ function ProductFrame() {
     "architecture",
   );
   const [selectedNodeId, setSelectedNodeId] = useState(1);
+  const [blastMode, setBlastMode] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0 });
+
   const activeNode = GRAPH_NODES.find((n) => n.id === selectedNodeId) ?? GRAPH_NODES[1];
   const copilotData = COPILOT_PREVIEWS[selectedNodeId] ?? COPILOT_PREVIEWS[1];
+
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      const target = e.target as HTMLElement | SVGElement;
+      if (
+        target.tagName === "svg" ||
+        target.tagName === "rect" ||
+        target.tagName === "pattern"
+      ) {
+        setIsDragging(true);
+        dragStart.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
+      }
+    },
+    [pan],
+  );
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (!isDragging) return;
+      setPan({
+        x: e.clientX - dragStart.current.x,
+        y: e.clientY - dragStart.current.y,
+      });
+    },
+    [isDragging],
+  );
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.08 : 0.08;
+    setZoom((z) => Math.min(1.7, Math.max(0.7, +(z + delta).toFixed(2))));
+  }, []);
+
+  const handleZoomIn = () => setZoom((z) => Math.min(1.7, +(z + 0.15).toFixed(2)));
+  const handleZoomOut = () => setZoom((z) => Math.max(0.7, +(z - 0.15).toFixed(2)));
+  const handleResetZoom = () => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  };
 
   return (
     <div className="mf-frame">
@@ -268,38 +791,81 @@ function ProductFrame() {
               marginBottom: 12,
               display: "flex",
               justifyContent: "space-between",
+              alignItems: "center",
+              fontSize: "0.6875rem",
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
             }}
           >
             <span>Source Tree</span>
-            <span style={{ opacity: 0.5 }}>10 files</span>
+            <span
+              style={{
+                opacity: 0.6,
+                background: "rgba(255,255,255,0.08)",
+                padding: "1px 6px",
+                borderRadius: 4,
+              }}
+            >
+              {GRAPH_NODES.length} files
+            </span>
           </div>
-          {GRAPH_NODES.map((n) => {
-            const isSelected = n.id === selectedNodeId;
-            return (
-              <div
-                key={n.id}
-                onClick={() => setSelectedNodeId(n.id)}
-                style={{
-                  fontFamily: "var(--mf-mono)",
-                  fontSize: 12,
-                  padding: "6px 8px",
-                  borderRadius: 6,
-                  cursor: "pointer",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  background: isSelected ? "#262626" : "transparent",
-                  color: isSelected ? "#fff" : "#9a9a9a",
-                  transition: "all 0.15s",
-                }}
-              >
-                <span>{n.label}</span>
-                {isSelected && (
-                  <span style={{ fontSize: "0.625rem", color: "#ffffff" }}>focus</span>
-                )}
-              </div>
-            );
-          })}
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 3,
+              maxHeight: 460,
+              overflowY: "auto",
+            }}
+          >
+            {GRAPH_NODES.map((n) => {
+              const isSelected = n.id === selectedNodeId;
+              return (
+                <div
+                  key={n.id}
+                  onClick={() => setSelectedNodeId(n.id)}
+                  style={{
+                    fontFamily: "var(--mf-mono, monospace)",
+                    fontSize: 12,
+                    padding: "6px 10px",
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    background: isSelected ? "rgba(255,255,255,0.08)" : "transparent",
+                    border: isSelected
+                      ? "1px solid rgba(255,255,255,0.18)"
+                      : "1px solid transparent",
+                    color: isSelected ? "#ffffff" : "#a1a1aa",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span
+                      style={{
+                        width: 4,
+                        height: 4,
+                        borderRadius: "50%",
+                        background: isSelected ? "#ffffff" : "rgba(255,255,255,0.25)",
+                        display: "inline-block",
+                      }}
+                    />
+                    <span>{n.label}</span>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: "0.6875rem",
+                      opacity: isSelected ? 0.75 : 0.35,
+                      fontFamily: "var(--mf-mono)",
+                    }}
+                  >
+                    {n.loc}L
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Center: Interactive Workspace Canvas */}
@@ -344,17 +910,144 @@ function ProductFrame() {
           <div
             style={{
               flex: 1,
-              minHeight: 280,
+              minHeight: 480,
               position: "relative",
-              borderRadius: 12,
+              borderRadius: 14,
               overflow: "hidden",
-              background: "#060608",
+              background: "#08080b",
               border: "1px solid rgba(255,255,255,0.08)",
+              boxShadow: "inset 0 0 50px rgba(0,0,0,0.45)",
             }}
           >
             {frameTab === "architecture" && (
               <>
-                <MiniGraph selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} />
+                {/* Top Canvas HUD & Controls */}
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 12,
+                    left: 14,
+                    right: 14,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    zIndex: 10,
+                    pointerEvents: "none",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      pointerEvents: "auto",
+                    }}
+                  >
+                    <span
+                      className="mf-mono"
+                      style={{
+                        fontSize: "0.6875rem",
+                        color: "rgba(255,255,255,0.6)",
+                        letterSpacing: "0.06em",
+                        fontWeight: 500,
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      Architecture Map · {GRAPH_NODES.length} Modules · {GRAPH_EDGES.length} Edges
+                    </span>
+                    {blastMode && (
+                      <span
+                        className="mf-mono"
+                        style={{
+                          fontSize: "0.625rem",
+                          color: "#f59e0b",
+                          background: "rgba(245, 158, 11, 0.12)",
+                          border: "1px solid rgba(245, 158, 11, 0.3)",
+                          padding: "2px 7px",
+                          borderRadius: 4,
+                          fontWeight: 500,
+                        }}
+                      >
+                        Blast radius active
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Canvas Controls */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      pointerEvents: "auto",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      className="devlens-canvas-btn"
+                      onClick={handleZoomOut}
+                      title="Zoom Out"
+                    >
+                      −
+                    </button>
+                    <span
+                      className="devlens-canvas-btn"
+                      style={{
+                        cursor: "default",
+                        minWidth: 44,
+                        color: "rgba(255,255,255,0.85)",
+                      }}
+                    >
+                      {Math.round(zoom * 100)}%
+                    </span>
+                    <button
+                      type="button"
+                      className="devlens-canvas-btn"
+                      onClick={handleZoomIn}
+                      title="Zoom In"
+                    >
+                      +
+                    </button>
+                    <button
+                      type="button"
+                      className="devlens-canvas-btn"
+                      onClick={handleResetZoom}
+                      title="Reset Framing"
+                    >
+                      ⟲ Fit
+                    </button>
+                    <button
+                      type="button"
+                      className={`devlens-canvas-btn ${blastMode ? "active" : ""}`}
+                      onClick={() => setBlastMode((b) => !b)}
+                      style={{
+                        marginLeft: 4,
+                        background: blastMode ? "#f59e0b" : undefined,
+                        color: blastMode ? "#000000" : undefined,
+                        borderColor: blastMode ? "#f59e0b" : undefined,
+                      }}
+                      title="Toggle Blast Radius Calculation"
+                    >
+                      ⚡ Blast Radius
+                    </button>
+                  </div>
+                </div>
+
+                {/* SVG Graph Canvas */}
+                <MiniGraph
+                  selectedNodeId={selectedNodeId}
+                  onSelectNode={setSelectedNodeId}
+                  blastMode={blastMode}
+                  zoom={zoom}
+                  pan={pan}
+                  isDragging={isDragging}
+                  onMouseDown={handleMouseDown}
+                  onMouseMove={handleMouseMove}
+                  onMouseUp={handleMouseUp}
+                  onWheel={handleWheel}
+                />
+
+                {/* Bottom Left HUD Metadata Chips */}
                 <div
                   style={{
                     position: "absolute",
@@ -367,7 +1060,7 @@ function ProductFrame() {
                   }}
                 >
                   <span className="mf-studio-stat-pill">
-                    <span style={{ color: "rgba(255, 255, 255, 0.65)", fontWeight: 400 }}>
+                    <span style={{ color: "rgba(255, 255, 255, 0.5)", fontWeight: 400 }}>
                       Selected:
                     </span>
                     <strong style={{ color: "#ffffff", fontWeight: 700 }}>
@@ -375,20 +1068,60 @@ function ProductFrame() {
                     </strong>
                   </span>
                   <span className="mf-studio-stat-pill">
-                    <span style={{ color: "rgba(255, 255, 255, 0.65)", fontWeight: 400 }}>
+                    <span style={{ color: "rgba(255, 255, 255, 0.5)", fontWeight: 400 }}>
                       Coupling:
                     </span>
-                    <strong style={{ color: "#38bdf8", fontWeight: 700 }}>
-                      {activeNode.coupling}
+                    <strong
+                      style={{
+                        color: activeNode.coupling > 0.8 ? "#f59e0b" : "#ffffff",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {activeNode.coupling} {activeNode.coupling > 0.8 ? "(High)" : ""}
                     </strong>
                   </span>
                   <span className="mf-studio-stat-pill">
-                    <span style={{ color: "rgba(255, 255, 255, 0.65)", fontWeight: 400 }}>
+                    <span style={{ color: "rgba(255, 255, 255, 0.5)", fontWeight: 400 }}>
                       Complexity:
                     </span>
-                    <strong style={{ color: "#ffffff", fontWeight: 700 }}>
+                    <strong
+                      style={{
+                        color: activeNode.complexity > 15 ? "#f59e0b" : "#ffffff",
+                        fontWeight: 700,
+                      }}
+                    >
                       {activeNode.complexity}
                     </strong>
+                  </span>
+                  <span className="mf-studio-stat-pill">
+                    <span style={{ color: "rgba(255, 255, 255, 0.5)", fontWeight: 400 }}>
+                      Downstream:
+                    </span>
+                    <strong style={{ color: "#ffffff", fontWeight: 700 }}>
+                      +{activeNode.sinks} Sinks
+                    </strong>
+                  </span>
+                </div>
+
+                {/* Bottom Right Helper Hint */}
+                <div
+                  style={{
+                    position: "absolute",
+                    bottom: 14,
+                    right: 14,
+                    zIndex: 10,
+                    pointerEvents: "none",
+                  }}
+                >
+                  <span
+                    className="mf-mono"
+                    style={{
+                      fontSize: "0.625rem",
+                      color: "rgba(255,255,255,0.4)",
+                      letterSpacing: "0.03em",
+                    }}
+                  >
+                    Drag to pan · Scroll to zoom · Click node to focus
                   </span>
                 </div>
               </>
@@ -556,38 +1289,57 @@ function ProductFrame() {
         {/* Right: Cited Copilot Box */}
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
           <div>
-            <div className="mf-mono" style={{ color: "#8a8a8a", marginBottom: 12 }}>
-              Ask DevLens Copilot
+            <div
+              className="mf-mono"
+              style={{
+                color: "#8a8a8a",
+                marginBottom: 12,
+                fontSize: "0.6875rem",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+              }}
+            >
+              DevLens Copilot
             </div>
             <div
               style={{
-                background: "#171717",
+                background: "rgba(255,255,255,0.03)",
                 borderRadius: 10,
-                padding: 12,
+                padding: "12px 14px",
                 fontSize: 13,
                 lineHeight: 1.45,
                 marginBottom: 12,
                 color: "#ffffff",
-                border: "1px solid rgba(255,255,255,0.1)",
+                border: "1px solid rgba(255,255,255,0.12)",
+                fontFamily: "var(--mf-mono, monospace)",
               }}
             >
               {copilotData.q}
             </div>
             <div
               style={{
-                border: "1px solid rgba(255,255,255,.15)",
+                border: "1px solid rgba(255,255,255,0.12)",
                 borderRadius: 10,
-                padding: 12,
-                fontSize: 13,
-                lineHeight: 1.5,
-                color: "#d4d4d4",
-                background: "rgba(255,255,255,0.02)",
+                padding: "14px",
+                fontSize: 12.5,
+                lineHeight: 1.55,
+                color: "#d4d4d8",
+                background: "rgba(10,10,14,0.6)",
               }}
             >
               {copilotData.a}
               <div
                 className="mf-mono"
-                style={{ marginTop: 10, color: "#38bdf8", fontSize: "0.6875rem" }}
+                style={{
+                  marginTop: 12,
+                  color: "#ffffff",
+                  fontSize: "0.6875rem",
+                  padding: "4px 8px",
+                  background: "rgba(255, 255, 255, 0.06)",
+                  borderRadius: 6,
+                  border: "1px solid rgba(255, 255, 255, 0.14)",
+                  display: "inline-block",
+                }}
               >
                 ↳ {copilotData.sources}
               </div>
@@ -595,13 +1347,23 @@ function ProductFrame() {
           </div>
 
           <div
-            style={{ marginTop: 12, borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 12 }}
+            style={{
+              marginTop: 16,
+              borderTop: "1px solid rgba(255,255,255,0.08)",
+              paddingTop: 12,
+              display: "flex",
+              flexDirection: "column",
+              gap: 4,
+            }}
           >
             <span
               className="mf-mono"
               style={{ fontSize: "0.625rem", color: "rgba(255,255,255,0.4)" }}
             >
-              Click nodes or files on left to spotlight
+              Click any node in graph or file in tree
+            </span>
+            <span className="mf-mono" style={{ fontSize: "0.625rem", color: "rgba(255,255,255,0.5)" }}>
+              Target: {activeNode.label} ({activeNode.role})
             </span>
           </div>
         </div>
