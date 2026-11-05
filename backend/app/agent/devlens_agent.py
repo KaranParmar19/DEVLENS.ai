@@ -367,64 +367,112 @@ class DevLensAgent:
 
     async def generate_onboarding_doc(self) -> str:
         """
-        Generate a comprehensive onboarding walkthrough document.
-        Combines top entry points, architecture metrics, and critical code chunks.
+        Generate an authoritative, production-grade architectural onboarding dossier.
+        All metrics, entry points, risk levels, and starter tasks are computed in code
+        via FactsExtractor and passed as an immutable FACTS block to the model.
         """
+        from app.core.facts_extractor import FactsExtractor
         from app.agent.prompts import ONBOARDING_DOC_PROMPT
 
-        queries = [
-            "application startup and entry point",
-            "core architecture modules",
-            "routing and api endpoints",
-            "data models and storage",
-            "error handling and middleware",
-        ]
+        extractor = FactsExtractor(
+            db=self.db,
+            repo_id=self.repo_id,
+            repo_full_name=self.repo_full_name,
+            graph_cache=self.graph_cache,
+        )
+        facts = await extractor.assemble_verified_facts()
+        facts_block = extractor.format_facts_text(facts)
 
+        # Pull real code chunks for key entry points and starter candidates
         context_parts = []
-        for q in queries:
+        key_files = (
+            [ep["path"] for ep in facts["entry_points"][:3]]
+            + [cs["path"] for cs in facts["candidate_starters"][:2]]
+        )
+        for path in key_files:
             try:
-                results = await self.vector_store.similarity_search(q, top_k=2)
-                for r in results:
-                    loc = f"lines {r['start_line']}–{r['end_line']}" if r.get("start_line") else ""
+                chunks = await self.vector_store.get_chunks_by_file(path)
+                if chunks:
+                    c = chunks[0]
+                    loc = f"lines {c['start_line']}–{c['end_line']}" if c.get("start_line") else ""
                     context_parts.append(
-                        f"### [[{r['file_path']}]] {loc}\n```{r.get('language', '').lower()}\n{r['content'][:600]}\n```"
+                        f"### [[{c['file_path']}]] {loc}\n```{c.get('language', '').lower()}\n{c['content'][:600]}\n```"
                     )
             except Exception as e:
-                logger.warning("onboarding_query_failed", query=q, error=str(e))
+                logger.warning("onboarding_context_fetch_failed", path=path, error=str(e))
 
-        context = "\n\n".join(context_parts[:10])
+        context = "\n\n".join(context_parts[:6]) or "Topological graph and manifest indexed."
         prompt = ONBOARDING_DOC_PROMPT.format(
             repo_full_name=self.repo_full_name,
-            context=context or "Topological graph indexed.",
+            facts_block=facts_block,
+            context=context,
         )
 
         try:
             res = await self.llm.ainvoke([HumanMessage(content=prompt)])
             return res.content
         except Exception as exc:
-            logger.warning("onboarding_llm_failed_using_ast_doc", error=str(exc))
-            nodes = self.graph_cache.get("nodes", [])
-            entry_points = [n["id"] for n in nodes if n.get("is_entry")]
-            cycles = self.graph_cache.get("meta", {}).get("cycles", [])
+            logger.warning("onboarding_llm_failed_using_facts_doc", error=str(exc))
 
-            return f"""# Getting Started with {self.repo_full_name}
+            # Deterministic, facts-only fallback markdown (zero fabricated prose or invariants)
+            entry_lines = "\n".join(
+                f"- `[[{ep['path']}]]`: Entry point ({ep['dependents_count']} downstream dependents, {ep['dependencies_count']} dependencies)"
+                for ep in facts["entry_points"]
+            ) or "- No explicit entry point declared."
 
-*(Architectural Walkthrough generated via DevLens AST & Topological Analysis)*
+            high_risk_lines = "\n".join(
+                f"- `[[{hr['path']}]]` (Risk: High, {hr['dependents_count']} direct dependents, coupling: {hr['coupling']:.2f})\n"
+                f"  Modifying public signatures affects {hr['dependents_count']} dependent modules. Verify all dependents before merging changes."
+                for hr in facts["high_risk_files"]
+            ) or "- No single-point high-risk modules identified."
 
----
+            starter_lines = "\n".join(
+                f"- `[[{cs['path']}]]` ({cs['line_count']} lines, {cs['dependents_count']} downstream dependents)\n"
+                f"  Safe candidate module with low coupling."
+                + (f" Verified test: `[[{cs['nearby_test']}]]`." if cs.get("nearby_test") else " No dedicated test file detected.")
+                for cs in facts["candidate_starters"]
+            ) or "- Consult explorer rail for candidate starter files."
 
-## 1. System Overview
-**{self.repo_full_name}** has been ingested and mapped into a directed dependency graph.
-- **Total Indexed Modules**: {len(nodes)}
-- **Cyclic Dependencies**: {len(cycles)} detected
-- **Identified Entry Points**: {len(entry_points)}
+            manifest = facts["manifest"]
+            cmd_lines = []
+            if manifest["test_command"]:
+                cmd_lines.append(f"- **Test Command**: `{manifest['test_command']}`")
+            if manifest["dev_command"]:
+                cmd_lines.append(f"- **Dev Server**: `{manifest['dev_command']}`")
+            if manifest["build_command"]:
+                cmd_lines.append(f"- **Build Command**: `{manifest['build_command']}`")
+            command_section = "\n".join(cmd_lines) if cmd_lines else "- No build or test scripts identified in project manifest."
 
-## 2. Key Entry Points
-{chr(10).join(f"- `[[{p}]]`" for p in entry_points[:6]) if entry_points else "- Standard module package structure."}
+            overview = (
+                facts["readme_summary"]
+                or f"Repository containing {facts['total_modules']} indexed modules across {facts['total_edges']} dependency edges."
+            )
 
-## 3. Discovered Core Modules
-{chr(10).join(f"- `[[{p.split('### ')[1].split(']]')[0]}]]`" for p in context_parts[:8] if "### [[" in p) if context_parts else "- Inspect the Modules tab for the full topological index."}
+            cycle_notice = (
+                f"> [!CAUTION]\n> **Circular Import Cycles Detected ({facts['cycles_count']})**:\n> Cycle clusters exist in the dependency tree. Avoid introducing cross-cycle imports."
+                if facts["cycles_count"] > 0
+                else "> [!NOTE]\n> **Strict Acyclic DAG Verified**: 0 circular dependency cycles detected. Architectural layers follow clean unidirectional hierarchy."
+            )
 
-## 4. Architectural Stability
-{"⚠️ **Notice**: Circular dependency cycles detected. Review the Architecture Graph tab to inspect tight couplings." if cycles else "✅ **DAG Stable**: No circular cycles detected. Modules follow a clean acyclic hierarchy."}
+            return f"""# {self.repo_full_name} — Onboarding Guide
+
+## 1. Project Overview & Architecture
+{overview}
+
+- **Total Indexed Modules**: {facts['total_modules']}
+- **Directed Graph Edges**: {facts['total_edges']}
+- **Architectural Health**:
+{cycle_notice}
+
+## 2. Verified Technical Stack & Commands
+{command_section}
+
+## 3. Files to Handle Carefully (High Blast Radius)
+{high_risk_lines}
+
+## 4. Key Ingress Entry Points
+{entry_lines}
+
+## 5. Candidate Starter Tasks
+{starter_lines}
 """

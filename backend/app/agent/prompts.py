@@ -32,25 +32,43 @@ Repository context: {repo_full_name}
 # ── Onboarding Document Generation ────────────────────────────────────────
 
 ONBOARDING_DOC_PROMPT = """\
-You are a senior engineer who has just deeply studied the repository: {repo_full_name}.
+You are a Staff Systems Architect writing an authoritative, production-grade Architectural Onboarding Dossier for engineers joining the repository: {repo_full_name}.
 
-Generate a comprehensive onboarding document for a new team member joining this project.
-The document should be in Markdown format and include:
+Your goal is to explain the system's architecture, key files, and safe first contribution paths clearly and accurately.
 
-1. **Project Overview** — What this repo does in 2-3 sentences.
-2. **Architecture Overview** — Key modules, their responsibilities, and how they interact.
-3. **Tech Stack** — Languages, frameworks, key dependencies.
-4. **Entry Points** — Where execution starts (main files, routes, CLI commands).
-5. **Critical Paths** — The most important code flows a new dev must understand.
-6. **Conventions & Patterns** — Naming conventions, folder structure rules, patterns used.
-7. **Gotchas & Non-Obvious Things** — Things that would confuse a new engineer.
-8. **Suggested First PR** — A safe, impactful contribution a new hire could make.
+CRITICAL GROUNDING RULES (NON-NEGOTIABLE):
+- Ground every statement strictly in the VERIFIED FACTS block below.
+- The model may explain and organize verified facts. It may NOT add numbers, percentages, metrics, or file paths that do not appear in VERIFIED FACTS.
+- If a section or command (e.g. test command, env vars) is missing from VERIFIED FACTS, explicitly state that it is not declared in the repository. Never invent files, commands, or invariants.
+- Every file reference MUST be cited with double brackets, e.g. [[path/to/file.ts]].
+- Audience is a beginner. Define technical terms when introducing them. Use plain words: prefer "files to handle carefully" over "high blast radius choke points", and "rules this repo follows" over "non-negotiable invariants".
+- FORBIDDEN: Empty buzzwords (delve, elevate, unlock, robust, seamless, groundbreaking, revolutionize, game-changer, journey, landscape).
+- Do not use em dashes anywhere in your output.
 
-Base your document on the actual code you've analyzed. Be specific — mention real file names,
-function names, and patterns you found. Do NOT include generic placeholders.
+VERIFIED FACTS (GROUND TRUTH FROM CODE & GRAPH):
+{facts_block}
 
-Context chunks from the codebase:
+CODE CONTEXT CHUNKS:
 {context}
+
+REQUIRED DOCUMENT STRUCTURE (Produce pure Markdown only):
+
+# {repo_full_name} — Onboarding Guide
+
+## 1. Project Overview & Architecture
+Explain what this repository does in plain language based on the verified facts. Describe how a request or task flows through the major folders and verified entry points.
+
+## 2. Verified Technical Stack & Commands
+List the tech stack, test commands, and build commands confirmed in the project manifest. If no test or build command was found, state that clearly.
+
+## 3. Files to Handle Carefully (High Blast Radius)
+Explain the verified high-risk files listed in the facts. For each file, state why downstream modules depend on it, what breaks if changed, and how to verify changes.
+
+## 4. Candidate Starter Tasks
+Present the verified candidate starter files from the facts. Explain why these modules are safe for day-one contributions (low or zero downstream dependents, small line count, and any nearby test files).
+
+## 5. Verified Repository Invariants & Traps
+State only the architectural rules, import cycle hazards, and runtime requirements verified by the facts and code chunks. If zero cycles exist, note the acyclic structure. Do not invent rules not present in the code.
 """
 
 # ── Blast Radius Explanation ───────────────────────────────────────────────
