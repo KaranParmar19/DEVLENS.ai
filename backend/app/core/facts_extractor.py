@@ -773,8 +773,9 @@ class FactsExtractor:
         folder_map = []
         for d, count in sorted(dir_counts.items(), key=lambda x: x[1], reverse=True)[:8]:
             sample = ", ".join(dir_files[d][:3])
+            clean_d = d.strip().rstrip("/")
             folder_map.append({
-                "path": d,
+                "path": clean_d,
                 "file_count": str(count),
                 "sample_files": sample,
             })
@@ -917,8 +918,15 @@ class FactsExtractor:
             lines.append(f"- None. Reason: {empty_reason}")
 
         lines.append("\n[Verified Directory Structure]:")
-        for fb in facts["folder_breakdown"]:
-            lines.append(f"- {fb['path']}/ ({fb['file_count']} files, e.g. {fb['sample_files']})")
+        for fb in facts.get("folder_breakdown", []):
+            clean_p = str(fb.get("path", "")).strip().rstrip("/")
+            try:
+                cnt = int(fb.get("file_count", 0))
+            except (ValueError, TypeError):
+                cnt = 0
+            plural = "1 file" if cnt == 1 else f"{cnt} files"
+            sample = f", e.g. {fb['sample_files']}" if fb.get("sample_files") else ""
+            lines.append(f"- {clean_p}/ ({plural}{sample})")
 
         lines.append("\n=== END VERIFIED FACTS ===")
         return "\n".join(lines)
@@ -979,10 +987,18 @@ def build_deterministic_fallback_doc(facts: dict[str, Any]) -> str:
     quick_start_section = "\n".join(quick_start_lines) if quick_start_lines else "- No setup commands declared."
     deps_section = "\n".join(cmd_lines) if cmd_lines else "- No external dependencies declared."
 
-    folder_map_lines = "\n".join(
-        f"- `{fb['path']}/` ({fb['file_count']} files, e.g. {fb['sample_files']})"
-        for fb in facts.get("folder_breakdown", [])
-    ) or "- No directory structure identified."
+    folder_entries = []
+    for fb in facts.get("folder_breakdown", []):
+        clean_p = str(fb.get("path", "")).strip().rstrip("/")
+        try:
+            cnt = int(fb.get("file_count", 0))
+        except (ValueError, TypeError):
+            cnt = 0
+        plural = "1 file" if cnt == 1 else f"{cnt} files"
+        sample = f", e.g. {fb['sample_files']}" if fb.get("sample_files") else ""
+        folder_entries.append(f"- `{clean_p}/` ({plural}{sample})")
+
+    folder_map_lines = "\n".join(folder_entries) or "- No directory structure identified."
 
     overview = (
         facts.get("readme_summary")

@@ -396,6 +396,21 @@ def test_folder_grouping():
     assert "backend" in paths
     assert "root" in paths
 
+    # Verify no trailing slashes and singular vs plural formatting
+    for b in breakdown:
+        assert not b["path"].endswith("/")
+    
+    fallback_doc = build_deterministic_fallback_doc({
+        "repo_full_name": "test-org/folder-test",
+        "total_modules": 5,
+        "total_edges": 0,
+        "folder_breakdown": breakdown,
+    })
+    assert "- `src/components/` (2 files" in fallback_doc
+    assert "- `src/lib/` (1 file" in fallback_doc
+    assert "src/components//" not in fallback_doc
+    assert "1 files" not in fallback_doc
+
 
 def test_deterministic_fallback_document():
     facts = {

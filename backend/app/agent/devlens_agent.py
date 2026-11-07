@@ -395,11 +395,24 @@ class DevLensAgent:
         lines.append("\n## 3. Folder Map")
         if doc.folder_map:
             for fm in doc.folder_map:
+                clean_p = fm.path.strip().rstrip("/")
+                try:
+                    cnt = int(fm.file_count)
+                except (ValueError, TypeError):
+                    cnt = 0
+                plural = "1 file" if cnt == 1 else f"{cnt} files"
                 samples = f" (e.g. {fm.sample_files})" if fm.sample_files else ""
-                lines.append(f"- **`{fm.path}/`** ({fm.file_count} files){samples}: {fm.role}")
+                lines.append(f"- **`{clean_p}/`** ({plural}){samples}: {fm.role}")
         else:
             for fb in facts.get("folder_breakdown", []):
-                lines.append(f"- **`{fb['path']}/`** ({fb['file_count']} files, e.g. {fb['sample_files']})")
+                clean_p = str(fb.get("path", "")).strip().rstrip("/")
+                try:
+                    cnt = int(fb.get("file_count", 0))
+                except (ValueError, TypeError):
+                    cnt = 0
+                plural = "1 file" if cnt == 1 else f"{cnt} files"
+                samples = f", e.g. {fb['sample_files']}" if fb.get("sample_files") else ""
+                lines.append(f"- **`{clean_p}/`** ({plural}{samples})")
 
         lines.append("\n## 4. How It Works")
         lines.append(doc.how_it_works)
