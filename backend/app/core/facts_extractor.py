@@ -250,8 +250,12 @@ class FactsExtractor:
             return None
 
         matching_chunks: list[str] = []
+        seen_indices: set[int] = set()
         for path, content, idx in chunks:
             if path == best_path:
+                if idx in seen_indices:
+                    continue
+                seen_indices.add(idx)
                 # Strip generic chunk header if present
                 clean_content = re.sub(r"^# File: [^\n]+\n\n", "", content)
                 clean_content = re.sub(r"^// File: [^\n]+\n// [^\n]+\n\n", "", clean_content)
