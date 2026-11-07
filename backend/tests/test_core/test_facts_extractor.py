@@ -1,14 +1,21 @@
 """
 Unit tests for FactsExtractor
-Verifies deterministic fact computation, risk scoring, and candidate starter selection.
+Verifies deterministic fact computation, risk scoring, starter selection,
+manifest parsing, environment variable parsing, and fallback document generation.
 """
 
+import asyncio
 import pytest
+import json
+from unittest.mock import AsyncMock, patch
+
 from app.core.facts_extractor import (
     is_test_file,
     is_config_file,
     is_generated_file,
     classify_risk_level,
+    join_chunks_without_overlap,
+    build_deterministic_fallback_doc,
     FactsExtractor,
     RiskThresholds,
 )
@@ -19,18 +26,38 @@ def test_file_type_classifiers():
     assert is_test_file("src/components/button.test.tsx") is True
     assert is_test_file("tests/unit/test_auth.py") is True
     assert is_test_file("src/__tests__/utils.ts") is True
+    assert is_test_file("test/test_app.py") is True
     assert is_test_file("src/components/button.tsx") is False
 
     # Config file classifier
     assert is_config_file("vite.config.ts") is True
     assert is_config_file("tsconfig.json") is True
     assert is_config_file("package.json") is True
+    assert is_config_file("pyproject.toml") is True
+    assert is_config_file(".env.example") is True
     assert is_config_file("src/services/api.ts") is False
 
     # Generated file classifier
     assert is_generated_file("dist/bundle.js") is True
+    assert is_generated_file("build/main.js") is True
     assert is_generated_file("src/types/schema.d.ts") is True
     assert is_generated_file("src/types/models.ts") is False
+
+
+def test_chunk_reassembly_deduplication():
+    # Simulate a text with sliding window overlap
+    part1 = "DevLens AI analyzes repository dependency graphs and generates architectural guides."
+    overlap = part1[-25:]
+    part2 = overlap + " Contributors can explore high-risk junctions and safe starter files."
+
+    # Joining raw parts has duplicated overlap text
+    raw_joined = part1 + part2
+    assert raw_joined.count(overlap) == 2
+
+    # join_chunks_without_overlap detects the duplicate suffix/prefix and removes it
+    deduped = join_chunks_without_overlap([part1, part2])
+    assert deduped.count(overlap) == 1
+    assert deduped == "DevLens AI analyzes repository dependency graphs and generates architectural guides. Contributors can explore high-risk junctions and safe starter files."
 
 
 def test_risk_classification():
@@ -38,19 +65,23 @@ def test_risk_classification():
         HIGH_DEPENDENTS_MIN=5,
         HIGH_COUPLING_MIN=0.5,
         HIGH_COMBINED_DEPS_MIN=3,
-        MEDIUM_DEPENDENTS_MIN=1,
+        MEDIUM_DEPENDENTS_MIN=2,
         MEDIUM_DEPENDENCIES_MIN=8,
         MEDIUM_COUPLING_MIN=0.3,
     )
 
-    # Entry point is always High
-    assert classify_risk_level(0, 0, 0.0, is_entry=True, thresholds=custom_thresholds) == "High"
+    # Entry point with 0 dependents must NOT read "High"
+    assert classify_risk_level(0, 0, 0.0, is_entry=True, source_dependents_count=0, thresholds=custom_thresholds) == "Low"
+    assert classify_risk_level(0, 2, 0.0, is_entry=True, source_dependents_count=0, thresholds=custom_thresholds) == "Medium"
+
+    # Entry point with active callers is High
+    assert classify_risk_level(2, 2, 0.1, is_entry=True, source_dependents_count=2, thresholds=custom_thresholds) == "High"
 
     # High dependents
     assert classify_risk_level(5, 2, 0.1, is_entry=False, thresholds=custom_thresholds) == "High"
 
     # High combined dependents and coupling
-    assert classify_risk_level(3, 2, 0.6, is_entry=False, thresholds=custom_thresholds) == "High"
+    assert classify_risk_level(3, 2, 0.6, is_entry=False, source_dependents_count=3, thresholds=custom_thresholds) == "High"
 
     # Medium risk
     assert classify_risk_level(2, 2, 0.1, is_entry=False, thresholds=custom_thresholds) == "Medium"
@@ -58,6 +89,7 @@ def test_risk_classification():
     assert classify_risk_level(0, 2, 0.4, is_entry=False, thresholds=custom_thresholds) == "Medium"
 
     # Low risk (isolated leaf)
+    assert classify_risk_level(1, 2, 0.1, is_entry=False, thresholds=custom_thresholds) == "Low"
     assert classify_risk_level(0, 2, 0.1, is_entry=False, thresholds=custom_thresholds) == "Low"
 
 
@@ -95,7 +127,7 @@ def test_graph_metrics_and_starter_selection():
     assert "src/server.ts" in entry_ids
 
     # Candidate starters should:
-    # 1. Include src/utils/math.ts (it has low dependents, has a nearby test src/utils/math.test.ts)
+    # 1. Include src/utils/math.ts (has low dependents, has a nearby test src/utils/math.test.ts)
     # 2. Exclude src/utils/math.test.ts (is a test)
     # 3. Exclude vite.config.ts (is config)
     # 4. Exclude src/dead_file.ts (dead code: 0 dependents, 0 dependencies)
@@ -111,3 +143,443 @@ def test_graph_metrics_and_starter_selection():
 
     math_starter = next(s for s in starters if s["path"] == "src/utils/math.ts")
     assert math_starter["nearby_test"] == "src/utils/math.test.ts"
+
+
+def test_starter_selection_with_no_tests_in_repo():
+    mock_graph = {
+        "nodes": [
+            {"id": "src/main.py", "path": "src/main.py", "is_entry": True, "line_count": 100, "complexity": 8},
+            {"id": "src/core.py", "path": "src/core.py", "coupling": 0.5, "line_count": 80, "complexity": 10},
+            {"id": "src/format.py", "path": "src/format.py", "coupling": 0.0, "line_count": 25, "complexity": 1},
+        ],
+        "edges": [
+            ["src/main.py", "src/core.py"],
+            ["src/core.py", "src/format.py"],
+        ],
+        "meta": {"cycles": []},
+    }
+
+    extractor = FactsExtractor(
+        db=None,  # type: ignore
+        repo_id=None,  # type: ignore
+        repo_full_name="test-org/no-tests",
+        graph_cache=mock_graph,
+    )
+
+    metrics = extractor.compute_graph_metrics()
+    starters = metrics["candidate_starters"]
+    assert len(starters) == 1
+    assert starters[0]["path"] == "src/format.py"
+    assert starters[0]["nearby_test"] is None
+
+
+def test_readme_summary_extraction():
+    extractor = FactsExtractor(
+        db=None,  # type: ignore
+        repo_id=None,  # type: ignore
+        repo_full_name="test-org/readme-test",
+    )
+
+    # 1. Valid README with badges and title
+    readme_sample = """# Project Foo
+[![Build Status](https://ci.org/badge.svg)](https://ci.org)
+<img src="logo.png" />
+
+Project Foo is a lightweight async task queue built for high throughput microservices.
+
+It provides automatic retry policies, dead-letter queues, and real-time dashboard telemetry.
+
+## Installation
+Run pip install foo
+"""
+    with patch.object(extractor, "extract_file_content", AsyncMock(return_value=readme_sample)):
+        summary = asyncio.run(extractor.extract_readme_summary())
+        assert summary is not None
+        assert "Project Foo is a lightweight async task queue" in summary
+        assert "It provides automatic retry policies" in summary
+        assert "[![Build Status]" not in summary
+        assert "# Project Foo" not in summary
+
+    # 2. Missing README
+    with patch.object(extractor, "extract_file_content", AsyncMock(return_value=None)):
+        missing_summary = asyncio.run(extractor.extract_readme_summary())
+        assert missing_summary is None
+
+    # 3. Empty README
+    with patch.object(extractor, "extract_file_content", AsyncMock(return_value="   ")):
+        empty_summary = asyncio.run(extractor.extract_readme_summary())
+        assert empty_summary is None
+
+    # 4. Valid README.rst with image directives, header underlines, and rst links
+    rst_sample = """.. image:: logo.png
+   :target: https://example.org
+   :alt: Logo
+
+====================
+Awesome Microservice
+====================
+
+Awesome Microservice is a lightweight WSGI_ micro web-framework for Python_. It has no dependencies other than the `Python Standard Library <https://docs.python.org>`_.
+
+* **Fast:** High performance.
+"""
+    with patch.object(extractor, "extract_file_content", AsyncMock(return_value=rst_sample)):
+        rst_summary = asyncio.run(extractor.extract_readme_summary())
+        assert rst_summary is not None
+        assert "Awesome Microservice is a lightweight WSGI micro web-framework for Python." in rst_summary
+        assert "Python Standard Library" in rst_summary
+        assert ".. image::" not in rst_summary
+        assert "====================" not in rst_summary
+
+
+def test_package_json_and_pyproject_parsing():
+    extractor = FactsExtractor(
+        db=None,  # type: ignore
+        repo_id=None,  # type: ignore
+        repo_full_name="test-org/manifest-test",
+    )
+
+    # 1. Standard package.json
+    pkg_json = json.dumps({
+        "name": "sample-app",
+        "scripts": {
+            "dev": "vite",
+            "build": "vite build",
+            "test": "vitest run",
+        },
+        "dependencies": {
+            "react": "^18.2.0",
+            "zustand": "^4.5.0",
+        },
+        "devDependencies": {
+            "typescript": "^5.0.0",
+            "vitest": "^1.0.0",
+        },
+    })
+    with patch.object(extractor, "extract_file_content", AsyncMock(return_value=pkg_json)):
+        facts = asyncio.run(extractor.extract_manifest_facts())
+        assert facts["manifest_type"] == "package.json"
+        assert facts["project_name"] == "sample-app"
+        assert "npm test" in facts["test_command"]
+        assert "declared" in facts["test_command_type"]
+        assert "npm run dev" in facts["dev_command"]
+        assert "react" in facts["runtime_dependencies"]
+        assert "typescript" in facts["dev_dependencies"]
+
+    # 2. Empty package.json
+    with patch.object(extractor, "extract_file_content", AsyncMock(return_value="{}")):
+        empty_facts = asyncio.run(extractor.extract_manifest_facts())
+        assert empty_facts["manifest_type"] == "package.json"
+        assert empty_facts["project_name"] is None
+        assert empty_facts["test_command"] is None
+        assert empty_facts["runtime_dependencies"] == []
+        assert empty_facts["dev_dependencies"] == []
+
+    # 3. Standard pyproject.toml parsed with tomllib
+    pyproject_toml = """[project]
+name = "sample-service"
+dependencies = [
+    "fastapi>=0.100.0",
+    "sqlalchemy>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+"""
+    async def mock_extract(name: str):
+        if name == "package.json":
+            return None
+        if name == "pyproject.toml":
+            return pyproject_toml
+        return None
+
+    with patch.object(extractor, "extract_file_content", side_effect=mock_extract):
+        py_facts = asyncio.run(extractor.extract_manifest_facts())
+        assert py_facts["manifest_type"] == "pyproject.toml"
+        assert py_facts["project_name"] == "sample-service"
+        assert "pytest" in py_facts["test_command"]
+        assert "declared" in py_facts["test_command_type"]
+        assert "fastapi" in py_facts["runtime_dependencies"]
+        assert "sqlalchemy" in py_facts["runtime_dependencies"]
+        assert "pytest" in py_facts["dev_dependencies"]
+        assert "AUTHORS" not in py_facts["runtime_dependencies"]
+        assert "AUTHORS" not in py_facts["dev_dependencies"]
+
+
+def test_real_readme_chunker_and_reassembly():
+    from app.core.chunker import chunk_file
+
+    sections = [
+        f"## Section {i}\n\nThis is paragraph {i} of the comprehensive repository documentation. "
+        f"It contains architectural guidelines, dependency notes, and setup instructions for new contributors.\n\n"
+        f"```bash\nmake target-{i}\n```\n"
+        for i in range(35)
+    ]
+    original = "# Complete Repository Guide\n\n" + "\n".join(sections)
+    assert len(original) > 5000
+
+    chunks = chunk_file("README.md", original, "Markdown")
+    assert len(chunks) > 3
+
+    raw_contents = [c.content.replace("# File: README.md\n\n", "") for c in chunks]
+    reconstructed = join_chunks_without_overlap(raw_contents)
+
+    assert reconstructed == original
+
+
+def test_env_example_parsing():
+    extractor = FactsExtractor(
+        db=None,  # type: ignore
+        repo_id=None,  # type: ignore
+        repo_full_name="test-org/env-test",
+    )
+
+    env_content = """# App Configuration
+PORT=8080
+DATABASE_URL=postgresql://localhost:5432/app
+JWT_SECRET=supersecret123
+
+# Optional Redis
+REDIS_URL=redis://localhost:6379/0
+"""
+    # 1. Valid .env.example
+    with patch.object(extractor, "extract_file_content", AsyncMock(return_value=env_content)):
+        keys = asyncio.run(extractor.extract_env_variables())
+        assert "PORT" in keys
+        assert "DATABASE_URL" in keys
+        assert "JWT_SECRET" in keys
+        assert "REDIS_URL" in keys
+        # Never extracts comments or values
+        assert "# App Configuration" not in keys
+        assert "supersecret123" not in keys
+
+    # 2. Missing .env.example
+    with patch.object(extractor, "extract_file_content", AsyncMock(return_value=None)):
+        missing_keys = asyncio.run(extractor.extract_env_variables())
+        assert missing_keys == []
+
+
+def test_folder_grouping():
+    mock_graph = {
+        "nodes": [
+            {"id": "src/components/button.tsx", "path": "src/components/button.tsx"},
+            {"id": "src/components/card.tsx", "path": "src/components/card.tsx"},
+            {"id": "src/lib/api.ts", "path": "src/lib/api.ts"},
+            {"id": "backend/app/main.py", "path": "backend/app/main.py"},
+            {"id": "README.md", "path": "README.md"},
+        ],
+        "edges": [],
+    }
+
+    extractor = FactsExtractor(
+        db=None,  # type: ignore
+        repo_id=None,  # type: ignore
+        repo_full_name="test-org/folder-test",
+        graph_cache=mock_graph,
+    )
+
+    breakdown = extractor.compute_folder_breakdown()
+    paths = [b["path"] for b in breakdown]
+    assert "src/components" in paths
+    assert "src/lib" in paths
+    assert "backend" in paths
+    assert "root" in paths
+
+
+def test_deterministic_fallback_document():
+    facts = {
+        "repo_full_name": "acme/quantum-engine",
+        "total_modules": 42,
+        "total_edges": 88,
+        "cycles_count": 0,
+        "readme_summary": "Quantum simulation engine for statevector calculation.",
+        "entry_points": [
+            {"path": "src/main.py", "dependents_count": 0, "dependencies_count": 5}
+        ],
+        "high_risk_files": [
+            {"path": "src/circuit.py", "dependents_count": 12, "dependencies_count": 3, "coupling": 0.85}
+        ],
+        "candidate_starters": [
+            {"path": "src/gates/hadamard.py", "line_count": 45, "dependents_count": 0, "nearby_test": "tests/test_hadamard.py"}
+        ],
+        "manifest": {
+            "test_command": "pytest",
+            "dev_command": None,
+            "build_command": "python -m build",
+            "tech_stack": ["numpy", "scipy"],
+        },
+    }
+
+    doc = build_deterministic_fallback_doc(facts)
+
+    # Must contain real verified facts
+    assert "# acme/quantum-engine: Onboarding Guide" in doc
+    assert "—" not in doc
+    assert "unidirectional hierarchy" not in doc
+    assert "42" in doc
+    assert "88" in doc
+    assert "src/circuit.py" in doc
+    assert "src/gates/hadamard.py" in doc
+    assert "pytest" in doc
+    assert "tests/test_hadamard.py" in doc
+
+    # Must NOT contain fake data
+    assert "src/router.ts" not in doc
+    assert "src/db.ts" not in doc
+    assert "0.75" not in doc
+    assert "HAZARD ALERT" not in doc
+    assert "Non-Negotiable Architectural Invariants" not in doc
+
+
+def test_chunk_boundary_no_overlap_shared_suffix_prefix():
+    # Chunk 1 ends with a pattern and Chunk 2 starts with the exact same 9-char pattern
+    # even though there was NO intentional overlap produced by a sliding window.
+    chunk1 = "First function ends here:\nreturn 0;"
+    chunk2 = "return 0;\nSecond function begins here."
+    # The heuristic looks for matching suffix/prefix >= 6 chars and merges them:
+    merged = join_chunks_without_overlap([chunk1, chunk2])
+    # The 9-character shared string "return 0;" is coalesced by the heuristic
+    assert merged == "First function ends here:\nreturn 0;\nSecond function begins here."
+
+
+def test_makefile_test_target_precedence_over_pyproject():
+    extractor = FactsExtractor(
+        db=None,  # type: ignore
+        repo_id=None,  # type: ignore
+        repo_full_name="test-org/makefile-precedence",
+    )
+    pyproject_toml = """[project]
+name = "bottle"
+dependencies = []
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+"""
+    makefile = """
+.PHONY: test build
+test:
+\tpytest test/
+build:
+\tpython -m build
+"""
+    async def mock_extract(name: str):
+        if name == "package.json":
+            return None
+        if name == "Makefile":
+            return makefile
+        if name == "pyproject.toml":
+            return pyproject_toml
+        return None
+
+    with patch.object(extractor, "extract_file_content", side_effect=mock_extract):
+        facts = asyncio.run(extractor.extract_manifest_facts())
+        assert facts["test_command"] == "make test"
+        assert "Makefile target" in facts["test_command_type"]
+        assert facts["build_command"] == "make build"
+
+
+def test_candidate_starter_first_30_lines_and_purpose():
+    mock_graph = {
+        "nodes": [
+            {"id": "src/main.py", "path": "src/main.py", "is_entry": True, "line_count": 80, "complexity": 5},
+            {"id": "src/helper.py", "path": "src/helper.py", "line_count": 20, "complexity": 1},
+        ],
+        "edges": [
+            ["src/main.py", "src/helper.py"],
+        ],
+        "meta": {"cycles": []},
+    }
+    extractor = FactsExtractor(
+        db=None,  # type: ignore
+        repo_id=None,  # type: ignore
+        repo_full_name="test-org/starter-snippet",
+        graph_cache=mock_graph,
+    )
+    snippet = "def helper():\n    # verified logic\n    return 42"
+    async def mock_extract(name: str):
+        if "helper.py" in name:
+            return snippet
+        return None
+
+    with patch.object(extractor, "extract_file_content", side_effect=mock_extract):
+        facts = asyncio.run(extractor.assemble_verified_facts())
+        starters = facts["candidate_starters"]
+        assert len(starters) == 1
+        assert starters[0]["first_30_lines"] == snippet.strip()
+
+        facts_text = extractor.format_facts_text(facts)
+        assert "Verified first 30 lines snippet" in facts_text
+        assert "def helper():" in facts_text
+
+
+def test_onboarding_doc_schema_validation():
+    from app.schemas.onboarding import (
+        OnboardingDocSchema,
+        QuickStartInfo,
+        FolderMapItem,
+        CarefulFileItem,
+        GotchaItem,
+        FirstTaskSection,
+        StarterTaskItem,
+        GlossaryItem,
+    )
+
+    doc_data = {
+        "repo_name": "acme/quantum",
+        "summary": "Quantum computing library.",
+        "tech_stack": ["python", "numpy"],
+        "quick_start": {
+            "install_command": "pip install -e .",
+            "run_command": "python -m quantum",
+            "test_command": "make test",
+            "test_command_type": "declared",
+            "env_variables": ["QUANTUM_SEED"],
+        },
+        "folder_map": [
+            {"path": "quantum", "role": "Core engine", "file_count": 10, "sample_files": "engine.py"}
+        ],
+        "how_it_works": "Requests enter quantum.py and invoke simulation steps.",
+        "careful_files": [
+            {
+                "path": "quantum/core.py",
+                "risk_level": "High",
+                "dependents_count": 8,
+                "source_dependents_count": 8,
+                "test_dependents_count": 2,
+                "coupling": 0.9,
+                "reason": "Core statevector dispatch.",
+            }
+        ],
+        "gotchas": [
+            {"title": "DAG invariant", "description": "No cyclic imports", "evidence_path": "quantum/core.py"}
+        ],
+        "first_task": {
+            "title": "Add gate unit test",
+            "suggested_files": [
+                {
+                    "path": "quantum/gates.py",
+                    "line_count": 30,
+                    "source_dependents_count": 1,
+                    "nearby_test": "tests/test_gates.py",
+                    "verified_purpose": "Calculates unitary matrix.",
+                }
+            ],
+            "rationale": "Isolated leaf.",
+            "verification_steps": "Run make test.",
+        },
+        "glossary": [
+            {"term": "Statevector", "definition": "Array of complex amplitudes.", "defined_in": "quantum/core.py"}
+        ],
+    }
+
+    schema = OnboardingDocSchema.model_validate(doc_data)
+    assert schema.repo_name == "acme/quantum"
+    assert schema.quick_start.install_command == "pip install -e ."
+    assert schema.careful_files[0].risk_level == "High"
+    assert schema.first_task.suggested_files[0].line_count == 30
