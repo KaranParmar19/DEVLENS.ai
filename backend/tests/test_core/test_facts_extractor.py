@@ -800,17 +800,22 @@ def test_grouped_env_variables_and_code_usage():
 
 
 def test_glossary_and_gotcha_evidence_chunk_validation():
-    from app.agent.devlens_agent import _is_valid_source_file
+    from app.agent.devlens_agent import _is_valid_source_file, _resolve_graph_path, _clean_markdown_citations
+    from app.schemas.onboarding import GlossaryItem
 
-    known_paths = {"src/app.ts", "src/auth.ts"}
-    # Allowed sources: indexed paths, README files, build manifests
+    known_paths = {"src/app.ts", "src/auth.ts", "README.rst", "package.json"}
     assert _is_valid_source_file("src/app.ts", known_paths) is True
-    assert _is_valid_source_file("README.md", known_paths) is True
-    assert _is_valid_source_file("README.rst", known_paths) is True
+    assert _resolve_graph_path("README", known_paths) == "README.rst"
+    assert _resolve_graph_path("README.md", known_paths) == "README.rst"
     assert _is_valid_source_file("package.json", known_paths) is True
-    assert _is_valid_source_file("pyproject.toml", known_paths) is True
-    assert _is_valid_source_file("requirements.txt", known_paths) is True
+    assert _is_valid_source_file("pyproject.toml", known_paths) is False
     assert _is_valid_source_file("fictional_unindexed_file.py", known_paths) is False
+
+    cleaned = _clean_markdown_citations("See [[README]] and [[src/app.ts]] and [[not_in_graph.py]].", known_paths)
+    assert cleaned == "See [[README.rst]] and [[src/app.ts]] and not_in_graph.py."
+
+    gl = GlossaryItem(term="Topological", definition="Graph analysis", seen_in="README.rst")
+    assert gl.seen_in == "README.rst"
 
     # Chunk term validation logic
     readme_chunk = "# DevLens AI\nDevLens provides topological repository intelligence."

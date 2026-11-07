@@ -159,7 +159,7 @@ REQUIRED JSON SCHEMA:
     {{
       "term": "Key term, acronym, or central symbol",
       "definition": "Clear explanation grounded in code",
-      "defined_in": "File path where this term or symbol appears"
+      "seen_in": "File path where this term or symbol appears"
     }}
   ]
 }}
