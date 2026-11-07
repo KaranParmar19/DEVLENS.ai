@@ -202,8 +202,9 @@ def classify_risk_level(
     return "Low"
 
 
+# Grouping is based strictly on key name words (prefixes/keywords), not on file contents or model inference.
 def categorize_env_key(key: str) -> str:
-    """Group environment variables by domain prefix or keyword."""
+    """Group environment variables strictly by key name words and keywords."""
     k_upper = key.upper()
     if any(w in k_upper for w in ("AUTH", "SECRET", "TOKEN", "JWT", "KEY", "PASSWORD", "PASS", "CERT", "SALT", "HASH", "PRIVATE", "SIGNING")):
         return "Authentication & Security"
@@ -841,8 +842,13 @@ class FactsExtractor:
 
     async def detect_env_usage_in_code(self, declared_keys: list[str]) -> dict[str, str]:
         """
-        Scan code chunks for references to declared env keys via process.env, import.meta.env, os.environ, os.getenv.
-        Returns a mapping from key -> accessor (e.g. 'process.env', 'os.environ', 'import.meta.env').
+        Scan code chunks for references to declared env keys via:
+        - import.meta.env
+        - process.env
+        - os.environ
+        - os.getenv
+        - pydantic Settings fields
+        Returns a mapping from key -> accessor.
         """
         if not declared_keys:
             return {}
@@ -854,29 +860,61 @@ class FactsExtractor:
         if self.db is not None:
             try:
                 from app.models.code_chunk import CodeChunk
-                from sqlalchemy import select, or_
+                from sqlalchemy import select
 
-                stmt = select(CodeChunk.content).where(
-                    CodeChunk.repo_id == self.repo_id,
-                    or_(
-                        CodeChunk.content.ilike("%process.env%"),
-                        CodeChunk.content.ilike("%import.meta.env%"),
-                        CodeChunk.content.ilike("%environ%"),
-                        CodeChunk.content.ilike("%getenv%"),
-                    ),
+                stmt = select(CodeChunk.file_path, CodeChunk.content).where(
+                    CodeChunk.repo_id == self.repo_id
                 )
                 res = await self.db.execute(stmt)
-                for (content,) in res.all():
+                for path, content in res.all():
+                    if path.endswith((".example", ".sample")):
+                        continue
+                    is_settings_file = (
+                        "BaseSettings" in content
+                        or "SettingsConfigDict" in content
+                        or path.endswith(("config.py", "settings.py"))
+                    )
+                    has_import_meta = "import.meta.env" in content or "readEnv" in content
+                    has_process_env = "process.env" in content
+
                     for k in key_set:
                         if k in read_keys:
                             continue
-                        if f"process.env.{k}" in content or f'process.env["{k}"]' in content or f"process.env['{k}']" in content:
-                            read_keys[k] = "process.env"
-                        elif f"import.meta.env.{k}" in content or f'import.meta.env["{k}"]' in content or f"import.meta.env['{k}']" in content:
+                        k_lower = k.lower()
+
+                        # 1. Pydantic Settings
+                        if is_settings_file and (re.search(rf"\b{re.escape(k_lower)}\s*:", content) or f"{k}:" in content):
+                            read_keys[k] = "pydantic Settings"
+                        # 2. import.meta.env
+                        elif (
+                            f"import.meta.env.{k}" in content
+                            or f'import.meta.env["{k}"]' in content
+                            or f"import.meta.env['{k}']" in content
+                            or (has_import_meta and (f'"{k}"' in content or f"'{k}'" in content))
+                        ):
                             read_keys[k] = "import.meta.env"
-                        elif f'os.environ["{k}"]' in content or f"os.environ['{k}']" in content or f'os.environ.get("{k}"' in content or f"os.environ.get('{k}'" in content:
+                        # 3. process.env
+                        elif (
+                            f"process.env.{k}" in content
+                            or f'process.env["{k}"]' in content
+                            or f"process.env['{k}']" in content
+                        ):
+                            read_keys[k] = "process.env"
+                        # 4. os.environ
+                        elif (
+                            f'os.environ["{k}"]' in content
+                            or f"os.environ['{k}']" in content
+                            or f'os.environ.get("{k}"' in content
+                            or f"os.environ.get('{k}'" in content
+                        ):
                             read_keys[k] = "os.environ"
-                        elif f'os.getenv("{k}"' in content or f"os.getenv('{k}'" in content or f'getenv("{k}"' in content or f"getenv('{k}'" in content:
+                        # 5. os.getenv
+                        elif (
+                            f'os.getenv("{k}"' in content
+                            or f"os.getenv('{k}'" in content
+                            or f'getenv("{k}"' in content
+                            or f"getenv('{k}'" in content
+                        ):
                             read_keys[k] = "os.getenv"
             except Exception as e:
                 logger.warning("env_usage_db_scan_failed", error=str(e))
@@ -886,18 +924,33 @@ class FactsExtractor:
             nodes = self.graph_cache.get("nodes", [])
             for n in nodes[:50]:
                 path = n.get("path") or n.get("id", "")
-                if is_test_file(path) or is_generated_file(path) or path.endswith((".md", ".rst", ".txt")):
+                if is_test_file(path) or is_generated_file(path) or path.endswith((".md", ".rst", ".txt", ".example", ".sample")):
                     continue
                 content = await self.extract_file_content(path)
                 if not content:
                     continue
+                is_settings_file = (
+                    "BaseSettings" in content
+                    or "SettingsConfigDict" in content
+                    or path.endswith(("config.py", "settings.py"))
+                )
+                has_import_meta = "import.meta.env" in content or "readEnv" in content
+
                 for k in key_set:
                     if k in read_keys:
                         continue
-                    if f"process.env.{k}" in content or f'process.env["{k}"]' in content or f"process.env['{k}']" in content:
-                        read_keys[k] = "process.env"
-                    elif f"import.meta.env.{k}" in content or f'import.meta.env["{k}"]' in content or f"import.meta.env['{k}']" in content:
+                    k_lower = k.lower()
+                    if is_settings_file and (re.search(rf"\b{re.escape(k_lower)}\s*:", content) or f"{k}:" in content):
+                        read_keys[k] = "pydantic Settings"
+                    elif (
+                        f"import.meta.env.{k}" in content
+                        or f'import.meta.env["{k}"]' in content
+                        or f"import.meta.env['{k}']" in content
+                        or (has_import_meta and (f'"{k}"' in content or f"'{k}'" in content))
+                    ):
                         read_keys[k] = "import.meta.env"
+                    elif f"process.env.{k}" in content or f'process.env["{k}"]' in content or f"process.env['{k}']" in content:
+                        read_keys[k] = "process.env"
                     elif f'os.environ["{k}"]' in content or f"os.environ['{k}']" in content or f'os.environ.get("{k}"' in content or f"os.environ.get('{k}'" in content:
                         read_keys[k] = "os.environ"
                     elif f'os.getenv("{k}"' in content or f"os.getenv('{k}'" in content or f'getenv("{k}"' in content or f"getenv('{k}'" in content:
@@ -1030,14 +1083,16 @@ class FactsExtractor:
         env_usage = await self.detect_env_usage_in_code(env_vars)
 
         grouped_env_vars: dict[str, list[dict[str, Any]]] = {}
-        for k in env_vars:
-            cat = categorize_env_key(k)
-            accessor = env_usage.get(k)
-            grouped_env_vars.setdefault(cat, []).append({
-                "key": k,
-                "read_in_code": bool(accessor),
-                "accessor": accessor,
-            })
+        # Do not group when there are 6 or fewer keys
+        if len(env_vars) > 6:
+            for k in env_vars:
+                cat = categorize_env_key(k)
+                accessor = env_usage.get(k)
+                grouped_env_vars.setdefault(cat, []).append({
+                    "key": k,
+                    "read_in_code": bool(accessor),
+                    "accessor": accessor,
+                })
 
         readme_summary = await self.extract_readme_summary()
         folder_breakdown = self.compute_folder_breakdown()
@@ -1083,6 +1138,7 @@ class FactsExtractor:
             "starter_empty_reason": metrics.get("starter_empty_reason"),
             "manifest": manifest,
             "env_variables": env_vars,
+            "env_usage": env_usage,
             "grouped_env_variables": grouped_env_vars,
             "readme_summary": readme_summary,
             "folder_breakdown": folder_breakdown,

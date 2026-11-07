@@ -422,6 +422,7 @@ class DevLensAgent:
             else:
                 quick_start_lines.append("- **Test**: no tests found")
 
+        env_usage = facts.get("env_usage", {})
         if facts.get("grouped_env_variables"):
             quick_start_lines.append("- **Environment Variables**:")
             for cat, items in facts["grouped_env_variables"].items():
@@ -430,7 +431,10 @@ class DevLensAgent:
                     usage = f" (read in code via {item['accessor']})" if item.get("read_in_code") else " (declared in .env.example)"
                     quick_start_lines.append(f"    - `{item['key']}`{usage}")
         elif qs.env_variables:
-            quick_start_lines.append(f"- **Environment Variables**: {', '.join(qs.env_variables)}")
+            quick_start_lines.append("- **Environment Variables**:")
+            for k in qs.env_variables:
+                usage = f" (read in code via {env_usage.get(k)})" if k in env_usage else " (declared in .env.example)"
+                quick_start_lines.append(f"  - `{k}`{usage}")
         else:
             quick_start_lines.append("- **Environment Variables**: No .env.example declared in repository.")
 
