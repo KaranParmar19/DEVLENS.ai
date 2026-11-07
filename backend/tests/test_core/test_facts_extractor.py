@@ -1038,6 +1038,32 @@ def test_assemble_verified_facts_determinism():
         assert json.dumps(run1, sort_keys=True) == json.dumps(run2, sort_keys=True)
 
 
+def test_command_string_equality_and_clean_provenance():
+    extractor = FactsExtractor(
+        db=None,  # type: ignore
+        repo_id=None,  # type: ignore
+        repo_full_name="acme/cmd-test",
+    )
+    pkg_json = json.dumps({
+        "name": "cmd-test",
+        "scripts": {
+            "dev": "vite --host",
+            "test": "node --test tests/*.test.js",
+            "build": "vite build",
+        },
+    }, indent=2)
+    with patch.object(extractor, "extract_file_content", AsyncMock(return_value=pkg_json)):
+        mf = asyncio.run(extractor.extract_manifest_facts(test_modules_count=2))
+        assert mf["run_command"] == "npm run dev"
+        assert "(runs:" not in mf["run_command"]
+        assert "scripts.dev: vite --host" in mf["run_command_provenance"]
+        assert mf["test_command"] == "npm test"
+        assert "(runs:" not in mf["test_command"]
+        assert "scripts.test: node --test tests/*.test.js" in mf["test_command_provenance"]
+        assert mf["build_command"] == "npm run build"
+
+
+
 
 
 

@@ -1052,9 +1052,10 @@ class DevLensAgent:
         parsed_schema.first_task.suggested_files = computed_starters
 
         # Build title, rationale, and verification steps entirely in code
-        test_cmd = facts.get("manifest", {}).get("test_command")
+        # Use the exact command strings from quick_start so Quick Start and first_task always match
+        test_cmd = parsed_schema.quick_start.test_command
         has_tests = bool(facts.get("test_modules_count", 0) > 0 and test_cmd and test_cmd != "no tests found")
-        raw_run_cmd = facts.get("manifest", {}).get("run_command")
+        raw_run_cmd = parsed_schema.quick_start.run_command
         run_cmd = raw_run_cmd if (raw_run_cmd and raw_run_cmd != "no run command declared") else "no run command declared"
         fallback_paths = [
             p for p, m in sorted(facts.get("file_metrics", {}).items())

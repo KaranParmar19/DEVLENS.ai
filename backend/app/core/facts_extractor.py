@@ -647,9 +647,13 @@ class FactsExtractor:
 
                 if "test" in scripts:
                     test_line = find_line_matching(pkg_content, r'"test"\s*:')
-                    manifest_facts["test_command"] = f"npm test (runs: {scripts['test']})"
+                    manifest_facts["test_command"] = "npm test"
                     manifest_facts["test_command_type"] = "declared (package.json scripts.test)"
-                    manifest_facts["test_command_provenance"] = f"package.json:{test_line} (scripts.test)" if test_line else "package.json (scripts.test)"
+                    manifest_facts["test_command_provenance"] = (
+                        f"package.json:{test_line} (scripts.test: {scripts['test']})"
+                        if test_line
+                        else f"package.json (scripts.test: {scripts['test']})"
+                    )
                 elif "test" in makefile_targets:
                     mk_line = find_makefile_target_line(makefile_content, "test")
                     manifest_facts["test_command"] = "make test"
@@ -668,22 +672,34 @@ class FactsExtractor:
 
                 if "dev" in scripts:
                     dev_line = find_line_matching(pkg_content, r'"dev"\s*:')
-                    manifest_facts["dev_command"] = f"npm run dev (runs: {scripts['dev']})"
-                    manifest_facts["run_command"] = f"npm run dev (runs: {scripts['dev']})"
-                    manifest_facts["run_command_provenance"] = f"package.json:{dev_line} (scripts.dev)" if dev_line else "package.json (scripts.dev)"
+                    manifest_facts["dev_command"] = "npm run dev"
+                    manifest_facts["run_command"] = "npm run dev"
+                    manifest_facts["run_command_provenance"] = (
+                        f"package.json:{dev_line} (scripts.dev: {scripts['dev']})"
+                        if dev_line
+                        else f"package.json (scripts.dev: {scripts['dev']})"
+                    )
                 elif "start" in scripts:
                     start_line = find_line_matching(pkg_content, r'"start"\s*:')
-                    manifest_facts["run_command"] = f"npm start (runs: {scripts['start']})"
-                    manifest_facts["run_command_provenance"] = f"package.json:{start_line} (scripts.start)" if start_line else "package.json (scripts.start)"
+                    manifest_facts["run_command"] = "npm start"
+                    manifest_facts["run_command_provenance"] = (
+                        f"package.json:{start_line} (scripts.start: {scripts['start']})"
+                        if start_line
+                        else f"package.json (scripts.start: {scripts['start']})"
+                    )
                 elif "build" in scripts:
                     build_line = find_line_matching(pkg_content, r'"build"\s*:')
-                    manifest_facts["run_command"] = f"npm run build (runs: {scripts['build']})"
-                    manifest_facts["run_command_provenance"] = f"package.json:{build_line} (scripts.build)" if build_line else "package.json (scripts.build)"
+                    manifest_facts["run_command"] = "npm run build"
+                    manifest_facts["run_command_provenance"] = (
+                        f"package.json:{build_line} (scripts.build: {scripts['build']})"
+                        if build_line
+                        else f"package.json (scripts.build: {scripts['build']})"
+                    )
                 else:
                     manifest_facts["run_command_provenance"] = "common default, not declared in repo"
 
                 if "build" in scripts:
-                    manifest_facts["build_command"] = f"npm run build (runs: {scripts['build']})"
+                    manifest_facts["build_command"] = "npm run build"
                 elif "build" in makefile_targets:
                     manifest_facts["build_command"] = "make build"
 
@@ -752,11 +768,15 @@ class FactsExtractor:
                     manifest_facts["test_command_provenance"] = f"Makefile:{mk_line} (target test)" if mk_line else "Makefile (target test)"
                 elif "pytest" in py_data.get("tool", {}):
                     testpaths = py_data["tool"]["pytest"].get("ini_options", {}).get("testpaths", [])
-                    testpaths_info = f" (testpaths: {', '.join(testpaths)})" if testpaths else ""
+                    testpaths_info = f", testpaths: {', '.join(testpaths)}" if testpaths else ""
                     pyt_line = find_line_matching(pyproject_content, r"\[tool\.pytest")
-                    manifest_facts["test_command"] = f"pytest{testpaths_info}"
+                    manifest_facts["test_command"] = "pytest"
                     manifest_facts["test_command_type"] = "declared (pyproject.toml [tool.pytest])"
-                    manifest_facts["test_command_provenance"] = f"pyproject.toml:{pyt_line} ([tool.pytest])" if pyt_line else "pyproject.toml ([tool.pytest])"
+                    manifest_facts["test_command_provenance"] = (
+                        f"pyproject.toml:{pyt_line} ([tool.pytest]{testpaths_info})"
+                        if pyt_line
+                        else f"pyproject.toml ([tool.pytest]{testpaths_info})"
+                    )
                 elif "pytest" in dev_deps:
                     manifest_facts["test_command"] = "pytest"
                     manifest_facts["test_command_type"] = "inferred (from dev dependencies: pytest, not explicitly declared)"
@@ -946,7 +966,11 @@ class FactsExtractor:
                                 else:
                                     test_line = find_line_matching(content, r'"test"\s*:')
                                     test_cmd = f"{cd_prefix}npm test" if "test" in pscripts else None
-                                    test_prov = f"{p_json}:{test_line}" if test_line else "common default, not declared in repo"
+                                    test_prov = (
+                                        f"{p_json}:{test_line} (scripts.test: {pscripts['test']})"
+                                        if (test_line and "test" in pscripts)
+                                        else ("common default, not declared in repo" if test_cmd else None)
+                                    )
                             else:
                                 test_cmd = None
                                 test_prov = None
@@ -958,7 +982,11 @@ class FactsExtractor:
                             )
                             run_key = "dev" if "dev" in pscripts else ("start" if "start" in pscripts else None)
                             run_line = find_line_matching(content, rf'"{run_key}"\s*:') if run_key else None
-                            run_prov = f"{p_json}:{run_line}" if run_line else ("common default, not declared in repo" if run_cmd else None)
+                            run_prov = (
+                                f"{p_json}:{run_line} (scripts.{run_key}: {pscripts[run_key]})"
+                                if (run_line and run_key and run_key in pscripts)
+                                else ("common default, not declared in repo" if run_cmd else None)
+                            )
 
                             monorepo_packages.append({
                                 "folder": folder,
@@ -1035,6 +1063,18 @@ class FactsExtractor:
                     })
 
             manifest_facts["monorepo_packages"] = monorepo_packages
+            if not manifest_facts.get("test_command"):
+                for pkg in monorepo_packages:
+                    if pkg.get("test_command") and pkg["test_command"] != "no tests found":
+                        manifest_facts["test_command"] = pkg["test_command"]
+                        manifest_facts["test_command_provenance"] = pkg.get("test_provenance")
+                        break
+            if not manifest_facts.get("run_command") or manifest_facts.get("run_command") == "no run command declared":
+                for pkg in monorepo_packages:
+                    if pkg.get("run_command") and pkg["run_command"] != "no run command declared":
+                        manifest_facts["run_command"] = pkg["run_command"]
+                        manifest_facts["run_command_provenance"] = pkg.get("run_provenance")
+                        break
         else:
             manifest_facts["monorepo_packages"] = []
 
