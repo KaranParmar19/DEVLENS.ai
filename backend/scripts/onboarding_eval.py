@@ -40,6 +40,8 @@ TARGET_REPOS = [
     "patelhashilkumar/flo-studios",
     "KaranParmar19/DEVLENS.ai",
     "bottlepy/bottle",
+    "KaranParmar19/Luminary",       # Held-out: no-README
+    "pallets/markupsafe",          # Held-out: Python-only
 ]
 
 
@@ -111,13 +113,48 @@ async def evaluate_repo(db, repo_full_name: str) -> dict[str, Any]:
     expected_nums = list(range(1, len(section_nums) + 1))
     check_numbering = (section_nums == expected_nums)
 
+    # 6. Narrative guard: first_task title and rationale must not leak the filename when purpose is not verified
+    check_narrative = True
+    narrative_error = None
+    structured_doc = getattr(agent, "last_structured_doc", {}) or {}
+    first_task = structured_doc.get("first_task", {})
+    starters = first_task.get("suggested_files", [])
+    if starters:
+        top_st = starters[0]
+        if top_st.get("verified_purpose") == "purpose not verified":
+            title = first_task.get("title", "")
+            rationale = first_task.get("rationale", "")
+            file_name = PurePosixPath(top_st["path"]).name
+            stem = PurePosixPath(top_st["path"]).stem
+
+            # Title must be generic
+            if not (title == f"Add a test for {file_name}" or title.startswith("Add a test for") or title == "Explore Low-Risk Modules"):
+                check_narrative = False
+                narrative_error = f"Title '{title}' is not generic when purpose is unverified"
+
+            # Check that unverified rationale does not hallucinate purpose based on file stem
+            clean_rationale = re.sub(r"\[\[.*?\]\]", "", rationale)
+            stem_tokens = [t.lower() for t in re.split(r"[-_.]", stem) if len(t) >= 4 and t.lower() not in ("test", "main", "utils", "index")]
+            leaked_tokens = [t for t in stem_tokens if t in clean_rationale.lower()]
+            if leaked_tokens:
+                check_narrative = False
+                narrative_error = f"Rationale leaked unverified filename tokens: {leaked_tokens}"
+
     all_passed = (
         check_em_dash
         and check_banned_words
         and check_paths_exist
         and check_commands
         and check_numbering
+        and check_narrative
     )
+
+    drops_by_section = getattr(agent, "last_drops_by_section", {}) or {
+        "paths": [],
+        "gotchas": [],
+        "glossary": [],
+        "starters": [],
+    }
 
     return {
         "repo": repo_full_name,
@@ -125,6 +162,7 @@ async def evaluate_repo(db, repo_full_name: str) -> dict[str, Any]:
         "facts": facts,
         "doc_md": doc_md,
         "drops": getattr(agent, "last_drops", []),
+        "drops_by_section": drops_by_section,
         "checks": {
             "no_em_dash": check_em_dash,
             "no_banned_words": check_banned_words,
@@ -134,6 +172,8 @@ async def evaluate_repo(db, repo_full_name: str) -> dict[str, Any]:
             "commands_verified": check_commands,
             "sequential_numbering": check_numbering,
             "section_nums": section_nums,
+            "narrative_guard": check_narrative,
+            "narrative_error": narrative_error,
         },
         "passed": all_passed,
     }
@@ -157,10 +197,10 @@ async def main():
     print("=" * 80)
     header = (
         f"| {'Repository':<30} | {'No Em-Dash':<10} | {'No Banned':<10} | "
-        f"{'Paths Grounded':<14} | {'Commands Valid':<14} | {'Numbering':<10} | {'Verdict':<8} |"
+        f"{'Paths Grounded':<14} | {'Commands Valid':<14} | {'Numbering':<10} | {'Narrative Guard':<16} | {'Verdict':<8} |"
     )
     print(header)
-    print("|" + "-" * 32 + "|" + "-" * 12 + "|" + "-" * 12 + "|" + "-" * 16 + "|" + "-" * 16 + "|" + "-" * 12 + "|" + "-" * 10 + "|")
+    print("|" + "-" * 32 + "|" + "-" * 12 + "|" + "-" * 12 + "|" + "-" * 16 + "|" + "-" * 16 + "|" + "-" * 12 + "|" + "-" * 18 + "|" + "-" * 10 + "|")
 
     for r in results:
         c = r.get("checks", {})
@@ -169,29 +209,33 @@ async def main():
         path_str = "PASS" if c.get("paths_exist") else f"FAIL ({len(c.get('invalid_citations', []))})"
         cmd_str = "PASS" if c.get("commands_verified") else "FAIL"
         num_str = "PASS" if c.get("sequential_numbering") else f"FAIL ({c.get('section_nums')})"
+        narr_str = "PASS" if c.get("narrative_guard") else "FAIL"
         verd_str = "PASS" if r.get("passed") else "FAIL"
 
         row = (
             f"| {r['repo']:<30} | {em_str:<10} | {ban_str:<10} | "
-            f"{path_str:<14} | {cmd_str:<14} | {num_str:<10} | {verd_str:<8} |"
+            f"{path_str:<14} | {cmd_str:<14} | {num_str:<10} | {narr_str:<16} | {verd_str:<8} |"
         )
         print(row)
 
     print("\n" + "=" * 80)
-    print("FACTS & DROPS SUMMARY PER REPOSITORY")
+    print("DROPS LOGGED PER SECTION")
     print("=" * 80)
     for r in results:
         print(f"\n### Repository: {r['repo']}")
-        f = r.get("facts", {})
-        print(f"- Modules: {f.get('total_modules')} (Source: {f.get('source_modules_count')}, Tests: {f.get('test_modules_count')})")
-        manifest = f.get("manifest", {})
-        print(f"- Manifest: {manifest.get('manifest_type')}")
-        print(f"- Install Command: {manifest.get('install_command')}")
-        print(f"- Test Command: {manifest.get('test_command')}")
-        print(f"- Run Command: {manifest.get('run_command')}")
-        print(f"- High Risk Files: {len(f.get('high_risk_files', []))}")
-        print(f"- Candidate Starters: {len(f.get('candidate_starters', []))}")
-        print(f"- Post-processing Drops: {r.get('drops', [])}")
+        dbs = r.get("drops_by_section", {})
+        for sec in ("paths", "gotchas", "glossary", "starters"):
+            items = dbs.get(sec, [])
+            print(f"- **{sec}** ({len(items)} dropped):")
+            for it in items:
+                print(f"  - {it}")
+
+    print("\n" + "=" * 80)
+    print("FULL GENERATED ONBOARDING DOCUMENTS")
+    print("=" * 80)
+    for r in results:
+        print(f"\n{'#' * 80}\n# REPOSITORY: {r['repo']}\n{'#' * 80}\n")
+        print(r.get("doc_md", ""))
 
 
 if __name__ == "__main__":

@@ -41,6 +41,30 @@ def _is_valid_source_file(path: str, known_paths: set[str]) -> bool:
     return False
 
 
+def _clean_markdown_citations(
+    text: str,
+    known_paths: set[str],
+    drops: list[str] | None = None,
+    drops_by_section: dict[str, list[str]] | None = None,
+) -> str:
+    """Validate all [[citations]] in prose. Unwraps invalid paths or directories to inline code."""
+    if not text:
+        return text
+
+    def repl(m: re.Match) -> str:
+        raw = m.group(1).strip()
+        if _is_valid_source_file(raw, known_paths):
+            return f"[[{raw}]]"
+        if drops is not None:
+            msg = f"unwrapped invalid citation '[[{raw}]]' (not an indexed file)"
+            drops.append(f"paths: {msg}")
+            if drops_by_section is not None:
+                drops_by_section["paths"].append(msg)
+        return f"`{raw}`"
+
+    return re.sub(r"\[\[(.*?)\]\]", repl, text)
+
+
 class DevLensAgent:
     """
     Wraps a tool-calling agent grounded in the repository's AST index.
@@ -630,6 +654,22 @@ class DevLensAgent:
         manifest = facts.get("manifest", {})
 
         drops: list[str] = []
+        drops_by_section: dict[str, list[str]] = {
+            "paths": [],
+            "gotchas": [],
+            "glossary": [],
+            "starters": [],
+        }
+
+        # Clean prose citations in summary and how_it_works
+        if parsed_schema.summary:
+            parsed_schema.summary = _clean_markdown_citations(
+                parsed_schema.summary, all_known_paths, drops, drops_by_section
+            )
+        if parsed_schema.how_it_works:
+            parsed_schema.how_it_works = _clean_markdown_citations(
+                parsed_schema.how_it_works, all_known_paths, drops, drops_by_section
+            )
 
         # 1. Overwrite quick start with ground truth from manifest
         test_cmd = manifest.get("test_command")
@@ -648,6 +688,14 @@ class DevLensAgent:
 
         # 2. Choose careful_files in code: Render every High-risk file from computed data
         # The model may only write the explanation, and only from the snippet
+        computed_hr_paths = {hr["path"] for hr in facts.get("high_risk_files", [])}
+        for cf in (parsed_schema.careful_files if parsed_schema else []):
+            clean_cf = cf.path.replace("[[", "").replace("]]", "").strip()
+            if clean_cf not in computed_hr_paths:
+                msg = f"dropped non-computed careful file '{cf.path}'"
+                drops.append(f"paths: {msg}")
+                drops_by_section["paths"].append(msg)
+
         model_reasons_by_path = {
             cf.path.replace("[[", "").replace("]]", "").strip(): cf.reason
             for cf in (parsed_schema.careful_files if parsed_schema else [])
@@ -688,12 +736,16 @@ class DevLensAgent:
         for g in parsed_schema.gotchas:
             clean_evidence = g.evidence_path.replace("[[", "").replace("]]", "").strip()
             if not _is_valid_source_file(clean_evidence, all_known_paths):
-                drops.append(f"gotchas: dropped rule '{g.title}' (evidence_path '{g.evidence_path}' is not a recognized repository file)")
+                msg = f"dropped rule '{g.title}' (evidence_path '{g.evidence_path}' is not a recognized repository file)"
+                drops.append(f"gotchas: {msg}")
+                drops_by_section["gotchas"].append(msg)
                 continue
 
             content = await extractor.extract_file_content(clean_evidence)
             if not content:
-                drops.append(f"gotchas: dropped rule '{g.title}' (evidence file '{clean_evidence}' has no indexed content)")
+                msg = f"dropped rule '{g.title}' (evidence file '{clean_evidence}' has no indexed content)"
+                drops.append(f"gotchas: {msg}")
+                drops_by_section["gotchas"].append(msg)
                 continue
 
             # Verify that the evidence chunk contains the claimed term or title tokens
@@ -703,7 +755,9 @@ class DevLensAgent:
                 g.evidence_path = clean_evidence
                 valid_gotchas.append(g)
             else:
-                drops.append(f"gotchas: dropped rule '{g.title}' (claimed term not found in chunk of '{clean_evidence}')")
+                msg = f"dropped rule '{g.title}' (claimed term not found in chunk of '{clean_evidence}')"
+                drops.append(f"gotchas: {msg}")
+                drops_by_section["gotchas"].append(msg)
         parsed_schema.gotchas = valid_gotchas
 
         # 4. Choose first_task in code, not the model. Pick starters from computed candidate_starters.
@@ -714,6 +768,14 @@ class DevLensAgent:
         }
 
         candidate_starters = facts.get("candidate_starters", [])
+        computed_starter_paths = {cs["path"] for cs in candidate_starters[:3]}
+        for st in (parsed_schema.first_task.suggested_files if parsed_schema and parsed_schema.first_task else []):
+            clean_st = st.path.replace("[[", "").replace("]]", "").strip()
+            if clean_st not in computed_starter_paths:
+                msg = f"dropped model starter '{st.path}' (not a computed candidate starter)"
+                drops.append(f"starters: {msg}")
+                drops_by_section["starters"].append(msg)
+
         for cs in candidate_starters[:3]:
             cs_path = cs["path"]
             has_snippet = bool(cs.get("first_30_lines") and cs["first_30_lines"].strip())
@@ -792,12 +854,16 @@ class DevLensAgent:
         for item in parsed_schema.glossary:
             clean_p = item.defined_in.replace("[[", "").replace("]]", "").strip()
             if not _is_valid_source_file(clean_p, all_known_paths):
-                drops.append(f"glossary: dropped term '{item.term}' (defined_in '{item.defined_in}' is not a recognized repository file)")
+                msg = f"dropped term '{item.term}' (defined_in '{item.defined_in}' is not a recognized repository file)"
+                drops.append(f"glossary: {msg}")
+                drops_by_section["glossary"].append(msg)
                 continue
 
             content = await extractor.extract_file_content(clean_p)
             if not content:
-                drops.append(f"glossary: dropped term '{item.term}' (defined_in '{clean_p}' has no indexed content)")
+                msg = f"dropped term '{item.term}' (defined_in '{clean_p}' has no indexed content)"
+                drops.append(f"glossary: {msg}")
+                drops_by_section["glossary"].append(msg)
                 continue
 
             # Require that the evidence file's chunk contains the claimed term
@@ -805,11 +871,14 @@ class DevLensAgent:
                 item.defined_in = clean_p
                 valid_glossary.append(item)
             else:
-                drops.append(f"glossary: dropped term '{item.term}' (term not found in chunk of '{clean_p}')")
+                msg = f"dropped term '{item.term}' (term not found in chunk of '{clean_p}')"
+                drops.append(f"glossary: {msg}")
+                drops_by_section["glossary"].append(msg)
         parsed_schema.glossary = valid_glossary
 
         self.last_facts_block = facts_block
         self.last_raw_json = raw_output
         self.last_drops = drops
+        self.last_drops_by_section = drops_by_section
         self.last_structured_doc = parsed_schema.model_dump()
         return self._render_schema_to_markdown(parsed_schema, facts)
