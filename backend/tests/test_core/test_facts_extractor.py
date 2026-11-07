@@ -811,3 +811,62 @@ def test_glossary_and_gotcha_evidence_chunk_validation():
 
     assert term_present.lower() in readme_chunk.lower()
     assert term_absent.lower() not in readme_chunk.lower()
+
+
+def test_dynamic_section_renumbering_when_sections_omitted():
+    from app.agent.devlens_agent import DevLensAgent
+    from app.schemas.onboarding import (
+        OnboardingDocSchema,
+        QuickStartInfo,
+        CarefulFileItem,
+        FirstTaskSection,
+        FolderMapItem,
+    )
+
+    doc = OnboardingDocSchema(
+        repo_name="acme/renumber-test",
+        summary="Architecture summary.",
+        quick_start=QuickStartInfo(
+            install_command="npm install",
+            run_command="npm run dev",
+            test_command="npm test",
+            env_variables=[],
+        ),
+        folder_map=[
+            FolderMapItem(path="src", role="Source code", file_count=5, sample_files="app.ts")
+        ],
+        how_it_works="Data flows from main to handlers.",
+        careful_files=[
+            CarefulFileItem(
+                path="src/main.ts",
+                risk_level="High",
+                dependents_count=10,
+                source_dependents_count=8,
+                test_dependents_count=2,
+                coupling=0.7,
+                reason="Main coordinator.",
+            )
+        ],
+        gotchas=[],  # EMPTY
+        first_task=FirstTaskSection(
+            title="Add a test for helpers.ts",
+            rationale="Safe starter task.",
+            suggested_files=[],
+            verification_steps="npm test",
+        ),
+        glossary=[],  # EMPTY
+    )
+
+    agent = DevLensAgent(db=None, repo_id=None, repo_full_name="acme/renumber-test")  # type: ignore
+    rendered = agent._render_schema_to_markdown(doc, facts={})
+
+    assert "## 1. Project Overview & Architecture" in rendered
+    assert "## 2. Quick Start" in rendered
+    assert "## 3. Folder Map" in rendered
+    assert "## 4. How It Works" in rendered
+    assert "## 5. Files to Handle Carefully" in rendered
+    # Since gotchas is empty, Recommended First Task must be ## 6, not ## 7!
+    assert "## 6. Recommended First Task" in rendered
+    assert "## 7." not in rendered
+    assert "## 8." not in rendered
+    assert "Repository Invariants & Gotchas" not in rendered

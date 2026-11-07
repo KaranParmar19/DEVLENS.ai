@@ -383,56 +383,66 @@ class DevLensAgent:
     # ── Onboarding Document Generator ─────────────────────────────────────────
 
     def _render_schema_to_markdown(self, doc: Any, facts: dict[str, Any]) -> str:
-        """Render a validated OnboardingDocSchema into clean, structured Markdown."""
-        lines = [
-            f"# {doc.repo_name}: Onboarding Guide\n",
-            "## 1. Project Overview & Architecture",
-            doc.summary,
-            "",
-            "## 2. Quick Start",
-        ]
+        """Render a validated OnboardingDocSchema into clean, structured Markdown with sequential section numbering."""
+        lines = [f"# {doc.repo_name}: Onboarding Guide\n"]
+        sec_idx = 1
 
+        # Section: Project Overview & Architecture
+        if doc.summary and doc.summary.strip():
+            lines.append(f"## {sec_idx}. Project Overview & Architecture")
+            lines.append(doc.summary.strip())
+            sec_idx += 1
+
+        # Section: Quick Start
+        quick_start_lines = []
         qs = doc.quick_start
         manifest = facts.get("manifest", {})
         if manifest.get("monorepo_packages"):
-            lines.append("- **Monorepo Packages Setup**:")
+            quick_start_lines.append("- **Monorepo Packages Setup**:")
             for pkg in manifest["monorepo_packages"]:
                 folder = pkg["folder"]
-                lines.append(f"  - **`{folder}/`** ({pkg['manifest_type']}):")
+                quick_start_lines.append(f"  - **`{folder}/`** ({pkg['manifest_type']}):")
                 if pkg.get("install_command"):
-                    lines.append(f"    - Install: `{pkg['install_command']}`")
+                    quick_start_lines.append(f"    - Install: `{pkg['install_command']}`")
                 if pkg.get("run_command"):
-                    lines.append(f"    - Run/Dev: `{pkg['run_command']}`")
-                lines.append(f"    - Test: `{pkg['test_command']}`")
+                    quick_start_lines.append(f"    - Run/Dev: `{pkg['run_command']}`")
+                quick_start_lines.append(f"    - Test: `{pkg['test_command']}`")
         else:
             if qs.install_command:
-                lines.append(f"- **Install**: `{qs.install_command}`")
+                quick_start_lines.append(f"- **Install**: `{qs.install_command}`")
             if qs.run_command:
-                lines.append(f"- **Run/Dev**: `{qs.run_command}`")
+                quick_start_lines.append(f"- **Run/Dev**: `{qs.run_command}`")
             if qs.test_command:
                 if qs.test_command == "no tests found":
-                    lines.append("- **Test**: no tests found")
+                    quick_start_lines.append("- **Test**: no tests found")
                 else:
                     cmd_type = f" ({qs.test_command_type})" if qs.test_command_type else ""
-                    lines.append(f"- **Test**: `{qs.test_command}`{cmd_type}")
+                    quick_start_lines.append(f"- **Test**: `{qs.test_command}`{cmd_type}")
             else:
-                lines.append("- **Test**: no tests found")
+                quick_start_lines.append("- **Test**: no tests found")
+
         if facts.get("grouped_env_variables"):
-            lines.append("- **Environment Variables**:")
+            quick_start_lines.append("- **Environment Variables**:")
             for cat, items in facts["grouped_env_variables"].items():
-                lines.append(f"  - **{cat}**:")
+                quick_start_lines.append(f"  - **{cat}**:")
                 for item in items:
                     usage = f" (read in code via {item['accessor']})" if item.get("read_in_code") else " (declared in .env.example)"
-                    lines.append(f"    - `{item['key']}`{usage}")
+                    quick_start_lines.append(f"    - `{item['key']}`{usage}")
         elif qs.env_variables:
-            lines.append(f"- **Environment Variables**: {', '.join(qs.env_variables)}")
+            quick_start_lines.append(f"- **Environment Variables**: {', '.join(qs.env_variables)}")
         else:
-            lines.append("- **Environment Variables**: No .env.example declared in repository.")
+            quick_start_lines.append("- **Environment Variables**: No .env.example declared in repository.")
 
         if doc.tech_stack:
-            lines.append(f"- **Tech Stack**: {', '.join(doc.tech_stack)}")
+            quick_start_lines.append(f"- **Tech Stack**: {', '.join(doc.tech_stack)}")
 
-        lines.append("\n## 3. Folder Map")
+        if quick_start_lines:
+            lines.append(f"\n## {sec_idx}. Quick Start")
+            lines.extend(quick_start_lines)
+            sec_idx += 1
+
+        # Section: Folder Map
+        folder_entries = []
         if doc.folder_map:
             for fm in doc.folder_map:
                 clean_p = fm.path.strip().rstrip("/")
@@ -442,8 +452,8 @@ class DevLensAgent:
                     cnt = 0
                 plural = "1 file" if cnt == 1 else f"{cnt} files"
                 samples = f" (e.g. {fm.sample_files})" if fm.sample_files else ""
-                lines.append(f"- **`{clean_p}/`** ({plural}){samples}: {fm.role}")
-        else:
+                folder_entries.append(f"- **`{clean_p}/`** ({plural}){samples}: {fm.role}")
+        elif facts.get("folder_breakdown"):
             for fb in facts.get("folder_breakdown", []):
                 clean_p = str(fb.get("path", "")).strip().rstrip("/")
                 try:
@@ -452,47 +462,65 @@ class DevLensAgent:
                     cnt = 0
                 plural = "1 file" if cnt == 1 else f"{cnt} files"
                 samples = f", e.g. {fb['sample_files']}" if fb.get("sample_files") else ""
-                lines.append(f"- **`{clean_p}/`** ({plural}{samples})")
+                folder_entries.append(f"- **`{clean_p}/`** ({plural}{sample})")
 
-        lines.append("\n## 4. How It Works")
-        lines.append(doc.how_it_works)
+        if folder_entries:
+            lines.append(f"\n## {sec_idx}. Folder Map")
+            lines.extend(folder_entries)
+            sec_idx += 1
 
-        lines.append("\n## 5. Files to Handle Carefully (High Blast Radius)")
+        # Section: How It Works
+        if doc.how_it_works and doc.how_it_works.strip():
+            lines.append(f"\n## {sec_idx}. How It Works")
+            lines.append(doc.how_it_works.strip())
+            sec_idx += 1
+
+        # Section: Files to Handle Carefully (High Blast Radius)
+        careful_lines = []
         if doc.careful_files:
             for cf in doc.careful_files:
                 deps_info = f"Total Dependents: {cf.dependents_count} (Source: {cf.source_dependents_count}, Tests: {cf.test_dependents_count})"
-                lines.append(
+                careful_lines.append(
                     f"- **[[{cf.path}]]** (Risk: {cf.risk_level}, {deps_info}, Coupling: {cf.coupling:.2f}):\n"
                     f"  {cf.reason}"
                 )
-        else:
-            lines.append("- No single-point high-risk modules identified.")
+        if careful_lines:
+            lines.append(f"\n## {sec_idx}. Files to Handle Carefully (High Blast Radius)")
+            lines.extend(careful_lines)
+            sec_idx += 1
 
+        # Section: Repository Invariants & Gotchas (omit if empty, else renumber)
         if doc.gotchas:
-            lines.append("\n## 6. Repository Invariants & Gotchas")
+            lines.append(f"\n## {sec_idx}. Repository Invariants & Gotchas")
             for g in doc.gotchas:
                 lines.append(f"- **{g.title}** (Evidence: [[{g.evidence_path}]]):\n  {g.description}")
+            sec_idx += 1
 
-        lines.append("\n## 7. Recommended First Task")
+        # Section: Recommended First Task
         ft = doc.first_task
-        lines.append(f"### {ft.title}")
-        if ft.rationale:
-            lines.append(ft.rationale)
-        if ft.suggested_files:
-            lines.append("\nSuggested starter files:")
-            for sf in ft.suggested_files:
-                test_str = f" | Test: [[{sf.nearby_test}]]" if sf.nearby_test else " | No dedicated test file detected"
-                lines.append(
-                    f"- **[[{sf.path}]]** ({sf.line_count} lines, {sf.source_dependents_count} source dependents{test_str}):\n"
-                    f"  Verified purpose: {sf.verified_purpose}"
-                )
-        if ft.verification_steps:
-            lines.append(f"\nVerification steps:\n{ft.verification_steps}")
+        if ft and (ft.suggested_files or ft.rationale):
+            lines.append(f"\n## {sec_idx}. Recommended First Task")
+            lines.append(f"### {ft.title}")
+            if ft.rationale:
+                lines.append(ft.rationale)
+            if ft.suggested_files:
+                lines.append("\nSuggested starter files:")
+                for sf in ft.suggested_files:
+                    test_str = f" | Test: [[{sf.nearby_test}]]" if sf.nearby_test else " | No dedicated test file detected"
+                    lines.append(
+                        f"- **[[{sf.path}]]** ({sf.line_count} lines, {sf.source_dependents_count} source dependents{test_str}):\n"
+                        f"  Verified purpose: {sf.verified_purpose}"
+                    )
+            if ft.verification_steps:
+                lines.append(f"\nVerification steps:\n{ft.verification_steps}")
+            sec_idx += 1
 
+        # Section: Glossary (omit if empty, else renumber)
         if doc.glossary:
-            lines.append("\n## 8. Glossary")
+            lines.append(f"\n## {sec_idx}. Glossary")
             for gl in doc.glossary:
                 lines.append(f"- **{gl.term}** (defined in [[{gl.defined_in}]]): {gl.definition}")
+            sec_idx += 1
 
         return "\n".join(lines)
 
