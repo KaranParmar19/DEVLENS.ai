@@ -222,6 +222,7 @@ async def _ingest_pipeline(
             if (
                 repo.status == RepoStatus.READY
                 and repo.latest_commit_sha == meta.latest_commit_sha
+                and repo.embedding_model == settings.openai_embedding_model
             ):
                 emit({
                     "type": "complete",

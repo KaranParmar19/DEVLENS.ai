@@ -23,7 +23,7 @@ OPENAI_MAX_BATCH_SIZE = 2048          # max items per embeddings request
 EMBED_BATCH_SIZE = 100                # our conservative batch size
 MAX_TOKENS_PER_BATCH = 400_000        # ~8191 tokens × 100 texts × safety margin
 MAX_CHUNKS_PER_INGESTION = 10_000     # cost control: cap total chunks at 10k
-MAX_RETRIES = 4                       # exponential: 2s, 4s, 8s, 16s
+MAX_RETRIES = 6                       # retries for rate-limited embedding batches
 
 
 def _get_openai_client() -> AsyncOpenAI:
@@ -85,6 +85,8 @@ async def embed_texts(texts: list[str]) -> list[list[float]]:
 
     try:
         for batch_start in range(0, len(texts), EMBED_BATCH_SIZE):
+            if batch_start > 0:
+                await asyncio.sleep(62.0)
             batch = texts[batch_start : batch_start + EMBED_BATCH_SIZE]
             embedding_result = await _embed_batch_with_retry(client, batch, batch_start)
             all_embeddings.extend(embedding_result)
@@ -139,8 +141,8 @@ async def _embed_batch_with_retry(
         except RateLimitError as exc:
             last_exc = exc
             err_str = str(exc).lower()
-            # If quota is exhausted or after 1 retry, fail fast to fallback embeddings
-            if "quota" in err_str or "resource_exhausted" in err_str or "exhausted" in err_str or attempt >= 1:
+            # Only fail fast if daily quota is explicitly exhausted or on final attempt
+            if "per_day" in err_str or "daily" in err_str or attempt >= MAX_RETRIES - 1:
                 logger.warning(
                     "embedding_quota_or_rate_limit_fail_fast_to_fallback",
                     error=str(exc),
@@ -148,7 +150,7 @@ async def _embed_batch_with_retry(
                 )
                 raise
 
-            wait = 2.0 + random.uniform(0, 1)  # brief 2-3s retry
+            wait = 62.0 + random.uniform(0, 2)
             logger.warning(
                 "openai_rate_limit",
                 attempt=attempt + 1,

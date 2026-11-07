@@ -1063,6 +1063,34 @@ def test_command_string_equality_and_clean_provenance():
         assert mf["build_command"] == "npm run build"
 
 
+def test_snapshot_footer_age_and_staleness_note():
+    from app.core.facts_extractor import format_snapshot_footer
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+    fresh_ts = (now - timedelta(days=2)).isoformat()
+    stale_ts = (now - timedelta(days=20)).isoformat()
+
+    fresh_footer = format_snapshot_footer({
+        "commit_sha": "abc1234",
+        "indexed_at": fresh_ts,
+        "snapshot_age_days": 2,
+    })
+    assert "Commit: abc1234" in fresh_footer
+    assert "(2 days old)" in fresh_footer
+    assert "older than 14 days" not in fresh_footer
+
+    stale_footer = format_snapshot_footer({
+        "commit_sha": "def5678",
+        "indexed_at": stale_ts,
+        "snapshot_age_days": 20,
+    })
+    assert "Commit: def5678" in stale_footer
+    assert "(20 days old)" in stale_footer
+    assert "Note: Snapshot is older than 14 days; re-ingest for latest changes" in stale_footer
+
+
+
 
 
 
