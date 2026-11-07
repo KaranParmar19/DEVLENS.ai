@@ -709,7 +709,11 @@ class DevLensAgent:
                     cnt = 0
                 plural = "1 file" if cnt == 1 else f"{cnt} files"
                 samples = f" (e.g. {fm.sample_files})" if fm.sample_files else ""
-                folder_entries.append(f"- **`{clean_p}/`** ({plural}){samples}: {fm.role}")
+                role_txt = fm.role.strip() if fm.role else ""
+                if role_txt and role_txt.lower() not in ("application component directory", "not verified", "purpose not verified"):
+                    folder_entries.append(f"- **`{clean_p}/`** ({plural}){samples}: {role_txt}")
+                else:
+                    folder_entries.append(f"- **`{clean_p}/`** ({plural}){samples}")
         elif facts.get("folder_breakdown"):
             for fb in facts.get("folder_breakdown", []):
                 clean_p = str(fb.get("path", "")).strip().rstrip("/")
@@ -957,7 +961,7 @@ class DevLensAgent:
             for fb in facts.get("folder_breakdown", []):
                 valid_folder_map.append(FolderMapItem(
                     path=fb["path"],
-                    role="Application component directory",
+                    role="",
                     file_count=int(fb.get("file_count", 0)),
                     sample_files=fb.get("sample_files", ""),
                 ))
@@ -999,11 +1003,17 @@ class DevLensAgent:
             if has_snippet and model_reason and len(model_reason.strip()) > 10 and "not verified" not in model_reason.lower():
                 reason = model_reason.strip()
             else:
-                reason = (
-                    f"Central junction module with {hr['dependents_count']} dependent modules "
-                    f"(Source: {source_deps}, Tests: {test_deps}). "
-                    "Modifying public interfaces affects downstream modules across the codebase."
-                )
+                leading_doc = _extract_leading_comment_or_docstring(hr.get("first_30_lines") or "") if has_snippet else None
+                if leading_doc:
+                    reason = (
+                        f"{leading_doc} Imported by {hr['dependents_count']} modules "
+                        f"(Source: {source_deps}, Tests: {test_deps})."
+                    )
+                else:
+                    reason = (
+                        f"Imported by {hr['dependents_count']} modules "
+                        f"(Source: {source_deps}, Tests: {test_deps}, Outgoing dependencies: {hr.get('dependencies_count', 0)})."
+                    )
 
             computed_careful_files.append(CarefulFileItem(
                 path=path,
@@ -1129,32 +1139,10 @@ class DevLensAgent:
             if has_tests:
                 task_title = f"Add a test for {file_name}"
                 if top_st.verified_purpose == "purpose not verified":
-                    if dep_cnt == 0:
-                        task_rationale = (
-                            f"Module [[{top_st.path}]] is an isolated leaf ({line_phrase}) with "
-                            f"{dep_phrase}. Adding unit test coverage "
-                            "verifies the local development setup without risk of breaking other modules."
-                        )
-                    else:
-                        task_rationale = (
-                            f"Module [[{top_st.path}]] has low complexity ({line_phrase}) and "
-                            f"{dep_phrase}. Adding unit test coverage "
-                            "verifies the local development setup with minimal downstream impact."
-                        )
+                    task_rationale = f"[[{top_st.path}]] has {line_phrase} and {dep_phrase}."
                 else:
                     clean_purpose = top_st.verified_purpose.rstrip(".")
-                    if dep_cnt == 0:
-                        task_rationale = (
-                            f"Module [[{top_st.path}]] ({clean_purpose}) is an isolated leaf with "
-                            f"{dep_phrase}. Adding unit tests "
-                            "provides a safe, self-contained first PR."
-                        )
-                    else:
-                        task_rationale = (
-                            f"Module [[{top_st.path}]] ({clean_purpose}) has low complexity ({line_phrase}) and "
-                            f"{dep_phrase}. Adding unit tests "
-                            "provides a safe, self-contained first PR."
-                        )
+                    task_rationale = f"[[{top_st.path}]] ({clean_purpose}) has {line_phrase} and {dep_phrase}."
                 if top_st.nearby_test:
                     verification_steps = f"Run `{test_cmd}` (targeting [[{top_st.nearby_test}]]) to verify changes."
                 else:
@@ -1162,21 +1150,15 @@ class DevLensAgent:
             else:
                 task_title = f"Read {entry_file}, then run {run_cmd}"
                 if top_st.verified_purpose == "purpose not verified":
-                    if dep_cnt == 0:
-                        task_rationale = (
-                            f"No test suite is declared in this repository. Start by reading [[{entry_file}]] "
-                            f"and inspecting low-risk module [[{top_st.path}]] ({line_phrase}, {dep_phrase})."
-                        )
-                    else:
-                        task_rationale = (
-                            f"No test suite is declared in this repository. Start by reading [[{entry_file}]] "
-                            f"and inspecting low-complexity module [[{top_st.path}]] ({line_phrase}, {dep_phrase})."
-                        )
+                    task_rationale = (
+                        f"No test suite is declared in this repository. Read [[{entry_file}]] "
+                        f"and inspect [[{top_st.path}]] ({line_phrase}, {dep_phrase})."
+                    )
                 else:
                     clean_purpose = top_st.verified_purpose.rstrip(".")
                     task_rationale = (
-                        f"No test suite is declared in this repository. Start by reading [[{entry_file}]] "
-                        f"and inspecting [[{top_st.path}]] ({clean_purpose}, {line_phrase}, {dep_phrase})."
+                        f"No test suite is declared in this repository. Read [[{entry_file}]] "
+                        f"and inspect [[{top_st.path}]] ({clean_purpose}, {line_phrase}, {dep_phrase})."
                     )
                 if run_cmd == "no run command declared":
                     verification_steps = f"Read [[{entry_file}]], then run: no run command declared."
@@ -1192,10 +1174,7 @@ class DevLensAgent:
                     else (fallback_paths[0] if fallback_paths else "")
                 )
             )
-            empty_reason = facts.get(
-                "starter_empty_reason",
-                "No isolated low-risk starter modules identified: implementation is concentrated in core modules.",
-            )
+            empty_reason = facts.get("starter_empty_reason") or "0 candidate starter modules identified."
             task_rationale = empty_reason
             if has_tests:
                 target_name = PurePosixPath(entry_file).name if entry_file else "repository"

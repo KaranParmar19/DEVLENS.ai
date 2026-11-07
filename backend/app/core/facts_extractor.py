@@ -878,16 +878,17 @@ class FactsExtractor:
 
         starter_empty_reason = None
         if not candidate_starters:
-            if len(source_modules) <= 1:
-                single_name = source_modules[0] if source_modules else "the primary file"
+            if len(source_modules) == 1:
+                single_name = source_modules[0]
+                m_single = file_metrics.get(single_name, {})
                 starter_empty_reason = (
-                    f"No low-risk starter modules identified: implementation is concentrated in {single_name}, "
-                    "which is directly imported across the test suite."
+                    f"0 candidate starter modules: repository has 1 source module "
+                    f"([[{single_name}]], {m_single.get('source_dependents_count', 0)} source dependents, "
+                    f"{m_single.get('test_dependents_count', 0)} test dependents)."
                 )
             else:
                 starter_empty_reason = (
-                    "No low-risk starter modules identified: all core source modules have active dependents "
-                    "or participate in central application flows."
+                    f"0 candidate starter modules matching starter criteria among {len(source_modules)} source modules."
                 )
 
         graph_incomplete = bool(len(edges) == 0 and len(source_modules) > 1)
@@ -1985,10 +1986,7 @@ class FactsExtractor:
                 else:
                     lines.append("  Snippet: None available (purpose not verified).")
         else:
-            empty_reason = facts.get(
-                "starter_empty_reason",
-                "No low-risk starter modules identified: all core source modules have active dependents or are imported across the test suite."
-            )
+            empty_reason = facts.get("starter_empty_reason") or "0 candidate starter modules identified."
             lines.append(f"- None. Reason: {empty_reason}")
 
         lines.append("\n[Verified Directory Structure]:")
@@ -2052,9 +2050,8 @@ def build_deterministic_fallback_doc(facts: dict[str, Any]) -> str:
         f"- `[[{hr['path']}]]` (Risk: {hr.get('risk_level', 'High')}, "
         f"{hr['dependents_count']} {'direct dependent' if hr['dependents_count'] == 1 else 'direct dependents'}, "
         f"coupling: {hr['coupling']:.2f})\n"
-        f"  Modifying public signatures affects "
-        f"{hr['dependents_count']} {'dependent module' if hr['dependents_count'] == 1 else 'dependent modules'}. "
-        f"Verify all dependents before merging changes."
+        f"  Dependents: {hr['dependents_count']} (Source: {hr.get('source_dependents_count', 0)}, "
+        f"Tests: {hr.get('test_dependents_count', 0)}), Outgoing dependencies: {hr.get('dependencies_count', 0)}."
         for hr in facts.get("high_risk_files", [])
     ) or "- No single-point high-risk modules identified."
 
@@ -2062,15 +2059,12 @@ def build_deterministic_fallback_doc(facts: dict[str, Any]) -> str:
         starter_lines = "\n".join(
             f"- `[[{cs['path']}]]` ({cs['line_count']} lines, "
             f"{cs['dependents_count']} {'downstream dependent' if cs['dependents_count'] == 1 else 'downstream dependents'})\n"
-            f"  Safe candidate module with low coupling."
+            f"  Source dependents: {cs.get('source_dependents_count', 0)}, Test dependents: {cs.get('test_dependents_count', 0)}."
             + (f" Verified test: `[[{cs['nearby_test']}]]`." if cs.get("nearby_test") else " No dedicated test file detected.")
             for cs in facts.get("candidate_starters", [])
         )
     else:
-        empty_reason = facts.get(
-            "starter_empty_reason",
-            "No low-risk starter modules identified: all core source modules have active dependents or are imported across the test suite."
-        )
+        empty_reason = facts.get("starter_empty_reason") or "0 candidate starter modules identified."
         starter_lines = f"- {empty_reason}"
 
     manifest = facts.get("manifest", {})
