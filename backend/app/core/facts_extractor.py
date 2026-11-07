@@ -119,6 +119,18 @@ def is_generated_file(path: str) -> bool:
     return any(pat in p for pat in GENERATED_PATTERNS)
 
 
+def is_source_module(path: str) -> bool:
+    """Check if a file path is a runtime source module (excluding tests, config, generated, and docs/assets)."""
+    p_lower = path.lower().replace("\\", "/")
+    if is_test_file(path) or is_config_file(path) or is_generated_file(path):
+        return False
+    if p_lower.startswith("docs/") or "/docs/" in p_lower:
+        return False
+    if PurePosixPath(p_lower).suffix in (".rst", ".pot", ".md", ".txt", ".yaml", ".yml"):
+        return False
+    return True
+
+
 def join_chunks_without_overlap(chunks: list[str]) -> str:
     """
     Concatenate multi-chunk file contents, deduplicating the sliding-window
@@ -704,9 +716,10 @@ class FactsExtractor:
                 if file_name in ENTRY_FILENAMES or lower_path.startswith("cmd/"):
                     is_entry = True
 
-            deps = dependents_map.get(node_id, [])
-            source_deps = [d for d in deps if not is_test_file(d)]
-            test_deps = [d for d in deps if is_test_file(d)]
+            raw_deps = dependents_map.get(node_id, [])
+            source_deps = [d for d in raw_deps if is_source_module(d)]
+            test_deps = [d for d in raw_deps if is_test_file(d)]
+            deps = source_deps + test_deps
             outgoing = dependencies_map.get(node_id, [])
 
             risk = classify_risk_level(
@@ -1698,8 +1711,8 @@ class FactsExtractor:
         ]
         high_risk_files.sort(key=lambda m: m["dependents_count"], reverse=True)
 
-        # When the high-risk list is empty and the top file has 5 or more dependents,
-        # show it labeled "Core file, imported by tests only"
+        # When the high-risk list is empty and the top file has 5 or more dependents
+        # and is classified as "Core file, imported by tests only", include it with its computed risk_level.
         if not high_risk_files and metrics["file_metrics"]:
             all_by_deps = sorted(
                 metrics["file_metrics"].values(),
@@ -1707,10 +1720,8 @@ class FactsExtractor:
                 reverse=True,
             )
             top_file = all_by_deps[0]
-            if top_file.get("dependents_count", 0) >= 5:
-                top_copy = dict(top_file)
-                top_copy["risk_level"] = "Core file, imported by tests only"
-                high_risk_files = [top_copy]
+            if top_file.get("dependents_count", 0) >= 5 and top_file.get("risk_level") == "Core file, imported by tests only":
+                high_risk_files = [dict(top_file)]
 
         # Populate first 30 lines for high-risk files so explanations are snippet-grounded
         for hr in high_risk_files:

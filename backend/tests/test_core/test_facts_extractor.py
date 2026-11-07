@@ -994,8 +994,11 @@ def test_verified_purpose_rules_and_evidence_quote():
 
 
 def test_core_file_imported_by_tests_only_in_high_risk():
-    nodes = [{"id": "bottle.py", "path": "bottle.py", "line_count": 4000}]
-    edges = []
+    nodes = [
+        {"id": "bottle.py", "path": "bottle.py", "line_count": 4000},
+        {"id": "docs/conf.py", "path": "docs/conf.py", "line_count": 100},
+    ]
+    edges = [["docs/conf.py", "bottle.py"]]
     for i in range(6):
         t_path = f"test/test_suite_{i}.py"
         nodes.append({"id": t_path, "path": t_path, "line_count": 50})
