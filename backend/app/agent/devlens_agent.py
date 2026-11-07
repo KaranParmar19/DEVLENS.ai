@@ -563,34 +563,42 @@ class DevLensAgent:
             env_variables=facts.get("env_variables", []),
         )
 
-        # 2. Filter & overwrite careful_files with ground truth file_metrics
-        valid_careful_files: list[CarefulFileItem] = []
-        for cf in parsed_schema.careful_files:
-            clean_path = cf.path.replace("[[", "").replace("]]", "").strip()
-            if clean_path in file_metrics:
-                m = file_metrics[clean_path]
-                cf.path = clean_path
-                cf.risk_level = m["risk_level"]
-                cf.dependents_count = m["dependents_count"]
-                cf.source_dependents_count = m["source_dependents_count"]
-                cf.test_dependents_count = m["test_dependents_count"]
-                cf.coupling = m["coupling"]
-                valid_careful_files.append(cf)
-            else:
-                drops.append(f"careful_files: dropped '{cf.path}' (not in repository graph metrics)")
+        # 2. Choose careful_files in code: Render every High-risk file from computed data
+        # The model may only write the explanation, and only from the snippet
+        model_reasons_by_path = {
+            cf.path.replace("[[", "").replace("]]", "").strip(): cf.reason
+            for cf in (parsed_schema.careful_files if parsed_schema else [])
+        }
 
-        if not valid_careful_files and facts.get("high_risk_files"):
-            for hr in facts["high_risk_files"][:4]:
-                valid_careful_files.append(CarefulFileItem(
-                    path=hr["path"],
-                    risk_level=hr["risk_level"],
-                    dependents_count=hr["dependents_count"],
-                    source_dependents_count=hr.get("source_dependents_count", 0),
-                    test_dependents_count=hr.get("test_dependents_count", 0),
-                    coupling=hr["coupling"],
-                    reason=f"Central junction module with {hr['dependents_count']} dependent modules. Modifying this file affects downstream consumers.",
-                ))
-        parsed_schema.careful_files = valid_careful_files
+        computed_careful_files: list[CarefulFileItem] = []
+        for hr in facts.get("high_risk_files", []):
+            path = hr["path"]
+            has_snippet = bool(hr.get("first_30_lines") and hr["first_30_lines"].strip())
+            model_reason = model_reasons_by_path.get(path)
+
+            source_deps = hr.get("source_dependents_count", 0)
+            test_deps = hr.get("test_dependents_count", 0)
+
+            # Model may only write explanation if snippet is present and explanation is grounded
+            if has_snippet and model_reason and len(model_reason.strip()) > 10 and "not verified" not in model_reason.lower():
+                reason = model_reason.strip()
+            else:
+                reason = (
+                    f"Central junction module with {hr['dependents_count']} dependent modules "
+                    f"(Source: {source_deps}, Tests: {test_deps}). "
+                    "Modifying public interfaces affects downstream modules across the codebase."
+                )
+
+            computed_careful_files.append(CarefulFileItem(
+                path=path,
+                risk_level=hr.get("risk_level", "High"),
+                dependents_count=hr.get("dependents_count", 0),
+                source_dependents_count=source_deps,
+                test_dependents_count=test_deps,
+                coupling=hr.get("coupling", 0.0),
+                reason=reason,
+            ))
+        parsed_schema.careful_files = computed_careful_files
 
         # 3. Drop gotchas without valid evidence path in repository
         valid_gotchas: list[GotchaItem] = []
@@ -603,33 +611,36 @@ class DevLensAgent:
                 drops.append(f"gotchas: dropped rule '{g.title}' (evidence_path '{g.evidence_path}' is not an indexed file)")
         parsed_schema.gotchas = valid_gotchas
 
-        # 4. Filter starter tasks: must exist in repo and respect verified_purpose
-        valid_starters: list[StarterTaskItem] = []
-        fact_starters_by_path = {cs["path"]: cs for cs in facts.get("candidate_starters", [])}
-        for st in parsed_schema.first_task.suggested_files:
-            clean_path = st.path.replace("[[", "").replace("]]", "").strip()
-            if clean_path in fact_starters_by_path:
-                cs = fact_starters_by_path[clean_path]
-                st.path = clean_path
-                st.line_count = cs["line_count"]
-                st.source_dependents_count = cs["source_dependents_count"]
-                st.nearby_test = cs.get("nearby_test")
-                if not cs.get("first_30_lines"):
-                    st.verified_purpose = "purpose not verified"
-                valid_starters.append(st)
-            else:
-                drops.append(f"starter_tasks: dropped '{st.path}' (not in candidate starters list)")
+        # 4. Choose first_task in code, not the model. Pick starters from computed candidate_starters.
+        computed_starters: list[StarterTaskItem] = []
+        model_purposes = {
+            st.path.replace("[[", "").replace("]]", "").strip(): st.verified_purpose
+            for st in (parsed_schema.first_task.suggested_files if parsed_schema and parsed_schema.first_task else [])
+        }
 
-        if not valid_starters and facts.get("candidate_starters"):
-            for cs in facts["candidate_starters"][:3]:
-                valid_starters.append(StarterTaskItem(
-                    path=cs["path"],
-                    line_count=cs["line_count"],
-                    source_dependents_count=cs["source_dependents_count"],
-                    nearby_test=cs.get("nearby_test"),
-                    verified_purpose="purpose not verified" if not cs.get("first_30_lines") else "Low risk module verified from graph.",
-                ))
-        parsed_schema.first_task.suggested_files = valid_starters
+        candidate_starters = facts.get("candidate_starters", [])
+        for cs in candidate_starters[:3]:
+            cs_path = cs["path"]
+            has_snippet = bool(cs.get("first_30_lines") and cs["first_30_lines"].strip())
+
+            if not has_snippet:
+                verified_purpose = "purpose not verified"
+            else:
+                model_exp = model_purposes.get(cs_path)
+                if model_exp and model_exp.strip() and model_exp.strip().lower() != "purpose not verified":
+                    verified_purpose = model_exp.strip()
+                else:
+                    verified_purpose = "Low-risk module verified from graph metrics."
+
+            computed_starters.append(StarterTaskItem(
+                path=cs_path,
+                line_count=cs.get("line_count", 0),
+                source_dependents_count=cs.get("source_dependents_count", 0),
+                nearby_test=cs.get("nearby_test"),
+                verified_purpose=verified_purpose,
+            ))
+
+        parsed_schema.first_task.suggested_files = computed_starters
 
         # 5. Filter glossary: defined_in must exist in repo
         valid_glossary = []

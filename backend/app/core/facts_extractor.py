@@ -396,11 +396,13 @@ class FactsExtractor:
             candidate_starters.append({
                 **m,
                 "nearby_test": nearby_test,
-                "score": (0 if nearby_test else 100) + m["line_count"] + m["complexity"],
                 "first_30_lines": None,
             })
 
-        candidate_starters.sort(key=lambda c: c["score"])
+        # Pick starters by: has a test first, then fewest lines
+        candidate_starters.sort(
+            key=lambda c: (0 if c.get("nearby_test") else 1, c.get("line_count", 0))
+        )
 
         starter_empty_reason = None
         if not candidate_starters:
@@ -797,6 +799,15 @@ class FactsExtractor:
         ]
         high_risk_files.sort(key=lambda m: m["dependents_count"], reverse=True)
 
+        # Populate first 30 lines for high-risk files so explanations are snippet-grounded
+        for hr in high_risk_files:
+            content = await self.extract_file_content(hr["path"])
+            if content and content.strip():
+                snippet_lines = content.splitlines()[:30]
+                hr["first_30_lines"] = "\n".join(snippet_lines)
+            else:
+                hr["first_30_lines"] = None
+
         # Populate first 30 lines for each candidate starter file
         for cs in metrics.get("candidate_starters", []):
             content = await self.extract_file_content(cs["path"])
@@ -818,7 +829,7 @@ class FactsExtractor:
             "cycles_count": metrics["cycles_count"],
             "cycles": metrics["cycles"],
             "entry_points": metrics["entry_points"][:5],
-            "high_risk_files": high_risk_files[:6],
+            "high_risk_files": high_risk_files,
             "candidate_starters": metrics["candidate_starters"],
             "starter_empty_reason": metrics.get("starter_empty_reason"),
             "manifest": manifest,
@@ -893,6 +904,11 @@ class FactsExtractor:
                     f"- [[{hr['path']}]] (Risk: High, Total Dependents: {hr['dependents_count']} [Source: {source_deps}, Tests: {test_deps}], "
                     f"Dependencies: {hr['dependencies_count']}, Coupling: {hr['coupling']:.2f})"
                 )
+                if hr.get("first_30_lines"):
+                    ext = PurePosixPath(hr["path"]).suffix.lstrip(".") or "text"
+                    lines.append(f"  Verified first 30 lines snippet:\n  ```{ext}\n{hr['first_30_lines']}\n  ```")
+                else:
+                    lines.append("  Snippet: None available (explanation must note purpose not verified).")
         else:
             lines.append("- None identified.")
 
