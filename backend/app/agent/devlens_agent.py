@@ -690,6 +690,38 @@ class DevLensAgent:
             env_variables=facts.get("env_variables", []),
         )
 
+        # 1b. Overwrite folder_map sample_files and file_count strictly from computed facts
+        computed_fb_by_path = {
+            fb["path"].strip().rstrip("/"): fb
+            for fb in facts.get("folder_breakdown", [])
+        }
+        valid_folder_map: list[FolderMapItem] = []
+        for fm in (parsed_schema.folder_map if parsed_schema else []):
+            clean_p = fm.path.strip().rstrip("/")
+            if clean_p in computed_fb_by_path:
+                fb = computed_fb_by_path[clean_p]
+                fm.path = clean_p
+                fm.file_count = int(fb.get("file_count", 0))
+                fm.sample_files = fb.get("sample_files", "")
+                valid_folder_map.append(fm)
+            elif clean_p.lower() in {k.lower(): k for k in computed_fb_by_path}:
+                canonical_k = {k.lower(): k for k in computed_fb_by_path}[clean_p.lower()]
+                fb = computed_fb_by_path[canonical_k]
+                fm.path = canonical_k
+                fm.file_count = int(fb.get("file_count", 0))
+                fm.sample_files = fb.get("sample_files", "")
+                valid_folder_map.append(fm)
+
+        if not valid_folder_map and facts.get("folder_breakdown"):
+            for fb in facts.get("folder_breakdown", []):
+                valid_folder_map.append(FolderMapItem(
+                    path=fb["path"],
+                    role="Application component directory",
+                    file_count=int(fb.get("file_count", 0)),
+                    sample_files=fb.get("sample_files", ""),
+                ))
+        parsed_schema.folder_map = valid_folder_map
+
         # 2. Choose careful_files in code: Render every High-risk file from computed data
         # The model may only write the explanation, and only from the snippet
         computed_hr_paths = {hr["path"] for hr in facts.get("high_risk_files", [])}
