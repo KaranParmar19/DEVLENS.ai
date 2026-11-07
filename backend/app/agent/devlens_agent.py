@@ -1028,9 +1028,23 @@ class DevLensAgent:
         parsed_schema.first_task.suggested_files = computed_starters
 
         # Build title, rationale, and verification steps entirely in code
+        test_cmd = facts.get("manifest", {}).get("test_command")
+        has_tests = bool(facts.get("test_modules_count", 0) > 0 and test_cmd and test_cmd != "no tests found")
+        raw_run_cmd = facts.get("manifest", {}).get("run_command")
+        run_cmd = raw_run_cmd if (raw_run_cmd and raw_run_cmd != "no run command declared") else "no run command declared"
+        fallback_paths = [
+            p for p, m in sorted(facts.get("file_metrics", {}).items())
+            if m.get("source_dependents_count", 0) >= 0 and not p.startswith(".")
+        ] or sorted(facts.get("file_metrics", {}).keys())
+
         if computed_starters:
             top_st = computed_starters[0]
             file_name = PurePosixPath(top_st.path).name
+            entry_file = (
+                facts.get("entry_points", [{}])[0].get("path")
+                if facts.get("entry_points")
+                else top_st.path
+            )
             dep_cnt = top_st.source_dependents_count
             dep_phrase = (
                 "1 downstream source dependent"
@@ -1039,73 +1053,87 @@ class DevLensAgent:
             )
             line_phrase = "1 line" if top_st.line_count == 1 else f"{top_st.line_count} lines"
 
-            if top_st.verified_purpose == "purpose not verified":
+            if has_tests:
                 task_title = f"Add a test for {file_name}"
-                if dep_cnt == 0:
-                    task_rationale = (
-                        f"Module [[{top_st.path}]] is an isolated leaf ({line_phrase}) with "
-                        f"{dep_phrase}. Adding unit test coverage "
-                        "verifies the local development setup without risk of breaking other modules."
-                    )
+                if top_st.verified_purpose == "purpose not verified":
+                    if dep_cnt == 0:
+                        task_rationale = (
+                            f"Module [[{top_st.path}]] is an isolated leaf ({line_phrase}) with "
+                            f"{dep_phrase}. Adding unit test coverage "
+                            "verifies the local development setup without risk of breaking other modules."
+                        )
+                    else:
+                        task_rationale = (
+                            f"Module [[{top_st.path}]] has low complexity ({line_phrase}) and "
+                            f"{dep_phrase}. Adding unit test coverage "
+                            "verifies the local development setup with minimal downstream impact."
+                        )
                 else:
-                    task_rationale = (
-                        f"Module [[{top_st.path}]] has low complexity ({line_phrase}) and "
-                        f"{dep_phrase}. Adding unit test coverage "
-                        "verifies the local development setup with minimal downstream impact."
-                    )
-            else:
-                task_title = f"Add a test for {file_name}"
-                clean_purpose = top_st.verified_purpose.rstrip(".")
-                if dep_cnt == 0:
-                    task_rationale = (
-                        f"Module [[{top_st.path}]] ({clean_purpose}) is an isolated leaf with "
-                        f"{dep_phrase}. Adding unit tests "
-                        "provides a safe, self-contained first PR."
-                    )
-                else:
-                    task_rationale = (
-                        f"Module [[{top_st.path}]] ({clean_purpose}) has low complexity ({line_phrase}) and "
-                        f"{dep_phrase}. Adding unit tests "
-                        "provides a safe, self-contained first PR."
-                    )
-
-            test_cmd = facts.get("manifest", {}).get("test_command")
-            raw_run_cmd = facts.get("manifest", {}).get("run_command")
-            run_cmd = raw_run_cmd if (raw_run_cmd and raw_run_cmd != "no run command declared") else "no run command declared"
-            if facts.get("test_modules_count", 0) > 0 and test_cmd and test_cmd != "no tests found":
+                    clean_purpose = top_st.verified_purpose.rstrip(".")
+                    if dep_cnt == 0:
+                        task_rationale = (
+                            f"Module [[{top_st.path}]] ({clean_purpose}) is an isolated leaf with "
+                            f"{dep_phrase}. Adding unit tests "
+                            "provides a safe, self-contained first PR."
+                        )
+                    else:
+                        task_rationale = (
+                            f"Module [[{top_st.path}]] ({clean_purpose}) has low complexity ({line_phrase}) and "
+                            f"{dep_phrase}. Adding unit tests "
+                            "provides a safe, self-contained first PR."
+                        )
                 if top_st.nearby_test:
-                    verification_steps = f"Run `{test_cmd}` (targeting `[[{top_st.nearby_test}]]`) to verify changes."
+                    verification_steps = f"Run `{test_cmd}` (targeting [[{top_st.nearby_test}]]) to verify changes."
                 else:
                     verification_steps = f"Run `{test_cmd}` to verify that existing test suites pass."
             else:
-                entry_file = facts.get("entry_points", [{}])[0].get("path") if facts.get("entry_points") else top_st.path
-                if run_cmd == "no run command declared":
-                    verification_steps = f"Read `[[{entry_file}]]`, then run: no run command declared."
+                task_title = f"Read {entry_file}, then run {run_cmd}"
+                if top_st.verified_purpose == "purpose not verified":
+                    if dep_cnt == 0:
+                        task_rationale = (
+                            f"No test suite is declared in this repository. Start by reading [[{entry_file}]] "
+                            f"and inspecting low-risk module [[{top_st.path}]] ({line_phrase}, {dep_phrase})."
+                        )
+                    else:
+                        task_rationale = (
+                            f"No test suite is declared in this repository. Start by reading [[{entry_file}]] "
+                            f"and inspecting low-complexity module [[{top_st.path}]] ({line_phrase}, {dep_phrase})."
+                        )
                 else:
-                    verification_steps = f"Read `[[{entry_file}]]`, then run `{run_cmd}`."
+                    clean_purpose = top_st.verified_purpose.rstrip(".")
+                    task_rationale = (
+                        f"No test suite is declared in this repository. Start by reading [[{entry_file}]] "
+                        f"and inspecting [[{top_st.path}]] ({clean_purpose}, {line_phrase}, {dep_phrase})."
+                    )
+                if run_cmd == "no run command declared":
+                    verification_steps = f"Read [[{entry_file}]], then run: no run command declared."
+                else:
+                    verification_steps = f"Read [[{entry_file}]], then run `{run_cmd}`."
         else:
-            task_title = "Explore Repository Architecture"
-            empty_reason = facts.get(
-                "starter_empty_reason",
-                "No low-risk starter modules identified: all core source modules have active dependents or participate in central application flows."
-            )
-            task_rationale = empty_reason
-            fallback_paths = sorted(facts.get("file_metrics", {}).keys())
             entry_file = (
                 facts.get("entry_points", [{}])[0].get("path")
                 if facts.get("entry_points")
-                else (fallback_paths[0] if fallback_paths else "")
+                else (
+                    facts.get("high_risk_files", [{}])[0].get("path")
+                    if facts.get("high_risk_files")
+                    else (fallback_paths[0] if fallback_paths else "")
+                )
             )
-            raw_run_cmd = facts.get("manifest", {}).get("run_command")
-            run_cmd = raw_run_cmd if (raw_run_cmd and raw_run_cmd != "no run command declared") else "no run command declared"
-            test_cmd = facts.get("manifest", {}).get("test_command")
-            if facts.get("test_modules_count", 0) == 0 or not test_cmd or test_cmd == "no tests found":
-                if run_cmd == "no run command declared":
-                    verification_steps = f"Read `[[{entry_file}]]`, then run: no run command declared."
-                else:
-                    verification_steps = f"Read `[[{entry_file}]]`, then run `{run_cmd}`."
+            empty_reason = facts.get(
+                "starter_empty_reason",
+                "No isolated low-risk starter modules identified: implementation is concentrated in core modules.",
+            )
+            task_rationale = empty_reason
+            if has_tests:
+                target_name = PurePosixPath(entry_file).name if entry_file else "repository"
+                task_title = f"Add a test for {target_name}"
+                verification_steps = f"Run `{test_cmd}` to verify that existing test suites pass."
             else:
-                verification_steps = f"Run the test suite using `{test_cmd}` to verify the baseline setup."
+                task_title = f"Read {entry_file}, then run {run_cmd}"
+                if run_cmd == "no run command declared":
+                    verification_steps = f"Read [[{entry_file}]], then run: no run command declared."
+                else:
+                    verification_steps = f"Read [[{entry_file}]], then run `{run_cmd}`."
 
         parsed_schema.first_task.title = task_title
         parsed_schema.first_task.rationale = task_rationale

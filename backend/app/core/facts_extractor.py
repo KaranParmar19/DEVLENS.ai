@@ -427,13 +427,10 @@ class FactsExtractor:
             # Exclude test helpers or files in test directories
             if is_test_file(path) or any(part in ("test", "tests", "__tests__", "testing", "fixtures") for part in PurePosixPath(p_lower).parts):
                 continue
-            # Exclude 0-dependent non-entry files (must have active dependents in the codebase)
-            if m["dependents_count"] == 0 or m["source_dependents_count"] == 0:
-                continue
-            # Starter tasks should have exactly 1 source dependent (safe Day 1 PR)
-            if m["source_dependents_count"] != 1:
-                continue
             if m["risk_level"] != "Low":
+                continue
+            # Prefer modules with 1 source dependent; allow 0-dependent low-risk source modules as fallback
+            if m["source_dependents_count"] not in (0, 1):
                 continue
 
             # Check if there is a nearby test file
@@ -449,9 +446,27 @@ class FactsExtractor:
                 "first_30_lines": None,
             })
 
-        # Pick starters by: has a test first, then fewest lines
+        # If any candidate has 1 source dependent, keep only 1-dependent starters so 0-dependent data/leaf files do not crowd them out.
+        # Otherwise fall back to 0-dependent low-risk source modules (excluding trivial __init__.py if non-init files exist).
+        one_dep_starters = [c for c in candidate_starters if c.get("source_dependents_count") == 1]
+        if one_dep_starters:
+            candidate_starters = one_dep_starters
+        else:
+            non_trivial = [
+                c for c in candidate_starters
+                if not (PurePosixPath(c["path"]).name == "__init__.py" and c.get("line_count", 0) <= 5)
+            ]
+            if non_trivial:
+                candidate_starters = non_trivial
+
+        # Pick starters by: non-data/constants first, has a test first, then fewest lines
         candidate_starters.sort(
-            key=lambda c: (0 if c.get("nearby_test") else 1, c.get("line_count", 0))
+            key=lambda c: (
+                1 if any(seg in c["path"].lower() for seg in ("/data/", "/constants/", "__init__.py")) else 0,
+                0 if c.get("nearby_test") else 1,
+                c.get("line_count", 0),
+                c["path"],
+            )
         )
 
         starter_empty_reason = None
