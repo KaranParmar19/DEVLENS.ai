@@ -22,6 +22,15 @@ class RepoStatus(str, enum.Enum):
     FAILED   = "failed"     # Indexing failed (check analysis_jobs for details)
     STALE    = "stale"      # New commits detected — needs re-index
 
+    @classmethod
+    def _missing_(cls, value: object):
+        if isinstance(value, str):
+            val_lower = value.lower()
+            for member in cls:
+                if member.value == val_lower or member.name.lower() == val_lower:
+                    return member
+        return None
+
 
 class Repository(Base):
     __tablename__ = "repositories"
