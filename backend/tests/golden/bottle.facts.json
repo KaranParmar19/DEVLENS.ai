@@ -141,7 +141,6 @@
       "dependencies": [],
       "dependencies_count": 0,
       "dependents": [
-        "docs/conf.py",
         "test/__init__.py",
         "test/test_app.py",
         "test/test_auth.py",
@@ -170,17 +169,15 @@
         "test/test_wsgi.py",
         "test/tools.py"
       ],
-      "dependents_count": 28,
+      "dependents_count": 27,
       "id": "bottle.py",
       "is_entry": false,
       "label": "bottle",
       "line_count": 1236,
       "path": "bottle.py",
-      "risk_level": "Medium",
-      "source_dependents": [
-        "docs/conf.py"
-      ],
-      "source_dependents_count": 1,
+      "risk_level": "Core file, imported by tests only",
+      "source_dependents": [],
+      "source_dependents_count": 0,
       "test_dependents": [
         "test/__init__.py",
         "test/test_app.py",
@@ -4017,12 +4014,12 @@
     {
       "file_count": "164",
       "path": "docs",
-      "sample_files": "config, README.txt, api.pot"
+      "sample_files": "_locale/.tx/config, _locale/README.txt, _locale/_pot/api.pot"
     },
     {
       "file_count": "43",
       "path": "test",
-      "sample_files": ".coveragerc, __init__.py, build_python.sh"
+      "sample_files": ".coveragerc, build_python.sh, example_settings.py"
     },
     {
       "file_count": "9",
@@ -4030,6 +4027,7 @@
       "sample_files": ".gitignore, .readthedocs.yaml, AGENTS.md"
     }
   ],
+  "graph_incomplete": false,
   "grouped_env_variables": {},
   "high_risk_files": [
     {
@@ -4038,7 +4036,6 @@
       "dependencies": [],
       "dependencies_count": 0,
       "dependents": [
-        "docs/conf.py",
         "test/__init__.py",
         "test/test_app.py",
         "test/test_auth.py",
@@ -4067,7 +4064,7 @@
         "test/test_wsgi.py",
         "test/tools.py"
       ],
-      "dependents_count": 28,
+      "dependents_count": 27,
       "first_30_lines": "#!/usr/bin/env python\n# -*- coding: utf-8 -*-\n\"\"\"\nBottle is a fast and simple micro-framework for small web applications. It\noffers request dispatching (Routes) with URL parameter support, templates,\na built-in HTTP Server and adapters for many third party WSGI/HTTP-server and\ntemplate engines - all in a single file and with no dependencies other than the\nPython Standard Library.\n\nHomepage and documentation: https://bottlepy.org/\n\nCopyright (c) 2009-2025, Marcel Hellkamp.\nLicense: MIT (see LICENSE for details)\n\"\"\"\n\nimport sys\n\n__author__ = 'Marcel Hellkamp'\n__version__ = '0.14-dev'\n__license__ = 'MIT'\n\n###############################################################################\n# Command-line interface ######################################################\n###############################################################################\n# INFO: Some server adapters need to monkey-patch std-lib modules before they\n# are imported. This is why some of the command-line handling is done here, but\n# the actual call to _main() is at the end of the file.\n\n\n",
       "id": "bottle.py",
       "is_entry": false,
@@ -4075,10 +4072,8 @@
       "line_count": 1236,
       "path": "bottle.py",
       "risk_level": "Core file, imported by tests only",
-      "source_dependents": [
-        "docs/conf.py"
-      ],
-      "source_dependents_count": 1,
+      "source_dependents": [],
+      "source_dependents_count": 0,
       "test_dependents": [
         "test/__init__.py",
         "test/test_app.py",
@@ -4136,8 +4131,8 @@
       "sphinx-intl"
     ],
     "grouped_tech_stack": [],
-    "install_command": "pip install -e .",
-    "install_command_provenance": "common default, not declared in repo",
+    "install_command": "pip install -q -e .[dev,docs]",
+    "install_command_provenance": "Makefile:35 (target venv)",
     "manifest_type": "pyproject.toml",
     "monorepo_packages": [],
     "project_name": "bottle",
@@ -4155,7 +4150,7 @@
   "snapshot_age_days": 18,
   "snapshot_is_stale": true,
   "source_modules_count": 3,
-  "starter_empty_reason": "No low-risk starter modules identified: all core source modules have active dependents or participate in central application flows.",
+  "starter_empty_reason": "0 candidate starter modules matching starter criteria among 3 source modules.",
   "test_modules_count": 43,
   "total_edges": 28,
   "total_modules": 216

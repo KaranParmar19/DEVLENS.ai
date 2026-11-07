@@ -497,7 +497,7 @@ class FactsExtractor:
         best_path: str | None = None
         readme_targets = (
             ("readme.rst", "readme.md", "readme.txt", "readme")
-            if clean_target in ("readme", "readme.md", "readme.rst", "readme.txt")
+            if clean_target == "readme"
             else (clean_target,)
         )
         for target in readme_targets:
@@ -572,7 +572,10 @@ class FactsExtractor:
                     )
                     if m_inst:
                         cmd_str = m_inst.group(1).strip()
-                        if not re.fullmatch(r"pip3?\s+install\s+--upgrade\s+pip", cmd_str):
+                        if not re.fullmatch(
+                            r"pip3?\s+install(?:\s+(?:-q|--quiet|-U|--upgrade))+\s+(?:pip|setuptools|wheel)(?:\s+(?:pip|setuptools|wheel))*",
+                            cmd_str,
+                        ):
                             tgt_note = f" (target {current_target})" if current_target else ""
                             found["install"] = (f"{cd_prefix}{cmd_str}", f"{mk_path}:{idx}{tgt_note}")
 
@@ -1626,9 +1629,19 @@ class FactsExtractor:
             is_rst = filename.lower().endswith(".rst")
             clean_lines = []
             skip_block = False
+            in_md_code = False
 
             for line in content.splitlines():
                 stripped = line.strip()
+
+                if not is_rst and stripped.startswith("```"):
+                    in_md_code = not in_md_code
+                    continue
+                if in_md_code:
+                    continue
+
+                if stripped.startswith(("[![", "<img", "<div", "</div", "<p", "</p", "[!DOCTYPE", "![")):
+                    continue
 
                 if is_rst:
                     if stripped.startswith(".. image::") or stripped.startswith(".. code-block::"):
@@ -1645,7 +1658,7 @@ class FactsExtractor:
                     if len(stripped) >= 3 and all(c in "=-~^\"`#" for c in stripped):
                         continue
                 else:
-                    if stripped.startswith(("[![", "<img", "[!DOCTYPE", "![", "#")):
+                    if stripped.startswith("#"):
                         continue
 
                 clean_lines.append(line)

@@ -1513,7 +1513,7 @@
     {
       "file_count": "2",
       "path": "public",
-      "sample_files": ".gitattributes, encrypt.cjs"
+      "sample_files": "models/.gitattributes, models/encrypt.cjs"
     },
     {
       "file_count": "1",
@@ -1526,6 +1526,7 @@
       "sample_files": "boneData.ts"
     }
   ],
+  "graph_incomplete": false,
   "grouped_env_variables": {},
   "high_risk_files": [],
   "indexed_at": "2026-11-07T14:16:02.998689+00:00",
@@ -1540,6 +1541,7 @@
   },
   "manifest": {
     "build_command": "npm run build",
+    "build_command_provenance": "package.json:8 (scripts.build: vite build)",
     "dev_command": "npm run dev",
     "dev_dependencies": [
       "@eslint/js",
@@ -1567,7 +1569,7 @@
       "three-stdlib"
     ],
     "install_command": "npm install",
-    "install_command_provenance": "common default, not declared in repo",
+    "install_command_provenance": "README.md:35",
     "manifest_type": "package.json",
     "monorepo_packages": [],
     "project_name": "rajesh-portfolio",

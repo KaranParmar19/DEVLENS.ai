@@ -2409,6 +2409,7 @@
       "sample_files": "adminStorage.js, supabaseService.js"
     }
   ],
+  "graph_incomplete": false,
   "grouped_env_variables": {},
   "high_risk_files": [
     {
@@ -2474,6 +2475,7 @@
   },
   "manifest": {
     "build_command": "npm run build",
+    "build_command_provenance": "package.json:8 (scripts.build: vite build)",
     "dev_command": "npm run dev",
     "dev_dependencies": [
       "@eslint/js",
@@ -2497,8 +2499,8 @@
       "react-router-dom",
       "three"
     ],
-    "install_command": "npm install",
-    "install_command_provenance": "common default, not declared in repo",
+    "install_command": "not declared in repo",
+    "install_command_provenance": null,
     "manifest_type": "package.json",
     "monorepo_packages": [],
     "project_name": "new-site",

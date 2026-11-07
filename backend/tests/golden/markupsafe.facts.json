@@ -2,63 +2,30 @@
   "candidate_starters": [
     {
       "complexity": 1,
-      "coupling": 0.0,
+      "coupling": 0.286,
       "dependencies": [],
       "dependencies_count": 0,
-      "dependents": [],
-      "dependents_count": 0,
+      "dependents": [
+        "src/markupsafe/__init__.py",
+        "tests/conftest.py"
+      ],
+      "dependents_count": 2,
       "first_30_lines": "def _escape_inner(s: str, /) -> str:\n    return (\n        s.replace(\"&\", \"&amp;\")\n        .replace(\">\", \"&gt;\")\n        .replace(\"<\", \"&lt;\")\n        .replace(\"'\", \"&#39;\")\n        .replace('\"', \"&#34;\")\n    )",
       "id": "src/markupsafe/_native.py",
       "is_entry": false,
       "label": "_native",
-      "line_count": 9,
+      "line_count": 8,
       "nearby_test": null,
       "path": "src/markupsafe/_native.py",
       "risk_level": "Low",
-      "source_dependents": [],
-      "source_dependents_count": 0,
-      "test_dependents": [],
-      "test_dependents_count": 0
-    },
-    {
-      "complexity": 25,
-      "coupling": 0.0,
-      "dependencies": [],
-      "dependencies_count": 0,
-      "dependents": [],
-      "dependents_count": 0,
-      "first_30_lines": "#include <Python.h>\n\n#define GET_DELTA(inp, inp_end, delta) \\\n\twhile (inp < inp_end) { \\\n\t\tswitch (*inp++) { \\\n\t\tcase '\"': \\\n\t\tcase '\\'': \\\n\t\tcase '&': \\\n\t\t\tdelta += 4; \\\n\t\t\tbreak; \\\n\t\tcase '<': \\\n\t\tcase '>': \\\n\t\t\tdelta += 3; \\\n\t\t\tbreak; \\\n\t\t} \\\n\t}\n\n#define DO_ESCAPE(inp, inp_end, outp) \\\n\t{ \\\n\t\tPy_ssize_t ncopy = 0; \\\n\t\twhile (inp < inp_end) { \\\n\t\t\tswitch (*inp) { \\\n\t\t\tcase '\"': \\\n\t\t\t\tmemcpy(outp, inp-ncopy, sizeof(*outp)*ncopy); \\\n\t\t\t\toutp += ncopy; ncopy = 0; \\\n\t\t\t\t*outp++ = '&'; \\\n\t\t\t\t*outp++ = '#'; \\\n\t\t\t\t*outp++ = '3'; \\\n\t\t\t\t*outp++ = '4'; \\\n\t\t\t\t*outp++ = ';'; \\",
-      "id": "src/markupsafe/_speedups.c",
-      "is_entry": false,
-      "label": "_speedups",
-      "line_count": 201,
-      "nearby_test": null,
-      "path": "src/markupsafe/_speedups.c",
-      "risk_level": "Low",
-      "source_dependents": [],
-      "source_dependents_count": 0,
-      "test_dependents": [],
-      "test_dependents_count": 0
-    },
-    {
-      "complexity": 30,
-      "coupling": 0.0,
-      "dependencies": [],
-      "dependencies_count": 0,
-      "dependents": [],
-      "dependents_count": 0,
-      "first_30_lines": "from __future__ import annotations\n\nimport collections.abc as cabc\nimport string\nimport typing as t\n\ntry:\n    from ._speedups import _escape_inner\nexcept ImportError:\n    from ._native import _escape_inner\n\nif t.TYPE_CHECKING:\n    import typing_extensions as teclass _HasHTML(t.Protocol):\n    def __html__(self, /) -> str: ...class _TPEscape(t.Protocol):\n    def __call__(self, s: t.Any, /) -> Markup: ...def escape(s: t.Any, /) -> Markup:\n    \"\"\"Replace the characters ``&``, ``<``, ``>``, ``'``, and ``\"`` in\n    the string with HTML-safe sequences. Use this if you need to display\n    text that might contain such characters in HTML.\n\n    If the object has an ``__html__`` method, it is called and the\n    return value is assumed to already be safe for HTML.\n\n    :param s: An object to be converted to a string and escaped.\n    :return: A :class:`Markup` string with the escaped text.\n    \"\"\"\n    # If the object is already a plain string, skip __html__ check and string\n    # conversion. This is the most common use case.\n    # Use type(s) instead of s.__class__ because a proxy object may be reporting\n    # the __class__ of the proxied value.\n    if type(s) is str:",
-      "id": "src/markupsafe/__init__.py",
-      "is_entry": false,
-      "label": "__init__",
-      "line_count": 390,
-      "nearby_test": "tests/__init__.py",
-      "path": "src/markupsafe/__init__.py",
-      "risk_level": "Low",
-      "source_dependents": [],
-      "source_dependents_count": 0,
-      "test_dependents": [],
-      "test_dependents_count": 0
+      "source_dependents": [
+        "src/markupsafe/__init__.py"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [
+        "tests/conftest.py"
+      ],
+      "test_dependents_count": 1
     }
   ],
   "commit_sha": "4e111271b1494995708a9e878a10829b5e10c7ba",
@@ -260,7 +227,7 @@
       "id": "bench.py",
       "is_entry": false,
       "label": "bench",
-      "line_count": 31,
+      "line_count": 30,
       "path": "bench.py",
       "risk_level": "Low",
       "source_dependents": [],
@@ -314,7 +281,7 @@
       "id": "docs/conf.py",
       "is_entry": false,
       "label": "conf",
-      "line_count": 55,
+      "line_count": 54,
       "path": "docs/conf.py",
       "risk_level": "Low",
       "source_dependents": [],
@@ -449,7 +416,7 @@
       "test_dependents_count": 0
     },
     "setup.py": {
-      "complexity": 10,
+      "complexity": 6,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -458,7 +425,7 @@
       "id": "setup.py",
       "is_entry": false,
       "label": "setup",
-      "line_count": 83,
+      "line_count": 78,
       "path": "setup.py",
       "risk_level": "Low",
       "source_dependents": [],
@@ -467,40 +434,63 @@
       "test_dependents_count": 0
     },
     "src/markupsafe/__init__.py": {
-      "complexity": 30,
-      "coupling": 0.0,
-      "dependencies": [],
-      "dependencies_count": 0,
-      "dependents": [],
-      "dependents_count": 0,
+      "complexity": 31,
+      "coupling": 1.0,
+      "dependencies": [
+        "src/markupsafe/_native.py"
+      ],
+      "dependencies_count": 1,
+      "dependents": [
+        "tests/conftest.py",
+        "tests/test_escape.py",
+        "tests/test_exception_custom_html.py",
+        "tests/test_ext_init.py",
+        "tests/test_leak.py",
+        "tests/test_markupsafe.py"
+      ],
+      "dependents_count": 6,
       "id": "src/markupsafe/__init__.py",
       "is_entry": false,
       "label": "__init__",
-      "line_count": 390,
+      "line_count": 365,
       "path": "src/markupsafe/__init__.py",
-      "risk_level": "Low",
+      "risk_level": "Core file, imported by tests only",
       "source_dependents": [],
       "source_dependents_count": 0,
-      "test_dependents": [],
-      "test_dependents_count": 0
+      "test_dependents": [
+        "tests/conftest.py",
+        "tests/test_escape.py",
+        "tests/test_exception_custom_html.py",
+        "tests/test_ext_init.py",
+        "tests/test_leak.py",
+        "tests/test_markupsafe.py"
+      ],
+      "test_dependents_count": 6
     },
     "src/markupsafe/_native.py": {
       "complexity": 1,
-      "coupling": 0.0,
+      "coupling": 0.286,
       "dependencies": [],
       "dependencies_count": 0,
-      "dependents": [],
-      "dependents_count": 0,
+      "dependents": [
+        "src/markupsafe/__init__.py",
+        "tests/conftest.py"
+      ],
+      "dependents_count": 2,
       "id": "src/markupsafe/_native.py",
       "is_entry": false,
       "label": "_native",
-      "line_count": 9,
+      "line_count": 8,
       "path": "src/markupsafe/_native.py",
       "risk_level": "Low",
-      "source_dependents": [],
-      "source_dependents_count": 0,
-      "test_dependents": [],
-      "test_dependents_count": 0
+      "source_dependents": [
+        "src/markupsafe/__init__.py"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [
+        "tests/conftest.py"
+      ],
+      "test_dependents_count": 1
     },
     "src/markupsafe/_speedups.c": {
       "complexity": 25,
@@ -530,7 +520,7 @@
       "id": "src/markupsafe/_speedups.pyi",
       "is_entry": false,
       "label": "_speedups",
-      "line_count": 2,
+      "line_count": 1,
       "path": "src/markupsafe/_speedups.pyi",
       "risk_level": "Low",
       "source_dependents": [],
@@ -575,16 +565,19 @@
       "test_dependents_count": 0
     },
     "tests/conftest.py": {
-      "complexity": 3,
-      "coupling": 0.0,
-      "dependencies": [],
-      "dependencies_count": 0,
+      "complexity": 2,
+      "coupling": 0.286,
+      "dependencies": [
+        "src/markupsafe/__init__.py",
+        "src/markupsafe/_native.py"
+      ],
+      "dependencies_count": 2,
       "dependents": [],
       "dependents_count": 0,
       "id": "tests/conftest.py",
       "is_entry": false,
       "label": "conftest",
-      "line_count": 40,
+      "line_count": 37,
       "path": "tests/conftest.py",
       "risk_level": "Low",
       "source_dependents": [],
@@ -593,16 +586,18 @@
       "test_dependents_count": 0
     },
     "tests/test_escape.py": {
-      "complexity": 1,
-      "coupling": 0.0,
-      "dependencies": [],
-      "dependencies_count": 0,
+      "complexity": 2,
+      "coupling": 0.143,
+      "dependencies": [
+        "src/markupsafe/__init__.py"
+      ],
+      "dependencies_count": 1,
       "dependents": [],
       "dependents_count": 0,
       "id": "tests/test_escape.py",
       "is_entry": false,
       "label": "test_escape",
-      "line_count": 69,
+      "line_count": 55,
       "path": "tests/test_escape.py",
       "risk_level": "Low",
       "source_dependents": [],
@@ -611,16 +606,18 @@
       "test_dependents_count": 0
     },
     "tests/test_exception_custom_html.py": {
-      "complexity": 2,
-      "coupling": 0.0,
-      "dependencies": [],
-      "dependencies_count": 0,
+      "complexity": 1,
+      "coupling": 0.143,
+      "dependencies": [
+        "src/markupsafe/__init__.py"
+      ],
+      "dependencies_count": 1,
       "dependents": [],
       "dependents_count": 0,
       "id": "tests/test_exception_custom_html.py",
       "is_entry": false,
       "label": "test_exception_custom_ht",
-      "line_count": 24,
+      "line_count": 17,
       "path": "tests/test_exception_custom_html.py",
       "risk_level": "Low",
       "source_dependents": [],
@@ -630,15 +627,17 @@
     },
     "tests/test_ext_init.py": {
       "complexity": 5,
-      "coupling": 0.0,
-      "dependencies": [],
-      "dependencies_count": 0,
+      "coupling": 0.143,
+      "dependencies": [
+        "src/markupsafe/__init__.py"
+      ],
+      "dependencies_count": 1,
       "dependents": [],
       "dependents_count": 0,
       "id": "tests/test_ext_init.py",
       "is_entry": false,
       "label": "test_ext_init",
-      "line_count": 29,
+      "line_count": 27,
       "path": "tests/test_ext_init.py",
       "risk_level": "Low",
       "source_dependents": [],
@@ -647,16 +646,18 @@
       "test_dependents_count": 0
     },
     "tests/test_leak.py": {
-      "complexity": 3,
-      "coupling": 0.0,
-      "dependencies": [],
-      "dependencies_count": 0,
+      "complexity": 4,
+      "coupling": 0.143,
+      "dependencies": [
+        "src/markupsafe/__init__.py"
+      ],
+      "dependencies_count": 1,
       "dependents": [],
       "dependents_count": 0,
       "id": "tests/test_leak.py",
       "is_entry": false,
       "label": "test_leak",
-      "line_count": 29,
+      "line_count": 27,
       "path": "tests/test_leak.py",
       "risk_level": "Low",
       "source_dependents": [],
@@ -665,16 +666,18 @@
       "test_dependents_count": 0
     },
     "tests/test_markupsafe.py": {
-      "complexity": 4,
-      "coupling": 0.0,
-      "dependencies": [],
-      "dependencies_count": 0,
+      "complexity": 2,
+      "coupling": 0.143,
+      "dependencies": [
+        "src/markupsafe/__init__.py"
+      ],
+      "dependencies_count": 1,
       "dependents": [],
       "dependents_count": 0,
       "id": "tests/test_markupsafe.py",
       "is_entry": false,
       "label": "test_markupsafe",
-      "line_count": 209,
+      "line_count": 158,
       "path": "tests/test_markupsafe.py",
       "risk_level": "Low",
       "source_dependents": [],
@@ -715,12 +718,12 @@
     {
       "file_count": "7",
       "path": "tests",
-      "sample_files": "__init__.py, conftest.py, test_escape.py"
+      "sample_files": "conftest.py, test_escape.py, test_exception_custom_html.py"
     },
     {
       "file_count": "5",
       "path": "src/markupsafe",
-      "sample_files": "__init__.py, _native.py, _speedups.c"
+      "sample_files": "_native.py, _speedups.c, _speedups.pyi"
     },
     {
       "file_count": "2",
@@ -728,8 +731,45 @@
       "sample_files": "devcontainer.json, on-create-command.sh"
     }
   ],
+  "graph_incomplete": false,
   "grouped_env_variables": {},
-  "high_risk_files": [],
+  "high_risk_files": [
+    {
+      "complexity": 31,
+      "coupling": 1.0,
+      "dependencies": [
+        "src/markupsafe/_native.py"
+      ],
+      "dependencies_count": 1,
+      "dependents": [
+        "tests/conftest.py",
+        "tests/test_escape.py",
+        "tests/test_exception_custom_html.py",
+        "tests/test_ext_init.py",
+        "tests/test_leak.py",
+        "tests/test_markupsafe.py"
+      ],
+      "dependents_count": 6,
+      "first_30_lines": "from __future__ import annotations\n\nimport collections.abc as cabc\nimport string\nimport typing as t\n\ntry:\n    from ._speedups import _escape_inner\nexcept ImportError:\n    from ._native import _escape_inner\n\nif t.TYPE_CHECKING:\n    import typing_extensions as teclass _HasHTML(t.Protocol):\n    def __html__(self, /) -> str: ...class _TPEscape(t.Protocol):\n    def __call__(self, s: t.Any, /) -> Markup: ...def escape(s: t.Any, /) -> Markup:\n    \"\"\"Replace the characters ``&``, ``<``, ``>``, ``'``, and ``\"`` in\n    the string with HTML-safe sequences. Use this if you need to display\n    text that might contain such characters in HTML.\n\n    If the object has an ``__html__`` method, it is called and the\n    return value is assumed to already be safe for HTML.\n\n    :param s: An object to be converted to a string and escaped.\n    :return: A :class:`Markup` string with the escaped text.\n    \"\"\"\n    # If the object is already a plain string, skip __html__ check and string\n    # conversion. This is the most common use case.\n    # Use type(s) instead of s.__class__ because a proxy object may be reporting\n    # the __class__ of the proxied value.\n    if type(s) is str:",
+      "id": "src/markupsafe/__init__.py",
+      "is_entry": false,
+      "label": "__init__",
+      "line_count": 365,
+      "path": "src/markupsafe/__init__.py",
+      "risk_level": "Core file, imported by tests only",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [
+        "tests/conftest.py",
+        "tests/test_escape.py",
+        "tests/test_exception_custom_html.py",
+        "tests/test_ext_init.py",
+        "tests/test_leak.py",
+        "tests/test_markupsafe.py"
+      ],
+      "test_dependents_count": 6
+    }
+  ],
   "indexed_at": "2026-11-07T12:19:44.534665+00:00",
   "language_breakdown": {
     "C": 1,
@@ -748,8 +788,8 @@
     "dev_command": null,
     "dev_dependencies": [],
     "grouped_tech_stack": [],
-    "install_command": "pip install -e .",
-    "install_command_provenance": "common default, not declared in repo",
+    "install_command": "uv sync",
+    "install_command_provenance": ".devcontainer/on-create-command.sh:13",
     "manifest_type": "pyproject.toml",
     "monorepo_packages": [],
     "project_name": "MarkupSafe",
@@ -762,13 +802,13 @@
     "test_command_provenance": "pyproject.toml:66 ([tool.pytest], testpaths: tests)",
     "test_command_type": "declared (pyproject.toml [tool.pytest])"
   },
-  "readme_summary": "<div align=\"center\"><img src=\"https://raw.githubusercontent.com/pallets/markupsafe/refs/heads/stable/docs/_static/markupsafe-name.svg\" alt=\"\" height=\"150\"></div>\n\nMarkupSafe implements a text object that escapes characters so it is safe to use in HTML and XML. Characters that have special meanings are replaced so that they display as the actual characters. This mitigates injection attacks, meaning untrusted user input can safely be displayed on a page.",
+  "readme_summary": "MarkupSafe implements a text object that escapes characters so it is safe to use in HTML and XML. Characters that have special meanings are replaced so that they display as the actual characters. This mitigates injection attacks, meaning untrusted user input can safely be displayed on a page.\n\n``pycon >>> from markupsafe import Markup, escape",
   "repo_full_name": "pallets/markupsafe",
   "snapshot_age_days": 0,
   "snapshot_is_stale": false,
   "source_modules_count": 3,
   "starter_empty_reason": null,
   "test_modules_count": 7,
-  "total_edges": 0,
+  "total_edges": 8,
   "total_modules": 35
 }

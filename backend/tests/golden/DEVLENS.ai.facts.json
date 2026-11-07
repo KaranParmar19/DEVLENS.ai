@@ -6,8 +6,8 @@
       "dependencies": [],
       "dependencies_count": 0,
       "dependents": [
-        "src/components/studio/export-utils.test.ts",
-        "src/components/studio/studio-workspace.tsx"
+        "src/components/studio/studio-workspace.tsx",
+        "src/components/studio/export-utils.test.ts"
       ],
       "dependents_count": 2,
       "first_30_lines": "/**\n * DevLens AI \u2014 Studio Diagram & Graph Export Helpers\n */\n\nexport function generateMermaidDiagram(edges: [string, string][], cap = 80): string {\n  const lines = [\"graph TD\"];\n  const slice = edges.slice(0, cap);\n  for (const [u, v] of slice) {\n    const uClean = u.replace(/[^a-zA-Z0-9]/g, \"_\");\n    const vClean = v.replace(/[^a-zA-Z0-9]/g, \"_\");\n    lines.push(`  ${uClean} --> ${vClean}`);\n  }\n  return lines.join(\"\\n\");\n}\n\nexport function generatePlantUmlDiagram(edges: [string, string][], repoLabel = \"Repository\", cap = 80): string {\n  const lines = [\"@startuml\", `title ${repoLabel} Architecture`];\n  const slice = edges.slice(0, cap);\n  for (const [u, v] of slice) {\n    const uClean = u.split(\"/\").pop() || u;\n    const vClean = v.split(\"/\").pop() || v;\n    lines.push(`  [${uClean}] --> [${vClean}]`);\n  }\n  lines.push(\"@enduml\");\n  return lines.join(\"\\n\");\n}\n\nexport function generateJsonExport(graphData: unknown): string {\n  return JSON.stringify(graphData ?? {}, null, 2);\n}",
@@ -2246,8 +2246,8 @@
       "dependencies": [],
       "dependencies_count": 0,
       "dependents": [
-        "src/components/studio/export-utils.test.ts",
-        "src/components/studio/studio-workspace.tsx"
+        "src/components/studio/studio-workspace.tsx",
+        "src/components/studio/export-utils.test.ts"
       ],
       "dependents_count": 2,
       "id": "src/components/studio/export-utils.ts",
@@ -4111,7 +4111,7 @@
     {
       "file_count": "82",
       "path": "src/components",
-      "sample_files": "command-palette.tsx, home.tsx, how-it-works-page.tsx"
+      "sample_files": "command-palette.tsx, mf/home.tsx, mf/how-it-works-page.tsx"
     },
     {
       "file_count": "72",
@@ -4149,6 +4149,7 @@
       "sample_files": "__root.tsx, dashboard.tsx, features.tsx"
     }
   ],
+  "graph_incomplete": false,
   "grouped_env_variables": {
     "API & External Services": [
       {
@@ -4336,6 +4337,7 @@
   },
   "manifest": {
     "build_command": "npm run build",
+    "build_command_provenance": "package.json:8 (scripts.build: vite build)",
     "dev_command": "npm run dev",
     "dev_dependencies": [
       "@eslint/js",
@@ -4371,13 +4373,13 @@
       "openai"
     ],
     "install_command": "npm install",
-    "install_command_provenance": "common default, not declared in repo",
+    "install_command_provenance": "README.md:195",
     "manifest_type": "package.json",
     "monorepo_packages": [
       {
         "folder": "root",
         "install_command": "npm install",
-        "install_provenance": "common default, not declared in repo",
+        "install_provenance": "README.md:195",
         "manifest_type": "package.json",
         "run_command": "npm run dev",
         "run_provenance": "package.json:7 (scripts.dev: vite dev)",
@@ -4387,23 +4389,23 @@
       },
       {
         "folder": "backend",
-        "install_command": "pip install -r backend/requirements.txt",
-        "install_provenance": "common default, not declared in repo",
+        "install_command": "pip install -r requirements.txt",
+        "install_provenance": "README.md:215",
         "manifest_type": "requirements.txt",
-        "run_command": "uvicorn app.main:app --reload",
-        "run_provenance": "common default, not declared in repo",
-        "test_command": "pytest backend",
+        "run_command": "uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload",
+        "run_provenance": "backend/Dockerfile:41 (CMD)",
+        "test_command": "pytest tests/ -v",
         "test_count": 11,
-        "test_provenance": "common default, not declared in repo"
+        "test_provenance": "README.md:360"
       },
       {
         "folder": "launch-video",
-        "install_command": "cd launch-video && npm install",
-        "install_provenance": "common default, not declared in repo",
+        "install_command": "not declared in repo",
+        "install_provenance": null,
         "manifest_type": "package.json",
         "run_command": "cd launch-video && npm run dev",
         "run_provenance": "launch-video/package.json:6 (scripts.dev: npx --yes hyperframes@0.9.9 preview)",
-        "test_command": null,
+        "test_command": "no tests found",
         "test_count": 0,
         "test_provenance": null
       }

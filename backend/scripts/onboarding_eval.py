@@ -44,6 +44,13 @@ BANNED_WORDS = [
 PLACEHOLDER_STRINGS = [
     "application run command",
     "entry module",
+    "common default",
+    "Application component directory",
+    "Central junction module",
+    "safe, self-contained first PR",
+    "without risk of breaking other modules",
+    "isolated leaf",
+    "legacy-fallback-",
 ]
 
 BANNED_FIRST_TASK_TITLES = [
@@ -126,15 +133,43 @@ async def evaluate_repo(db, repo_full_name: str) -> dict[str, Any]:
 
     check_commands = True
     command_errors = []
-    if manifest_install and manifest_install not in doc_md:
+    if manifest_install and manifest_install != "not declared in repo" and manifest_install not in doc_md:
         check_commands = False
         command_errors.append(f"install_command '{manifest_install}' missing from doc")
-    if manifest_test and manifest_test != "no tests found" and manifest_test not in doc_md:
+    if manifest_test and manifest_test not in ("no tests found", "not declared in repo") and manifest_test not in doc_md:
         check_commands = False
         command_errors.append(f"test_command '{manifest_test}' missing from doc")
     if facts.get("test_modules_count", 0) == 0 and "no tests found" not in doc_md:
         check_commands = False
         command_errors.append("0 test modules but 'no tests found' missing from doc")
+
+    # Verify every declared command has file:line provenance
+    if not manifest.get("monorepo_packages"):
+        for cmd_key, prov_key, sentinel_vals in (
+            ("install_command", "install_command_provenance", ("", None, "not declared in repo")),
+            ("run_command", "run_command_provenance", ("", None, "no run command declared", "not declared in repo")),
+            ("test_command", "test_command_provenance", ("", None, "no tests found", "not declared in repo")),
+        ):
+            c_val = manifest.get(cmd_key)
+            p_val = manifest.get(prov_key)
+            if c_val not in sentinel_vals:
+                if not p_val or ":" not in str(p_val) or "common default" in str(p_val).lower():
+                    check_commands = False
+                    command_errors.append(f"{cmd_key} '{c_val}' lacks file:line provenance (got '{p_val}')")
+    else:
+        for pkg in manifest["monorepo_packages"]:
+            fld = pkg.get("folder")
+            for cmd_key, prov_key, sentinel_vals in (
+                ("install_command", "install_provenance", ("", None, "not declared in repo")),
+                ("run_command", "run_provenance", ("", None, "no run command declared", "not declared in repo")),
+                ("test_command", "test_provenance", ("", None, "no tests found", "not declared in repo")),
+            ):
+                c_val = pkg.get(cmd_key)
+                p_val = pkg.get(prov_key)
+                if c_val not in sentinel_vals:
+                    if not p_val or ":" not in str(p_val) or "common default" in str(p_val).lower():
+                        check_commands = False
+                        command_errors.append(f"monorepo {fld} {cmd_key} '{c_val}' lacks file:line provenance (got '{p_val}')")
 
     # Quick Start vs first_task command equality
     qs_test = qs_doc.get("test_command") or ""
@@ -344,6 +379,15 @@ async def evaluate_repo(db, repo_full_name: str) -> dict[str, Any]:
                 expected_errors.append(f"expected entry_point '{exp['entry_point']}' not in {ep_paths}")
     else:
         expected_errors.append(f"Missing {expected_path}")
+
+    # Embedding provenance invariant check
+    emb_model = getattr(repo, "embedding_model", None)
+    search_mode = (repo.graph_cache or {}).get("meta", {}).get("search_mode")
+    if emb_model and str(emb_model).startswith("legacy-fallback"):
+        invariant_errors.append(f"Repository has legacy random fallback embedding_model: {emb_model}")
+    expected_mode = "semantic" if emb_model else "keyword"
+    if search_mode != expected_mode:
+        invariant_errors.append(f"graph_cache.meta.search_mode '{search_mode}' != expected '{expected_mode}' for embedding_model={emb_model}")
 
     invariant_errors.extend(expected_errors)
     check_invariants = (len(invariant_errors) == 0)

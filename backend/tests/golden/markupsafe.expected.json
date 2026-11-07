@@ -1,7 +1,7 @@
 {
   "repo_full_name": "pallets/markupsafe",
   "manifest_type": "pyproject.toml",
-  "install_command": "pip install -e .",
+  "install_command": "uv sync",
   "run_command": "no run command declared",
   "test_command": "pytest",
   "has_tests": true,

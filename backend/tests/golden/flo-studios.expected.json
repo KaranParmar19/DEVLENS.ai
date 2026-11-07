@@ -1,7 +1,7 @@
 {
   "repo_full_name": "patelhashilkumar/flo-studios",
   "manifest_type": "package.json",
-  "install_command": "npm install",
+  "install_command": "not declared in repo",
   "run_command": "npm run dev",
   "test_command": "npm test",
   "has_tests": true,

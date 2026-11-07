@@ -1,7 +1,7 @@
 {
   "repo_full_name": "bottlepy/bottle",
   "manifest_type": "pyproject.toml",
-  "install_command": "pip install -e .",
+  "install_command": "pip install -q -e .[dev,docs]",
   "run_command": "no run command declared",
   "test_command": "make test",
   "has_tests": true,
