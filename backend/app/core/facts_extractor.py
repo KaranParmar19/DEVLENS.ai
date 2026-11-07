@@ -83,9 +83,12 @@ GENERATED_PATTERNS = (
 
 
 def is_test_file(path: str) -> bool:
-    """Check if a file path is a test file or in a test directory."""
+    """Check if a file path is a test file, test helper, or in a test directory."""
     p = path.lower().replace("\\", "/")
-    if p.startswith("tests/") or p.startswith("test/") or "/tests/" in p or "/test/" in p:
+    if p.startswith("tests/") or p.startswith("test/") or "/tests/" in p or "/test/" in p or "/__tests__/" in p:
+        return True
+    name = PurePosixPath(p).name
+    if name in ("tools.py", "conftest.py", "setup_test.py", "helpers.py", "test_utils.py", "test_helper.py"):
         return True
     return any(pat in p for pat in TEST_PATTERNS)
 
@@ -396,11 +399,14 @@ class FactsExtractor:
 
             if m["is_entry"]:
                 continue
-            # Dead code check: isolated from the rest of the graph
-            if m["dependents_count"] == 0 and m["dependencies_count"] == 0:
+            # Exclude test helpers or files in test directories
+            if is_test_file(path) or any(part in ("test", "tests", "__tests__", "testing", "fixtures") for part in PurePosixPath(p_lower).parts):
                 continue
-            # Starter tasks should have 0 or at most 1 source dependent (safe Day 1 PR)
-            if m["source_dependents_count"] > 1:
+            # Exclude 0-dependent non-entry files (must have active dependents in the codebase)
+            if m["dependents_count"] == 0 or m["source_dependents_count"] == 0:
+                continue
+            # Starter tasks should have exactly 1 source dependent (safe Day 1 PR)
+            if m["source_dependents_count"] != 1:
                 continue
             if m["risk_level"] != "Low":
                 continue
