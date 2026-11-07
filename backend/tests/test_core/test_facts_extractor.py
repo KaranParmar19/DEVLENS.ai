@@ -924,3 +924,44 @@ def test_manifest_parse_failure_handling():
         assert manifest_py["parse_error"] == "could not read pyproject.toml"
         assert manifest_py["manifest_type"] == "pyproject.toml"
 
+
+def test_verified_purpose_rules_and_evidence_quote():
+    from app.agent.devlens_agent import _extract_purpose_from_snippet
+
+    # 1. Snippet starting with code line (e.g. "return <Scene />;") without docstring/comment or quote
+    code_snippet = "function Hero3D() {\n  return <Scene />;\n}"
+    assert _extract_purpose_from_snippet(code_snippet) == "purpose not verified"
+
+    # 2. Snippet with trailing code punctuation in object property
+    obj_snippet = "export const getRouter = () => {\n  const router = createRouter({\n    context: { queryClient },\n  });\n};"
+    assert _extract_purpose_from_snippet(obj_snippet) == "purpose not verified"
+
+    # 3. Snippet starting with a module docstring -> extracts first sentence
+    doc_snippet = '"""FastAPI application entry point for DevLens AI. Initializes routes and middleware."""\nfrom fastapi import FastAPI\n'
+    assert _extract_purpose_from_snippet(doc_snippet) == "FastAPI application entry point for DevLens AI."
+
+    # 4. Snippet starting with a leading comment -> extracts first sentence
+    comment_snippet = "// Utility helpers for formatting timestamps across UI views.\nexport function formatTime(ms: number) { return ms; }"
+    assert _extract_purpose_from_snippet(comment_snippet) == "Utility helpers for formatting timestamps across UI views."
+
+    # 5. Model provides an exact substring evidence_quote and valid prose purpose
+    assert (
+        _extract_purpose_from_snippet(
+            obj_snippet,
+            model_purpose="Creates and configures the application router instance.",
+            evidence_quote="const router = createRouter({",
+        )
+        == "Creates and configures the application router instance."
+    )
+
+    # 6. Model provides an evidence_quote NOT in the snippet -> rejected
+    assert (
+        _extract_purpose_from_snippet(
+            obj_snippet,
+            model_purpose="Creates and configures the application router instance.",
+            evidence_quote="nonexistent quote not in snippet",
+        )
+        == "purpose not verified"
+    )
+
+

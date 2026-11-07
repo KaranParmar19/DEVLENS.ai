@@ -44,6 +44,7 @@ class StarterTaskItem(BaseModel):
     source_dependents_count: int = Field(default=0, description="Downstream source dependents")
     nearby_test: str | None = Field(default=None, description="Path to associated test file")
     verified_purpose: str = Field(default="purpose not verified", description="Purpose strictly verified from code snippet, or 'purpose not verified'")
+    evidence_quote: str | None = Field(default=None, description="Exact substring quote from the file's first 30 lines snippet proving its purpose")
 
 
 class FirstTaskSection(BaseModel):

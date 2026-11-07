@@ -87,7 +87,7 @@ Your goal is to explain the system architecture, quick start commands, directory
 CRITICAL GROUNDING RULES (NON-NEGOTIABLE):
 - Ground every statement strictly in the VERIFIED FACTS block and CODE CONTEXT CHUNKS below.
 - Do NOT add numbers, percentages, metrics, or file paths that do not appear in VERIFIED FACTS.
-- For candidate starter files: describe their purpose ONLY from the provided first 30 lines code snippet in VERIFIED FACTS. If the snippet does not show the purpose, or no snippet is present, you MUST write "purpose not verified". You must NEVER guess or infer a file's purpose from its filename or path.
+- For candidate starter files: purpose is verified ONLY if the snippet starts with a docstring or leading comment (use its first sentence), OR you provide an evidence_quote that is an exact verbatim substring of the snippet along with a plain prose verified_purpose. Otherwise you MUST write "purpose not verified". You must NEVER guess or infer a file's purpose from its filename or path, and never output a raw code line as verified_purpose.
 - Risk levels and dependents: an entry file with 0 dependents must NOT be labeled High risk. Use the exact risk level and dependents given in VERIFIED FACTS. Count test importers separately from source importers.
 - Every file reference must use double brackets, e.g. [[path/to/file.ts]].
 - Audience is a beginner in their first month of programming. Explain terms clearly and simply.
@@ -148,7 +148,8 @@ REQUIRED JSON SCHEMA:
         "line_count": 25,
         "source_dependents_count": 0,
         "nearby_test": "test path or null",
-        "verified_purpose": "Purpose strictly verified from snippet, or 'purpose not verified'"
+        "verified_purpose": "Single prose sentence strictly verified from snippet, or 'purpose not verified'",
+        "evidence_quote": "Exact verbatim substring from the file's first 30 lines snippet proving its purpose, or null"
       }}
     ],
     "rationale": "Why these files are safe day-one PRs",

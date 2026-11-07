@@ -1444,19 +1444,26 @@ def build_deterministic_fallback_doc(facts: dict[str, Any]) -> str:
     repo_name = facts.get("repo_full_name", "Repository")
 
     entry_lines = "\n".join(
-        f"- `[[{ep['path']}]]`: Entry point ({ep['dependents_count']} downstream dependents, {ep['dependencies_count']} dependencies)"
+        f"- `[[{ep['path']}]]`: Entry point ("
+        f"{ep['dependents_count']} {'downstream dependent' if ep['dependents_count'] == 1 else 'downstream dependents'}, "
+        f"{ep['dependencies_count']} {'dependency' if ep['dependencies_count'] == 1 else 'dependencies'})"
         for ep in facts.get("entry_points", [])
     ) or "- No explicit entry point declared."
 
     high_risk_lines = "\n".join(
-        f"- `[[{hr['path']}]]` (Risk: High, {hr['dependents_count']} direct dependents, coupling: {hr['coupling']:.2f})\n"
-        f"  Modifying public signatures affects {hr['dependents_count']} dependent modules. Verify all dependents before merging changes."
+        f"- `[[{hr['path']}]]` (Risk: {hr.get('risk_level', 'High')}, "
+        f"{hr['dependents_count']} {'direct dependent' if hr['dependents_count'] == 1 else 'direct dependents'}, "
+        f"coupling: {hr['coupling']:.2f})\n"
+        f"  Modifying public signatures affects "
+        f"{hr['dependents_count']} {'dependent module' if hr['dependents_count'] == 1 else 'dependent modules'}. "
+        f"Verify all dependents before merging changes."
         for hr in facts.get("high_risk_files", [])
     ) or "- No single-point high-risk modules identified."
 
     if facts.get("candidate_starters"):
         starter_lines = "\n".join(
-            f"- `[[{cs['path']}]]` ({cs['line_count']} lines, {cs['dependents_count']} downstream dependents)\n"
+            f"- `[[{cs['path']}]]` ({cs['line_count']} lines, "
+            f"{cs['dependents_count']} {'downstream dependent' if cs['dependents_count'] == 1 else 'downstream dependents'})\n"
             f"  Safe candidate module with low coupling."
             + (f" Verified test: `[[{cs['nearby_test']}]]`." if cs.get("nearby_test") else " No dedicated test file detected.")
             for cs in facts.get("candidate_starters", [])

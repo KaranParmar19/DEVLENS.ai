@@ -26,18 +26,156 @@ logger = structlog.get_logger(__name__)
 settings = get_settings()
 
 
-def _extract_purpose_from_snippet(snippet: str | None) -> str:
-    """Extract a verified single sentence from code docstrings/comments, or return 'purpose not verified'."""
+def _is_valid_prose_purpose(text: str | None) -> bool:
+    """Verify that a candidate purpose string is clean prose and not a code line."""
+    if not text or not text.strip():
+        return False
+    s = text.strip()
+    if s.lower() == "purpose not verified":
+        return False
+    core = s.rstrip(".")
+    if len(core) < 12:
+        return False
+    if not core[0].isalpha():
+        return False
+    # Reject trailing code punctuation
+    if core.endswith(("{", "}", ",", "(", ")", ";", "[", "]", ":", "=")):
+        return False
+    # Reject code syntax patterns
+    code_patterns = (
+        "return <", "return (", "=>", "export const", "export default", "export function",
+        "import ", "from '", 'from "', "const ", "let ", "var ", "def ", "class ",
+        "function(", "function ", "interface ", "type ", "//", "/*", "*/",
+    )
+    s_lower = core.lower()
+    if any(pat in s_lower for pat in code_patterns):
+        return False
+    if s_lower.startswith(("eslint-", "@ts-", "todo", "fixme", "noqa", "type: ignore", "coding:", "-*-")):
+        return False
+    # Require at least 3 alphabetic words
+    words = re.findall(r"[A-Za-z]{2,}", core)
+    if len(words) < 3:
+        return False
+    return True
+
+
+def _first_sentence(text: str) -> str:
+    """Extract the first sentence from prose text and ensure it ends with a period."""
+    collapsed = " ".join(text.split()).strip()
+    sentence = re.split(r"\.(?:\s+|$)", collapsed)[0].strip()
+    sentence = sentence.rstrip(".")
+    return f"{sentence}." if sentence else ""
+
+
+def _extract_leading_comment_or_docstring(snippet: str) -> str | None:
+    """
+    If snippet starts with a module docstring or leading comment (ignoring blank lines,
+    shebang, or encoding declarations), extract its first sentence. Otherwise return None.
+    """
+    raw_lines = [l.strip() for l in snippet.splitlines() if l.strip()]
+    idx = 0
+    while idx < len(raw_lines):
+        line = raw_lines[idx]
+        if line.startswith("#!") or re.match(r"^#.*coding[:=]", line):
+            idx += 1
+            continue
+        break
+
+    if idx >= len(raw_lines):
+        return None
+
+    first = raw_lines[idx]
+
+    # Case 1: Leading docstring or block comment (""", ''', /*, /**)
+    for delim in ('"""', "'''", "/**", "/*"):
+        if first.startswith(delim):
+            closing = "*/" if delim.startswith("/*") else delim
+            after_open = first[len(delim):].strip()
+            collected: list[str] = []
+            if closing in after_open:
+                before_close = after_open.split(closing, 1)[0].strip().lstrip("*").strip()
+                if before_close:
+                    collected.append(before_close)
+            else:
+                if after_open.lstrip("*").strip():
+                    collected.append(after_open.lstrip("*").strip())
+                for sub_line in raw_lines[idx + 1 : idx + 15]:
+                    if closing in sub_line:
+                        before_close = sub_line.split(closing, 1)[0].strip().lstrip("*").strip()
+                        if before_close:
+                            collected.append(before_close)
+                        break
+                    cleaned_sub = sub_line.lstrip("*").strip()
+                    if cleaned_sub:
+                        collected.append(cleaned_sub)
+            joined = " ".join(collected).strip()
+            if joined:
+                cand = _first_sentence(joined)
+                if _is_valid_prose_purpose(cand):
+                    return cand
+            return None
+
+    # Case 2: Leading single-line comment (# or //)
+    if first.startswith(("//", "#")):
+        collected_comments: list[str] = []
+        for sub_line in raw_lines[idx : idx + 10]:
+            if sub_line.startswith("//"):
+                c_text = re.sub(r"^/{2,}\s*", "", sub_line).strip()
+            elif sub_line.startswith("#"):
+                c_text = re.sub(r"^#+\s*", "", sub_line).strip()
+            else:
+                break
+            if not c_text:
+                if collected_comments:
+                    break
+                continue
+            if c_text.lower().startswith(("eslint-", "@ts-", "noqa", "type: ignore", "ruff:", "fmt:")):
+                continue
+            collected_comments.append(c_text)
+        joined = " ".join(collected_comments).strip()
+        if joined:
+            cand = _first_sentence(joined)
+            if _is_valid_prose_purpose(cand):
+                return cand
+        return None
+
+    return None
+
+
+def _extract_purpose_from_snippet(
+    snippet: str | None,
+    model_purpose: str | None = None,
+    evidence_quote: str | None = None,
+) -> str:
+    """
+    Purpose is verified ONLY if:
+    1. The snippet starts with a docstring or leading comment (use its first sentence), OR
+    2. The model gives an evidence_quote that is an exact substring of the snippet
+       (and a valid prose sentence).
+    Otherwise return 'purpose not verified'.
+    """
     if not snippet or not snippet.strip():
         return "purpose not verified"
-    lines = [l.strip() for l in snippet.splitlines() if l.strip()]
-    for line in lines[:15]:
-        clean = re.sub(r"^(/{2,}|#+|/\*+|\*+|\"\"\"|\'\'\')\s*", "", line).strip()
-        clean = clean.rstrip("*/\"'")
-        if clean and len(clean) >= 15 and not clean.startswith(("@", "import ", "from ", "export ", "const ", "def ", "class ", "<!", "type ", "interface ")):
-            sentence = re.split(r"\.\s+", clean)[0].strip()
-            if len(sentence) >= 15 and "todo" not in sentence.lower():
-                return sentence + ("." if not sentence.endswith(".") else "")
+
+    # Rule 1: Snippet starts with a docstring or leading comment
+    leading = _extract_leading_comment_or_docstring(snippet)
+    if leading:
+        return leading
+
+    # Rule 2: Model provides an evidence_quote that is an exact substring of the snippet
+    if evidence_quote and evidence_quote.strip():
+        quote = evidence_quote.strip()
+        if len(quote) >= 5 and quote in snippet:
+            if model_purpose and model_purpose.strip():
+                cand = _first_sentence(model_purpose.strip())
+                if _is_valid_prose_purpose(cand):
+                    return cand
+            # Fallback if evidence_quote itself is a comment/prose sentence inside the snippet
+            clean_q = re.sub(r"^(/{2,}|#+|/\*+|\*+|\"\"\"|\'\'\')\s*", "", quote).rstrip("*/\"' ").strip()
+            cand_q = _first_sentence(clean_q)
+            if _is_valid_prose_purpose(cand_q):
+                return cand_q
+
     return "purpose not verified"
 
 
@@ -564,8 +702,9 @@ class DevLensAgent:
                 lines.append("\nSuggested starter files:")
                 for sf in ft.suggested_files:
                     test_str = f" | Test: [[{sf.nearby_test}]]" if sf.nearby_test else " | No dedicated test file detected"
+                    dep_word = "1 source dependent" if sf.source_dependents_count == 1 else f"{sf.source_dependents_count} source dependents"
                     lines.append(
-                        f"- **[[{sf.path}]]** ({sf.line_count} lines, {sf.source_dependents_count} source dependents{test_str}):\n"
+                        f"- **[[{sf.path}]]** ({sf.line_count} lines, {dep_word}{test_str}):\n"
                         f"  Verified purpose: {sf.verified_purpose}"
                     )
             if ft.verification_steps:
@@ -844,22 +983,38 @@ class DevLensAgent:
         candidate_starters = facts.get("candidate_starters", [])
         computed_starter_paths = {cs["path"] for cs in candidate_starters[:3]}
 
+        model_starters_by_path: dict[str, StarterTaskItem] = {}
         for st in (parsed_schema.first_task.suggested_files if parsed_schema and parsed_schema.first_task else []):
             clean_st = st.path.replace("[[", "").replace("]]", "").strip()
             if clean_st not in computed_starter_paths:
                 msg = f"dropped model starter '{st.path}' (not a computed candidate starter)"
                 drops.append(f"starters: {msg}")
                 drops_by_section["starters"].append(msg)
+            else:
+                model_starters_by_path[clean_st] = st
 
         for cs in candidate_starters[:3]:
             cs_path = cs["path"]
-            has_snippet = bool(cs.get("first_30_lines") and cs["first_30_lines"].strip())
+            snippet = cs.get("first_30_lines")
+            has_snippet = bool(snippet and snippet.strip())
+            model_st = model_starters_by_path.get(cs_path)
 
             if not has_snippet:
                 verified_purpose = "purpose not verified"
+                valid_quote = None
             else:
-                snippet_purpose = _extract_purpose_from_snippet(cs.get("first_30_lines"))
-                verified_purpose = snippet_purpose if snippet_purpose != "purpose not verified" else "purpose not verified"
+                m_purpose = model_st.verified_purpose if model_st else None
+                m_quote = model_st.evidence_quote if model_st else None
+                verified_purpose = _extract_purpose_from_snippet(
+                    snippet,
+                    model_purpose=m_purpose,
+                    evidence_quote=m_quote,
+                )
+                valid_quote = (
+                    m_quote.strip()
+                    if (m_quote and m_quote.strip() and m_quote.strip() in snippet and verified_purpose != "purpose not verified")
+                    else None
+                )
 
             computed_starters.append(StarterTaskItem(
                 path=cs_path,
@@ -867,6 +1022,7 @@ class DevLensAgent:
                 source_dependents_count=cs.get("source_dependents_count", 0),
                 nearby_test=cs.get("nearby_test"),
                 verified_purpose=verified_purpose,
+                evidence_quote=valid_quote,
             ))
 
         parsed_schema.first_task.suggested_files = computed_starters
@@ -875,22 +1031,43 @@ class DevLensAgent:
         if computed_starters:
             top_st = computed_starters[0]
             file_name = PurePosixPath(top_st.path).name
+            dep_cnt = top_st.source_dependents_count
+            dep_phrase = (
+                "1 downstream source dependent"
+                if dep_cnt == 1
+                else f"{dep_cnt} downstream source dependents"
+            )
+            line_phrase = "1 line" if top_st.line_count == 1 else f"{top_st.line_count} lines"
 
             if top_st.verified_purpose == "purpose not verified":
                 task_title = f"Add a test for {file_name}"
-                task_rationale = (
-                    f"Module [[{top_st.path}]] has low complexity ({top_st.line_count} lines) and "
-                    f"{top_st.source_dependents_count} downstream source dependents. Adding unit test coverage "
-                    "verifies the local development setup without risk of breaking other modules."
-                )
+                if dep_cnt == 0:
+                    task_rationale = (
+                        f"Module [[{top_st.path}]] is an isolated leaf ({line_phrase}) with "
+                        f"{dep_phrase}. Adding unit test coverage "
+                        "verifies the local development setup without risk of breaking other modules."
+                    )
+                else:
+                    task_rationale = (
+                        f"Module [[{top_st.path}]] has low complexity ({line_phrase}) and "
+                        f"{dep_phrase}. Adding unit test coverage "
+                        "verifies the local development setup with minimal downstream impact."
+                    )
             else:
                 task_title = f"Add a test for {file_name}"
                 clean_purpose = top_st.verified_purpose.rstrip(".")
-                task_rationale = (
-                    f"Module [[{top_st.path}]] ({clean_purpose}) is an isolated leaf with "
-                    f"{top_st.source_dependents_count} downstream source dependents. Adding unit tests "
-                    "provides a safe, self-contained first PR."
-                )
+                if dep_cnt == 0:
+                    task_rationale = (
+                        f"Module [[{top_st.path}]] ({clean_purpose}) is an isolated leaf with "
+                        f"{dep_phrase}. Adding unit tests "
+                        "provides a safe, self-contained first PR."
+                    )
+                else:
+                    task_rationale = (
+                        f"Module [[{top_st.path}]] ({clean_purpose}) has low complexity ({line_phrase}) and "
+                        f"{dep_phrase}. Adding unit tests "
+                        "provides a safe, self-contained first PR."
+                    )
 
             test_cmd = facts.get("manifest", {}).get("test_command")
             raw_run_cmd = facts.get("manifest", {}).get("run_command")
