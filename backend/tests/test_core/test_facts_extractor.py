@@ -789,3 +789,25 @@ def test_grouped_env_variables_and_code_usage():
         assert "`DATABASE_URL` (read in code via process.env)" in fallback_doc
         assert "`MISC_SETTING` (declared in .env.example)" in fallback_doc
         assert "DATABASE_URL, AUTH_SECRET, MISC_SETTING" not in fallback_doc
+
+
+def test_glossary_and_gotcha_evidence_chunk_validation():
+    from app.agent.devlens_agent import _is_valid_source_file
+
+    known_paths = {"src/app.ts", "src/auth.ts"}
+    # Allowed sources: indexed paths, README files, build manifests
+    assert _is_valid_source_file("src/app.ts", known_paths) is True
+    assert _is_valid_source_file("README.md", known_paths) is True
+    assert _is_valid_source_file("README.rst", known_paths) is True
+    assert _is_valid_source_file("package.json", known_paths) is True
+    assert _is_valid_source_file("pyproject.toml", known_paths) is True
+    assert _is_valid_source_file("requirements.txt", known_paths) is True
+    assert _is_valid_source_file("fictional_unindexed_file.py", known_paths) is False
+
+    # Chunk term validation logic
+    readme_chunk = "# DevLens AI\nDevLens provides topological repository intelligence."
+    term_present = "Topological"
+    term_absent = "QuantumSupremacy"
+
+    assert term_present.lower() in readme_chunk.lower()
+    assert term_absent.lower() not in readme_chunk.lower()

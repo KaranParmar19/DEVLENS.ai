@@ -7,6 +7,7 @@ with custom tools grounded in PostgreSQL pgvector code chunks and NetworkX depen
 import re
 import uuid
 import asyncio
+from pathlib import PurePosixPath
 from typing import Any
 import structlog
 from langchain_openai import ChatOpenAI
@@ -23,6 +24,21 @@ from app.rag.vector_store import VectorStore
 
 logger = structlog.get_logger(__name__)
 settings = get_settings()
+
+
+def _is_valid_source_file(path: str, known_paths: set[str]) -> bool:
+    """Validate if path is an indexed module, README, or build manifest."""
+    clean = path.replace("[[", "").replace("]]", "").strip()
+    if clean in known_paths:
+        return True
+    p_lower = clean.lower().replace("\\", "/")
+    name = PurePosixPath(p_lower).name
+    if name in ("readme", "readme.md", "readme.rst", "readme.txt"):
+        return True
+    manifest_names = ("package.json", "pyproject.toml", "requirements.txt", "makefile", "go.mod", "cargo.toml")
+    if name in manifest_names:
+        return True
+    return False
 
 
 class DevLensAgent:
@@ -630,15 +646,27 @@ class DevLensAgent:
             ))
         parsed_schema.careful_files = computed_careful_files
 
-        # 3. Drop gotchas without valid evidence path in repository
+        # 3. Filter gotchas: allow README and manifests as sources, but require that evidence chunk contains the claimed term
         valid_gotchas: list[GotchaItem] = []
         for g in parsed_schema.gotchas:
             clean_evidence = g.evidence_path.replace("[[", "").replace("]]", "").strip()
-            if clean_evidence in all_known_paths:
+            if not _is_valid_source_file(clean_evidence, all_known_paths):
+                drops.append(f"gotchas: dropped rule '{g.title}' (evidence_path '{g.evidence_path}' is not a recognized repository file)")
+                continue
+
+            content = await extractor.extract_file_content(clean_evidence)
+            if not content:
+                drops.append(f"gotchas: dropped rule '{g.title}' (evidence file '{clean_evidence}' has no indexed content)")
+                continue
+
+            # Verify that the evidence chunk contains the claimed term or title tokens
+            title_tokens = [w for w in re.findall(r"[A-Za-z0-9_]+", g.title) if len(w) >= 4]
+            term_matches = (g.title.lower() in content.lower()) or (title_tokens and any(tok.lower() in content.lower() for tok in title_tokens))
+            if term_matches:
                 g.evidence_path = clean_evidence
                 valid_gotchas.append(g)
             else:
-                drops.append(f"gotchas: dropped rule '{g.title}' (evidence_path '{g.evidence_path}' is not an indexed file)")
+                drops.append(f"gotchas: dropped rule '{g.title}' (claimed term not found in chunk of '{clean_evidence}')")
         parsed_schema.gotchas = valid_gotchas
 
         # 4. Choose first_task in code, not the model. Pick starters from computed candidate_starters.
@@ -722,15 +750,25 @@ class DevLensAgent:
         parsed_schema.first_task.rationale = task_rationale
         parsed_schema.first_task.verification_steps = verification_steps
 
-        # 5. Filter glossary: defined_in must exist in repo
-        valid_glossary = []
+        # 5. Filter glossary: allow README and manifests as sources, but require that evidence chunk contains the claimed term
+        valid_glossary: list[GlossaryItem] = []
         for item in parsed_schema.glossary:
             clean_p = item.defined_in.replace("[[", "").replace("]]", "").strip()
-            if clean_p in all_known_paths:
+            if not _is_valid_source_file(clean_p, all_known_paths):
+                drops.append(f"glossary: dropped term '{item.term}' (defined_in '{item.defined_in}' is not a recognized repository file)")
+                continue
+
+            content = await extractor.extract_file_content(clean_p)
+            if not content:
+                drops.append(f"glossary: dropped term '{item.term}' (defined_in '{clean_p}' has no indexed content)")
+                continue
+
+            # Require that the evidence file's chunk contains the claimed term
+            if item.term.lower().strip() in content.lower():
                 item.defined_in = clean_p
                 valid_glossary.append(item)
             else:
-                drops.append(f"glossary: dropped term '{item.term}' (defined_in '{item.defined_in}' is not an indexed file)")
+                drops.append(f"glossary: dropped term '{item.term}' (term not found in chunk of '{clean_p}')")
         parsed_schema.glossary = valid_glossary
 
         self.last_facts_block = facts_block
