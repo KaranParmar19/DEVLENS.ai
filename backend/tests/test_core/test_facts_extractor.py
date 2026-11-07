@@ -965,3 +965,29 @@ def test_verified_purpose_rules_and_evidence_quote():
     )
 
 
+def test_core_file_imported_by_tests_only_in_high_risk():
+    nodes = [{"id": "bottle.py", "path": "bottle.py", "line_count": 4000}]
+    edges = []
+    for i in range(6):
+        t_path = f"test/test_suite_{i}.py"
+        nodes.append({"id": t_path, "path": t_path, "line_count": 50})
+        edges.append([t_path, "bottle.py"])
+
+    extractor = FactsExtractor(
+        db=None,  # type: ignore
+        repo_id=None,  # type: ignore
+        repo_full_name="bottlepy/bottle",
+        graph_cache={"nodes": nodes, "edges": edges, "meta": {"cycles": []}},
+    )
+    with patch.object(extractor, "extract_file_content", AsyncMock(return_value='"""Bottle micro-framework."""\n')):
+        facts = asyncio.run(extractor.assemble_verified_facts())
+        assert len(facts["high_risk_files"]) == 1
+        hr = facts["high_risk_files"][0]
+        assert hr["path"] == "bottle.py"
+        assert hr["risk_level"] == "Core file, imported by tests only"
+        assert hr["dependents_count"] == 6
+        assert hr["test_dependents_count"] == 6
+        assert hr["source_dependents_count"] == 0
+
+
+

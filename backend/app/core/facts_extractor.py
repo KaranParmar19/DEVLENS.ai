@@ -1255,6 +1255,20 @@ class FactsExtractor:
         ]
         high_risk_files.sort(key=lambda m: m["dependents_count"], reverse=True)
 
+        # When the high-risk list is empty and the top file has 5 or more dependents,
+        # show it labeled "Core file, imported by tests only"
+        if not high_risk_files and metrics["file_metrics"]:
+            all_by_deps = sorted(
+                metrics["file_metrics"].values(),
+                key=lambda m: (m.get("dependents_count", 0), m.get("test_dependents_count", 0)),
+                reverse=True,
+            )
+            top_file = all_by_deps[0]
+            if top_file.get("dependents_count", 0) >= 5:
+                top_copy = dict(top_file)
+                top_copy["risk_level"] = "Core file, imported by tests only"
+                high_risk_files = [top_copy]
+
         # Populate first 30 lines for high-risk files so explanations are snippet-grounded
         for hr in high_risk_files:
             content = await self.extract_file_content(hr["path"])
@@ -1403,8 +1417,9 @@ class FactsExtractor:
             for hr in facts["high_risk_files"]:
                 source_deps = hr.get("source_dependents_count", 0)
                 test_deps = hr.get("test_dependents_count", 0)
+                risk_label = hr.get("risk_level", "High")
                 lines.append(
-                    f"- [[{hr['path']}]] (Risk: High, Total Dependents: {hr['dependents_count']} [Source: {source_deps}, Tests: {test_deps}], "
+                    f"- [[{hr['path']}]] (Risk: {risk_label}, Total Dependents: {hr['dependents_count']} [Source: {source_deps}, Tests: {test_deps}], "
                     f"Dependencies: {hr['dependencies_count']}, Coupling: {hr['coupling']:.2f})"
                 )
                 if hr.get("first_30_lines"):
