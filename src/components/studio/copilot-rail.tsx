@@ -6,31 +6,31 @@ import type { GraphData } from "./studio-types";
 export const SLASH_COMMANDS = [
   {
     cmd: "/blast",
-    label: "💥 /blast",
+    label: "/blast",
     desc: "Calculate blast radius and ripple impact of a module",
     requiresFile: true,
   },
   {
     cmd: "/cycles",
-    label: "🔄 /cycles",
+    label: "/cycles",
     desc: "Detect circular import dependency cycles in the architecture graph",
     requiresFile: false,
   },
   {
     cmd: "/explain",
-    label: "🔍 /explain",
+    label: "/explain",
     desc: "Explain architecture, responsibilities, callers, and complexity",
     requiresFile: true,
   },
   {
     cmd: "/test",
-    label: "🧪 /test",
+    label: "/test",
     desc: "Generate unit test specifications covering functions & classes",
     requiresFile: true,
   },
   {
     cmd: "/onboarding",
-    label: "📋 /onboarding",
+    label: "/onboarding",
     desc: "Overview of key architectural entry points and execution flows",
     requiresFile: false,
   },
@@ -47,6 +47,8 @@ interface CopilotRailProps {
   onToggleCollapse?: () => void;
   graphData?: GraphData | null;
   activeFile?: string | null;
+  width?: number;
+  theme?: "dark" | "light";
 }
 
 export function CopilotRail({
@@ -60,7 +62,10 @@ export function CopilotRail({
   onToggleCollapse,
   graphData,
   activeFile,
+  width = 340,
+  theme = "dark",
 }: CopilotRailProps) {
+  const isLight = theme === "light";
   const [input, setInput] = useState("");
   const [atQuery, setAtQuery] = useState<string | null>(null);
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
@@ -90,10 +95,10 @@ export function CopilotRail({
   const handleExportNotes = () => {
     if (messages.length === 0) return;
     const md = [
-      `# DevLens Copilot Architectural Notes — ${repoLabel}`,
-      `*Generated on ${new Date().toLocaleString()} via DevLens AI*\n`,
+      `# DevLens Architectural Notes: ${repoLabel}`,
+      `*Generated on ${new Date().toLocaleString()} via DevLens*\n`,
       ...messages.map((m) => {
-        const role = m.role === "user" ? "### 👤 User Inquiry" : "### 🤖 DevLens Copilot";
+        const role = m.role === "user" ? "### Inquiry" : "### Analysis & Citations";
         const sources =
           m.sources && m.sources.length > 0
             ? `\n\n**Cited Sources:**\n${m.sources.map((s) => `- \`${s}\``).join("\n")}`
@@ -308,9 +313,9 @@ export function CopilotRail({
               padding: "1px 6px",
               margin: "0 2px",
               borderRadius: 4,
-              backgroundColor: "rgba(255, 255, 255, 0.12)",
-              border: "1px solid rgba(255, 255, 255, 0.25)",
-              color: "#ffffff",
+              backgroundColor: isLight ? "rgba(0, 0, 0, 0.06)" : "rgba(255, 255, 255, 0.12)",
+              border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.15)" : "rgba(255, 255, 255, 0.25)"}`,
+              color: isLight ? "#09090b" : "#ffffff",
               fontFamily: "var(--mf-mono, monospace)",
               fontSize: "0.75rem",
               cursor: "pointer",
@@ -319,12 +324,14 @@ export function CopilotRail({
             }}
             title={`Inspect ${filePath}`}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "#ffffff";
-              e.currentTarget.style.color = "#000000";
+              e.currentTarget.style.backgroundColor = isLight ? "#09090b" : "#ffffff";
+              e.currentTarget.style.color = isLight ? "#ffffff" : "#000000";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.12)";
-              e.currentTarget.style.color = "#ffffff";
+              e.currentTarget.style.backgroundColor = isLight
+                ? "rgba(0, 0, 0, 0.06)"
+                : "rgba(255, 255, 255, 0.12)";
+              e.currentTarget.style.color = isLight ? "#09090b" : "#ffffff";
             }}
           >
             <span style={{ opacity: 0.6 }}>↳</span>
@@ -404,8 +411,8 @@ export function CopilotRail({
           key={`code-${codeId}`}
           style={{
             margin: "8px 0",
-            backgroundColor: "#050507",
-            border: "1px solid rgba(255, 255, 255, 0.15)",
+            backgroundColor: isLight ? "#f8f8fa" : "#050507",
+            border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.12)" : "rgba(255, 255, 255, 0.15)"}`,
             borderRadius: 6,
             overflow: "hidden",
           }}
@@ -416,11 +423,11 @@ export function CopilotRail({
               justifyContent: "space-between",
               alignItems: "center",
               padding: "4px 8px",
-              backgroundColor: "rgba(255,255,255,0.04)",
-              borderBottom: "1px solid rgba(255,255,255,0.08)",
+              backgroundColor: isLight ? "#f1f1f5" : "rgba(255,255,255,0.04)",
+              borderBottom: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255,255,255,0.08)"}`,
               fontFamily: "var(--mf-mono, monospace)",
               fontSize: "0.625rem",
-              color: "rgba(255,255,255,0.5)",
+              color: isLight ? "rgba(9, 9, 11, 0.55)" : "rgba(255,255,255,0.5)",
               textTransform: "uppercase",
             }}
           >
@@ -431,7 +438,13 @@ export function CopilotRail({
               style={{
                 background: "transparent",
                 border: "none",
-                color: isCopied ? "#ffffff" : "rgba(255,255,255,0.6)",
+                color: isCopied
+                  ? isLight
+                    ? "#09090b"
+                    : "#ffffff"
+                  : isLight
+                  ? "rgba(9, 9, 11, 0.6)"
+                  : "rgba(255,255,255,0.6)",
                 cursor: "pointer",
                 fontFamily: "inherit",
                 fontSize: "0.625rem",
@@ -441,6 +454,7 @@ export function CopilotRail({
             </button>
           </div>
           <pre
+            className="devlens-scroll"
             style={{
               margin: 0,
               padding: "8px 10px",
@@ -448,7 +462,7 @@ export function CopilotRail({
               fontSize: "0.75rem",
               lineHeight: 1.45,
               overflowX: "auto",
-              color: "rgba(255,255,255,0.9)",
+              color: isLight ? "#09090b" : "rgba(255,255,255,0.9)",
             }}
           >
             <code>{code}</code>
@@ -489,14 +503,15 @@ export function CopilotRail({
       <aside
         style={{
           width: 44,
-          borderLeft: "1px solid rgba(255, 255, 255, 0.1)",
-          backgroundColor: "#0d0d10",
+          borderLeft: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.1)"}`,
+          backgroundColor: isLight ? "#f8f8fa" : "#0d0d10",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           padding: "16px 0",
           gap: 16,
           flexShrink: 0,
+          transition: "background-color 0.2s ease, border-color 0.2s ease",
         }}
       >
         <button
@@ -504,9 +519,9 @@ export function CopilotRail({
           onClick={onToggleCollapse}
           style={{
             background: "transparent",
-            border: "1px solid rgba(255,255,255,0.12)",
+            border: `1px solid ${isLight ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.12)"}`,
             borderRadius: 6,
-            color: "rgba(255, 255, 255, 0.7)",
+            color: isLight ? "rgba(9, 9, 11, 0.7)" : "rgba(255, 255, 255, 0.7)",
             width: 28,
             height: 28,
             display: "grid",
@@ -528,7 +543,7 @@ export function CopilotRail({
             fontSize: "0.6875rem",
             letterSpacing: "0.08em",
             textTransform: "uppercase",
-            color: "rgba(255, 255, 255, 0.6)",
+            color: isLight ? "rgba(9, 9, 11, 0.6)" : "rgba(255, 255, 255, 0.6)",
             cursor: "pointer",
             marginTop: 8,
             display: "flex",
@@ -541,11 +556,12 @@ export function CopilotRail({
               width: 6,
               height: 6,
               borderRadius: "50%",
-              backgroundColor: isStreaming ? "#ffffff" : "rgba(255, 255, 255, 0.4)",
-              boxShadow: isStreaming ? "0 0 8px #ffffff" : "none",
+              backgroundColor: isStreaming
+                ? isLight ? "#09090b" : "#ffffff"
+                : isLight ? "rgba(0, 0, 0, 0.3)" : "rgba(255, 255, 255, 0.4)",
             }}
           />
-          <span>DevLens Copilot</span>
+          <span>Code Q&A</span>
         </div>
 
         {messages.length > 0 && (
@@ -554,10 +570,10 @@ export function CopilotRail({
               marginTop: "auto",
               fontFamily: "var(--mf-mono, monospace)",
               fontSize: "0.625rem",
-              background: "rgba(255,255,255,0.1)",
+              background: isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.1)",
               borderRadius: 999,
               padding: "2px 6px",
-              color: "#ffffff",
+              color: isLight ? "#09090b" : "#ffffff",
             }}
           >
             {messages.length}
@@ -570,25 +586,26 @@ export function CopilotRail({
   return (
     <aside
       style={{
-        width: 340,
-        borderLeft: "1px solid rgba(255, 255, 255, 0.1)",
-        backgroundColor: "#0c0c0f",
+        width,
+        borderLeft: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.1)"}`,
+        backgroundColor: isLight ? "#ffffff" : "#0c0c0f",
         display: "flex",
         flexDirection: "column",
         fontFamily: "var(--mf-font, 'Geist', sans-serif)",
         flexShrink: 0,
         overflow: "hidden",
+        transition: "background-color 0.2s ease, border-color 0.2s ease",
       }}
     >
       {/* Copilot Header */}
       <div
         style={{
           padding: "12px 14px",
-          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+          borderBottom: `1px solid ${isLight ? "rgba(0, 0, 0, 0.06)" : "rgba(255, 255, 255, 0.08)"}`,
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          backgroundColor: "#08080a",
+          backgroundColor: isLight ? "#f8f8fa" : "#08080a",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -597,9 +614,9 @@ export function CopilotRail({
               width: 7,
               height: 7,
               borderRadius: "50%",
-              backgroundColor: isStreaming ? "#ffffff" : "rgba(255, 255, 255, 0.4)",
-              boxShadow: isStreaming ? "0 0 10px #ffffff" : "none",
-              animation: isStreaming ? "mf-pulse 1s infinite" : "none",
+              backgroundColor: isStreaming
+                ? isLight ? "#09090b" : "#ffffff"
+                : isLight ? "rgba(0, 0, 0, 0.3)" : "rgba(255, 255, 255, 0.4)",
             }}
           />
           <span
@@ -608,11 +625,11 @@ export function CopilotRail({
               fontSize: "0.75rem",
               textTransform: "uppercase",
               letterSpacing: "0.08em",
-              color: "#ffffff",
+              color: isLight ? "#09090b" : "#ffffff",
               fontWeight: 500,
             }}
           >
-            DevLens Copilot
+            Code Q&A
           </span>
           <span
             style={{
@@ -626,7 +643,7 @@ export function CopilotRail({
               textTransform: "uppercase",
             }}
           >
-            AST Grounded
+            AST Citations
           </span>
         </div>
 
@@ -650,7 +667,7 @@ export function CopilotRail({
                 }}
                 title="Export Q&A as Markdown file"
               >
-                <span>⬇ Export</span>
+                <span>Export</span>
               </button>
               <button
                 type="button"
@@ -749,6 +766,7 @@ export function CopilotRail({
       {/* Chat Thread */}
       <div
         ref={scrollRef}
+        className="devlens-scroll"
         style={{
           flex: 1,
           overflowY: "auto",
@@ -776,7 +794,7 @@ export function CopilotRail({
                 color: "#ffffff",
               }}
             >
-              AI
+              Q&A
             </div>
             <p style={{ fontSize: "0.8125rem", lineHeight: 1.5, margin: "0 0 8px" }}>
               Ask anything about <strong style={{ color: "#ffffff" }}>{repoLabel}</strong>.
@@ -814,9 +832,25 @@ export function CopilotRail({
               >
                 <div
                   style={{
-                    background: isUser ? "#ffffff" : "rgba(255, 255, 255, 0.05)",
-                    color: isUser ? "#000000" : "#ffffff",
-                    border: isUser ? "none" : "1px solid rgba(255, 255, 255, 0.1)",
+                    background: isUser
+                      ? isLight
+                        ? "#09090b"
+                        : "#ffffff"
+                      : isLight
+                      ? "#f4f4f7"
+                      : "rgba(255, 255, 255, 0.05)",
+                    color: isUser
+                      ? isLight
+                        ? "#ffffff"
+                        : "#000000"
+                      : isLight
+                      ? "#09090b"
+                      : "#ffffff",
+                    border: isUser
+                      ? "none"
+                      : isLight
+                      ? "1px solid rgba(0, 0, 0, 0.08)"
+                      : "1px solid rgba(255, 255, 255, 0.1)",
                     borderRadius: isUser ? "14px 14px 2px 14px" : "14px 14px 14px 2px",
                     padding: "10px 12px",
                     fontSize: "0.8125rem",
@@ -834,7 +868,7 @@ export function CopilotRail({
                       style={{
                         fontFamily: "var(--mf-mono, monospace)",
                         fontSize: "0.5625rem",
-                        color: "rgba(255,255,255,0.4)",
+                        color: isLight ? "rgba(9, 9, 11, 0.45)" : "rgba(255,255,255,0.4)",
                         textTransform: "uppercase",
                         display: "flex",
                         alignItems: "center",
@@ -849,23 +883,29 @@ export function CopilotRail({
                         type="button"
                         onClick={() => onSelectFile(src)}
                         style={{
-                          background: "rgba(255,255,255,0.06)",
-                          border: "1px solid rgba(255,255,255,0.12)",
+                          background: isLight ? "rgba(0, 0, 0, 0.05)" : "rgba(255,255,255,0.06)",
+                          border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.12)" : "rgba(255,255,255,0.12)"}`,
                           borderRadius: 4,
                           padding: "2px 6px",
                           fontFamily: "var(--mf-mono, monospace)",
                           fontSize: "0.625rem",
-                          color: "rgba(255,255,255,0.8)",
+                          color: isLight ? "#09090b" : "rgba(255,255,255,0.8)",
                           cursor: "pointer",
                           transition: "all 0.15s",
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.16)";
-                          e.currentTarget.style.color = "#ffffff";
+                          e.currentTarget.style.backgroundColor = isLight
+                            ? "#09090b"
+                            : "rgba(255,255,255,0.16)";
+                          e.currentTarget.style.color = isLight ? "#ffffff" : "#ffffff";
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.06)";
-                          e.currentTarget.style.color = "rgba(255,255,255,0.8)";
+                          e.currentTarget.style.backgroundColor = isLight
+                            ? "rgba(0, 0, 0, 0.05)"
+                            : "rgba(255,255,255,0.06)";
+                          e.currentTarget.style.color = isLight
+                            ? "#09090b"
+                            : "rgba(255,255,255,0.8)";
                         }}
                         title={`Open ${src}`}
                       >
@@ -883,16 +923,19 @@ export function CopilotRail({
       {/* Mention Autocomplete Popover */}
       {atQuery !== null && matchingFiles.length > 0 && (
         <div
+          className="devlens-scroll"
           style={{
             maxHeight: 180,
             overflowY: "auto",
-            backgroundColor: "#111116",
-            border: "1px solid rgba(255,255,255,0.2)",
+            backgroundColor: isLight ? "#ffffff" : "#111116",
+            border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.14)" : "rgba(255,255,255,0.2)"}`,
             borderBottom: "none",
             borderRadius: "6px 6px 0 0",
             margin: "0 14px",
             padding: "4px 0",
-            boxShadow: "0 -8px 24px rgba(0,0,0,0.5)",
+            boxShadow: isLight
+              ? "0 -8px 24px rgba(0, 0, 0, 0.1)"
+              : "0 -8px 24px rgba(0,0,0,0.5)",
           }}
         >
           <div
@@ -901,7 +944,7 @@ export function CopilotRail({
               fontFamily: "var(--mf-mono, monospace)",
               fontSize: "0.5625rem",
               textTransform: "uppercase",
-              color: "rgba(255,255,255,0.4)",
+              color: isLight ? "rgba(9, 9, 11, 0.5)" : "rgba(255,255,255,0.4)",
             }}
           >
             Mention File (@)
@@ -914,9 +957,20 @@ export function CopilotRail({
                 padding: "6px 10px",
                 fontFamily: "var(--mf-mono, monospace)",
                 fontSize: "0.75rem",
-                color: idx === selectedMentionIndex ? "#ffffff" : "rgba(255,255,255,0.7)",
+                color:
+                  idx === selectedMentionIndex
+                    ? isLight
+                      ? "#09090b"
+                      : "#ffffff"
+                    : isLight
+                    ? "rgba(9, 9, 11, 0.7)"
+                    : "rgba(255,255,255,0.7)",
                 backgroundColor:
-                  idx === selectedMentionIndex ? "rgba(255,255,255,0.12)" : "transparent",
+                  idx === selectedMentionIndex
+                    ? isLight
+                      ? "rgba(0, 0, 0, 0.06)"
+                      : "rgba(255,255,255,0.12)"
+                    : "transparent",
                 cursor: "pointer",
                 display: "flex",
                 justifyContent: "space-between",
@@ -934,16 +988,19 @@ export function CopilotRail({
       {/* Slash Command Autocomplete Popover */}
       {slashQuery !== null && matchingSlashCommands.length > 0 && (
         <div
+          className="devlens-scroll"
           style={{
             maxHeight: 200,
             overflowY: "auto",
-            backgroundColor: "#111116",
-            border: "1px solid rgba(255,255,255,0.2)",
+            backgroundColor: isLight ? "#ffffff" : "#111116",
+            border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.14)" : "rgba(255,255,255,0.2)"}`,
             borderBottom: "none",
             borderRadius: "6px 6px 0 0",
             margin: "0 14px",
             padding: "4px 0",
-            boxShadow: "0 -8px 24px rgba(0,0,0,0.5)",
+            boxShadow: isLight
+              ? "0 -8px 24px rgba(0, 0, 0, 0.1)"
+              : "0 -8px 24px rgba(0,0,0,0.5)",
           }}
         >
           <div
@@ -952,7 +1009,7 @@ export function CopilotRail({
               fontFamily: "var(--mf-mono, monospace)",
               fontSize: "0.5625rem",
               textTransform: "uppercase",
-              color: "rgba(255,255,255,0.4)",
+              color: isLight ? "rgba(9, 9, 11, 0.5)" : "rgba(255,255,255,0.4)",
             }}
           >
             Slash Commands (/)
@@ -965,9 +1022,20 @@ export function CopilotRail({
                 padding: "8px 10px",
                 fontFamily: "var(--mf-mono, monospace)",
                 fontSize: "0.75rem",
-                color: idx === selectedSlashIndex ? "#ffffff" : "rgba(255,255,255,0.7)",
+                color:
+                  idx === selectedSlashIndex
+                    ? isLight
+                      ? "#09090b"
+                      : "#ffffff"
+                    : isLight
+                    ? "rgba(9, 9, 11, 0.7)"
+                    : "rgba(255,255,255,0.7)",
                 backgroundColor:
-                  idx === selectedSlashIndex ? "rgba(255,255,255,0.12)" : "transparent",
+                  idx === selectedSlashIndex
+                    ? isLight
+                      ? "rgba(0, 0, 0, 0.06)"
+                      : "rgba(255,255,255,0.12)"
+                    : "transparent",
                 cursor: "pointer",
                 display: "flex",
                 flexDirection: "column",
@@ -978,10 +1046,22 @@ export function CopilotRail({
               <div
                 style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
               >
-                <span style={{ fontWeight: 600, color: "#ffffff" }}>{cmd.label}</span>
+                <span
+                  style={{
+                    fontWeight: 600,
+                    color: isLight ? "#09090b" : "#ffffff",
+                  }}
+                >
+                  {cmd.label}
+                </span>
                 <span style={{ fontSize: "0.625rem", opacity: 0.5 }}>Tab ↵</span>
               </div>
-              <span style={{ fontSize: "0.6875rem", color: "rgba(255,255,255,0.45)" }}>
+              <span
+                style={{
+                  fontSize: "0.6875rem",
+                  color: isLight ? "rgba(9, 9, 11, 0.55)" : "rgba(255,255,255,0.45)",
+                }}
+              >
                 {cmd.desc}
               </span>
             </div>
@@ -991,13 +1071,14 @@ export function CopilotRail({
 
       {/* Quick Slash Commands Toolbar */}
       <div
+        className="devlens-tab-scroll"
         style={{
           display: "flex",
           gap: 6,
           overflowX: "auto",
           padding: "8px 14px 4px",
-          backgroundColor: "#09090b",
-          borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+          backgroundColor: isLight ? "#f4f4f7" : "#09090b",
+          borderTop: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.08)"}`,
         }}
       >
         {SLASH_COMMANDS.map((cmd) => (
@@ -1018,9 +1099,9 @@ export function CopilotRail({
             style={{
               fontFamily: "var(--mf-mono, monospace)",
               fontSize: "0.6875rem",
-              color: "rgba(255, 255, 255, 0.75)",
-              backgroundColor: "rgba(255, 255, 255, 0.05)",
-              border: "1px solid rgba(255, 255, 255, 0.12)",
+              color: isLight ? "#09090b" : "rgba(255, 255, 255, 0.75)",
+              backgroundColor: isLight ? "rgba(0, 0, 0, 0.05)" : "rgba(255, 255, 255, 0.05)",
+              border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.12)" : "rgba(255, 255, 255, 0.12)"}`,
               borderRadius: 6,
               padding: "3px 8px",
               cursor: "pointer",
@@ -1031,12 +1112,16 @@ export function CopilotRail({
               transition: "all 0.15s ease",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.14)";
-              e.currentTarget.style.color = "#ffffff";
+              e.currentTarget.style.backgroundColor = isLight
+                ? "rgba(0, 0, 0, 0.1)"
+                : "rgba(255, 255, 255, 0.14)";
+              e.currentTarget.style.color = isLight ? "#09090b" : "#ffffff";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)";
-              e.currentTarget.style.color = "rgba(255, 255, 255, 0.75)";
+              e.currentTarget.style.backgroundColor = isLight
+                ? "rgba(0, 0, 0, 0.05)"
+                : "rgba(255, 255, 255, 0.05)";
+              e.currentTarget.style.color = isLight ? "#09090b" : "rgba(255, 255, 255, 0.75)";
             }}
           >
             <span>{cmd.label}</span>
@@ -1049,7 +1134,8 @@ export function CopilotRail({
         onSubmit={handleSubmit}
         style={{
           padding: "10px 14px 12px",
-          backgroundColor: "#09090b",
+          backgroundColor: isLight ? "#f8f8fa" : "#09090b",
+          borderTop: `1px solid ${isLight ? "rgba(0, 0, 0, 0.06)" : "rgba(255, 255, 255, 0.08)"}`,
         }}
       >
         <div
@@ -1057,8 +1143,8 @@ export function CopilotRail({
             display: "flex",
             alignItems: "center",
             gap: 8,
-            background: "rgba(255, 255, 255, 0.05)",
-            border: "1px solid rgba(255, 255, 255, 0.14)",
+            background: isLight ? "#ffffff" : "rgba(255, 255, 255, 0.05)",
+            border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.14)" : "rgba(255, 255, 255, 0.14)"}`,
             borderRadius: 999,
             padding: "4px 6px 4px 14px",
           }}
@@ -1078,7 +1164,7 @@ export function CopilotRail({
               outline: "none",
               fontFamily: "var(--mf-font, 'Geist', sans-serif)",
               fontSize: "0.8125rem",
-              color: "#ffffff",
+              color: isLight ? "#09090b" : "#ffffff",
             }}
           />
           <motion.button
@@ -1091,8 +1177,22 @@ export function CopilotRail({
               width: 30,
               height: 30,
               borderRadius: "50%",
-              background: input.trim() && !isStreaming ? "#ffffff" : "rgba(255,255,255,0.15)",
-              color: input.trim() && !isStreaming ? "#000000" : "rgba(255,255,255,0.3)",
+              background:
+                input.trim() && !isStreaming
+                  ? isLight
+                    ? "#09090b"
+                    : "#ffffff"
+                  : isLight
+                  ? "rgba(0, 0, 0, 0.08)"
+                  : "rgba(255, 255, 255, 0.15)",
+              color:
+                input.trim() && !isStreaming
+                  ? isLight
+                    ? "#ffffff"
+                    : "#000000"
+                  : isLight
+                  ? "rgba(0, 0, 0, 0.3)"
+                  : "rgba(255, 255, 255, 0.3)",
               border: "none",
               cursor: input.trim() && !isStreaming ? "pointer" : "default",
               display: "grid",

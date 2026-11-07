@@ -8,6 +8,7 @@ interface DriftTimelineViewProps {
   graphData?: GraphData | null;
   onSelectFile?: (filePath: string) => void;
   onAskCopilot?: (prompt: string) => void;
+  theme?: "dark" | "light";
 }
 
 export function DriftTimelineView({
@@ -15,7 +16,9 @@ export function DriftTimelineView({
   repoLabel,
   onSelectFile,
   onAskCopilot,
+  theme = "dark",
 }: DriftTimelineViewProps) {
+  const isLight = theme === "light";
   const [commits, setCommits] = useState<GitCommitItem[]>([]);
   const [selectedCommitSha, setSelectedCommitSha] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -82,8 +85,8 @@ export function DriftTimelineView({
           height: "100%",
           display: "grid",
           placeItems: "center",
-          backgroundColor: "#08080a",
-          color: "rgba(255,255,255,0.6)",
+          backgroundColor: isLight ? "#fbfbfe" : "#08080a",
+          color: isLight ? "rgba(9, 9, 11, 0.6)" : "rgba(255,255,255,0.6)",
           fontFamily: "var(--mf-mono, monospace)",
           fontSize: "0.8125rem",
           textAlign: "center",
@@ -91,7 +94,13 @@ export function DriftTimelineView({
         }}
       >
         <div style={{ maxWidth: 420 }}>
-          <div style={{ color: "#ffffff", fontWeight: 600, marginBottom: 8 }}>
+          <div
+            style={{
+              color: isLight ? "#09090b" : "#ffffff",
+              fontWeight: 600,
+              marginBottom: 8,
+            }}
+          >
             {loading
               ? "Loading commit history…"
               : loadError
@@ -99,7 +108,13 @@ export function DriftTimelineView({
                 : "No commits found"}
           </div>
           {!loading && (
-            <p style={{ margin: "0 0 16px", lineHeight: 1.5 }}>
+            <p
+              style={{
+                margin: "0 0 16px",
+                lineHeight: 1.5,
+                color: isLight ? "rgba(9, 9, 11, 0.55)" : "rgba(255,255,255,0.5)",
+              }}
+            >
               {loadError ??
                 (sessionId
                   ? "GitHub returned no recent commits for this branch."
@@ -113,8 +128,8 @@ export function DriftTimelineView({
               style={{
                 padding: "6px 14px",
                 borderRadius: 999,
-                background: "#ffffff",
-                color: "#000000",
+                background: isLight ? "#09090b" : "#ffffff",
+                color: isLight ? "#ffffff" : "#000000",
                 border: "none",
                 fontFamily: "inherit",
                 fontSize: "0.75rem",
@@ -135,18 +150,19 @@ export function DriftTimelineView({
       style={{
         height: "100%",
         display: "flex",
-        backgroundColor: "#08080a",
-        color: "#ffffff",
+        backgroundColor: isLight ? "#ffffff" : "#08080a",
+        color: isLight ? "#09090b" : "#ffffff",
         fontFamily: "var(--mf-font, 'Geist', sans-serif)",
         overflow: "hidden",
+        transition: "background-color 0.2s ease, color 0.2s ease",
       }}
     >
       {/* ── Left Column: Commit Timeline Stepper ─────────────────────── */}
       <div
         style={{
           width: "min(380px, 38vw)",
-          borderRight: "1px solid rgba(255, 255, 255, 0.1)",
-          backgroundColor: "#0d0d11",
+          borderRight: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.1)"}`,
+          backgroundColor: isLight ? "#f8f8fa" : "#0d0d11",
           display: "flex",
           flexDirection: "column",
           flexShrink: 0,
@@ -156,22 +172,29 @@ export function DriftTimelineView({
         <div
           style={{
             padding: "16px 20px",
-            borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
-            backgroundColor: "#09090b",
+            borderBottom: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.1)"}`,
+            backgroundColor: isLight ? "#f4f4f7" : "#09090b",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
           }}
         >
           <div>
-            <div style={{ fontSize: "0.9375rem", fontWeight: 600, letterSpacing: "-0.01em" }}>
+            <div
+              style={{
+                fontSize: "0.9375rem",
+                fontWeight: 600,
+                letterSpacing: "-0.01em",
+                color: isLight ? "#09090b" : "#ffffff",
+              }}
+            >
               Architectural Drift
             </div>
             <div
               style={{
                 fontFamily: "var(--mf-mono, monospace)",
                 fontSize: "0.6875rem",
-                color: "rgba(255, 255, 255, 0.45)",
+                color: isLight ? "rgba(9, 9, 11, 0.5)" : "rgba(255, 255, 255, 0.45)",
               }}
             >
               {commits.length} commits indexed · {repoLabel}
@@ -182,7 +205,7 @@ export function DriftTimelineView({
               style={{
                 fontFamily: "var(--mf-mono, monospace)",
                 fontSize: "0.625rem",
-                color: "#ffffff",
+                color: isLight ? "#09090b" : "#ffffff",
               }}
             >
               Syncing...
@@ -191,7 +214,7 @@ export function DriftTimelineView({
         </div>
 
         {/* Commit List */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "12px" }}>
+        <div className="devlens-scroll" style={{ flex: 1, overflowY: "auto", padding: "12px" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {commits.map((c, idx) => {
               const isSelected = c.sha === selectedCommitSha;
@@ -204,10 +227,15 @@ export function DriftTimelineView({
                   style={{
                     padding: "12px 14px",
                     borderRadius: 10,
-                    backgroundColor: isSelected ? "rgba(255, 255, 255, 0.08)" : "transparent",
+                    backgroundColor: isSelected
+                      ? isLight
+                        ? "#ffffff"
+                        : "rgba(255, 255, 255, 0.08)"
+                      : "transparent",
                     border: isSelected
-                      ? "1px solid #ffffff"
-                      : "1px solid rgba(255, 255, 255, 0.06)",
+                      ? `1px solid ${isLight ? "#09090b" : "#ffffff"}`
+                      : `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.06)"}`,
+                    boxShadow: isSelected && isLight ? "0 2px 8px rgba(0, 0, 0, 0.06)" : "none",
                     cursor: "pointer",
                     transition: "all 0.15s ease",
                     position: "relative",
@@ -230,8 +258,8 @@ export function DriftTimelineView({
                             fontSize: "0.5625rem",
                             padding: "1px 5px",
                             borderRadius: 4,
-                            background: "#ffffff",
-                            color: "#000000",
+                            background: isLight ? "#09090b" : "#ffffff",
+                            color: isLight ? "#ffffff" : "#000000",
                             fontWeight: 700,
                           }}
                         >
@@ -242,7 +270,13 @@ export function DriftTimelineView({
                         style={{
                           fontFamily: "var(--mf-mono, monospace)",
                           fontSize: "0.6875rem",
-                          color: isSelected ? "#ffffff" : "rgba(255, 255, 255, 0.5)",
+                          color: isSelected
+                            ? isLight
+                              ? "#09090b"
+                              : "#ffffff"
+                            : isLight
+                            ? "rgba(9, 9, 11, 0.55)"
+                            : "rgba(255, 255, 255, 0.5)",
                           fontWeight: 500,
                         }}
                       >
@@ -254,7 +288,7 @@ export function DriftTimelineView({
                       style={{
                         fontFamily: "var(--mf-mono, monospace)",
                         fontSize: "0.625rem",
-                        color: "rgba(255, 255, 255, 0.35)",
+                        color: isLight ? "rgba(9, 9, 11, 0.45)" : "rgba(255, 255, 255, 0.35)",
                       }}
                     >
                       {new Date(c.date).toLocaleDateString(undefined, {
@@ -269,7 +303,13 @@ export function DriftTimelineView({
                     style={{
                       fontSize: "0.8125rem",
                       fontWeight: isSelected ? 500 : 400,
-                      color: isSelected ? "#ffffff" : "rgba(255, 255, 255, 0.8)",
+                      color: isSelected
+                        ? isLight
+                          ? "#09090b"
+                          : "#ffffff"
+                        : isLight
+                        ? "rgba(9, 9, 11, 0.8)"
+                        : "rgba(255, 255, 255, 0.8)",
                       lineHeight: 1.4,
                       marginBottom: 8,
                       overflow: "hidden",
@@ -292,18 +332,30 @@ export function DriftTimelineView({
                       fontSize: "0.625rem",
                     }}
                   >
-                    <span style={{ color: "rgba(255, 255, 255, 0.45)" }}>{c.author}</span>
+                    <span
+                      style={{
+                        color: isLight ? "rgba(9, 9, 11, 0.55)" : "rgba(255, 255, 255, 0.45)",
+                      }}
+                    >
+                      {c.author}
+                    </span>
                     <span
                       style={{
                         padding: "1px 6px",
                         borderRadius: 4,
-                        border: "1px solid rgba(255, 255, 255, 0.15)",
+                        border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.12)" : "rgba(255, 255, 255, 0.15)"}`,
                         color:
                           c.risk_level === "high"
-                            ? "#ff6b6b"
+                            ? isLight
+                              ? "#dc2626"
+                              : "#ff6b6b"
                             : c.risk_level === "moderate"
-                              ? "#ffc078"
-                              : "#69db7c",
+                            ? isLight
+                              ? "#d97706"
+                              : "#ffc078"
+                            : isLight
+                            ? "#16a34a"
+                            : "#69db7c",
                       }}
                     >
                       {c.risk_level ? `${c.risk_level.toUpperCase()} DRIFT` : "LOW DRIFT"}
@@ -317,13 +369,16 @@ export function DriftTimelineView({
       </div>
 
       {/* ── Right Column: Selected Commit Architectural Diff ────────── */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflowY: "auto" }}>
+      <div
+        className="devlens-scroll"
+        style={{ flex: 1, display: "flex", flexDirection: "column", overflowY: "auto" }}
+      >
         {/* Detail Header */}
         <div
           style={{
             padding: "24px 32px",
-            borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
-            backgroundColor: "#09090b",
+            borderBottom: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.1)"}`,
+            backgroundColor: isLight ? "#f4f4f7" : "#09090b",
           }}
         >
           <div
@@ -342,8 +397,11 @@ export function DriftTimelineView({
                     fontSize: "0.75rem",
                     padding: "3px 8px",
                     borderRadius: 6,
-                    backgroundColor: "rgba(255, 255, 255, 0.08)",
-                    border: "1px solid rgba(255, 255, 255, 0.15)",
+                    backgroundColor: isLight
+                      ? "rgba(0, 0, 0, 0.05)"
+                      : "rgba(255, 255, 255, 0.08)",
+                    border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.12)" : "rgba(255, 255, 255, 0.15)"}`,
+                    color: isLight ? "#09090b" : "#ffffff",
                     cursor: "pointer",
                   }}
                   onClick={() => copySha(selectedCommit.sha)}
@@ -356,7 +414,7 @@ export function DriftTimelineView({
                   style={{
                     fontFamily: "var(--mf-mono, monospace)",
                     fontSize: "0.6875rem",
-                    color: "rgba(255, 255, 255, 0.45)",
+                    color: isLight ? "rgba(9, 9, 11, 0.55)" : "rgba(255, 255, 255, 0.45)",
                   }}
                 >
                   Authored by {selectedCommit.author} on{" "}
@@ -375,7 +433,7 @@ export function DriftTimelineView({
                   fontWeight: 600,
                   margin: 0,
                   letterSpacing: "-0.02em",
-                  color: "#ffffff",
+                  color: isLight ? "#09090b" : "#ffffff",
                 }}
               >
                 {selectedCommit.message}
@@ -395,8 +453,8 @@ export function DriftTimelineView({
                 style={{
                   padding: "7px 14px",
                   borderRadius: 999,
-                  background: "#ffffff",
-                  color: "#000000",
+                  background: isLight ? "#09090b" : "#ffffff",
+                  color: isLight ? "#ffffff" : "#000000",
                   border: "none",
                   fontFamily: "var(--mf-mono, monospace)",
                   fontSize: "0.6875rem",
@@ -419,8 +477,8 @@ export function DriftTimelineView({
                   padding: "7px 14px",
                   borderRadius: 999,
                   background: "transparent",
-                  color: "#ffffff",
-                  border: "1px solid rgba(255, 255, 255, 0.2)",
+                  color: isLight ? "#09090b" : "#ffffff",
+                  border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.15)" : "rgba(255, 255, 255, 0.2)"}`,
                   fontFamily: "var(--mf-mono, monospace)",
                   fontSize: "0.6875rem",
                   cursor: "pointer",
@@ -439,9 +497,10 @@ export function DriftTimelineView({
             style={{
               padding: "18px 20px",
               borderRadius: 12,
-              backgroundColor: "rgba(255, 255, 255, 0.02)",
-              border: "1px solid rgba(255, 255, 255, 0.12)",
-              borderLeft: "4px solid #ffffff",
+              backgroundColor: isLight ? "#ffffff" : "rgba(255, 255, 255, 0.02)",
+              border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.1)" : "rgba(255, 255, 255, 0.12)"}`,
+              borderLeft: `4px solid ${isLight ? "#09090b" : "#ffffff"}`,
+              boxShadow: isLight ? "0 2px 10px rgba(0, 0, 0, 0.04)" : "none",
             }}
           >
             <div
@@ -449,13 +508,19 @@ export function DriftTimelineView({
                 fontFamily: "var(--mf-mono, monospace)",
                 fontSize: "0.6875rem",
                 textTransform: "uppercase",
-                color: "rgba(255, 255, 255, 0.4)",
+                color: isLight ? "rgba(9, 9, 11, 0.5)" : "rgba(255, 255, 255, 0.4)",
                 marginBottom: 6,
               }}
             >
               Architectural Shift Analysis
             </div>
-            <div style={{ fontSize: "0.9375rem", lineHeight: 1.5, color: "#ffffff" }}>
+            <div
+              style={{
+                fontSize: "0.9375rem",
+                lineHeight: 1.5,
+                color: isLight ? "#09090b" : "#ffffff",
+              }}
+            >
               {selectedCommit.drift_summary ||
                 "Standard code evolution. File edits preserve existing modular boundaries."}
             </div>
@@ -467,8 +532,8 @@ export function DriftTimelineView({
               style={{
                 padding: "16px",
                 borderRadius: 10,
-                backgroundColor: "#0d0d11",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
+                backgroundColor: isLight ? "#f8f8fa" : "#0d0d11",
+                border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.08)"}`,
               }}
             >
               <div
@@ -476,13 +541,19 @@ export function DriftTimelineView({
                   fontFamily: "var(--mf-mono, monospace)",
                   fontSize: "0.625rem",
                   textTransform: "uppercase",
-                  color: "rgba(255, 255, 255, 0.4)",
+                  color: isLight ? "rgba(9, 9, 11, 0.5)" : "rgba(255, 255, 255, 0.4)",
                   marginBottom: 6,
                 }}
               >
                 Files Touched
               </div>
-              <div style={{ fontSize: "1.5rem", fontWeight: 600, color: "#ffffff" }}>
+              <div
+                style={{
+                  fontSize: "1.5rem",
+                  fontWeight: 600,
+                  color: isLight ? "#09090b" : "#ffffff",
+                }}
+              >
                 {selectedCommit.files_changed ?? (selectedCommit.impacted_files?.length || 3)}
               </div>
             </div>
@@ -491,8 +562,8 @@ export function DriftTimelineView({
               style={{
                 padding: "16px",
                 borderRadius: 10,
-                backgroundColor: "#0d0d11",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
+                backgroundColor: isLight ? "#f8f8fa" : "#0d0d11",
+                border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.08)"}`,
               }}
             >
               <div
@@ -500,15 +571,19 @@ export function DriftTimelineView({
                   fontFamily: "var(--mf-mono, monospace)",
                   fontSize: "0.625rem",
                   textTransform: "uppercase",
-                  color: "rgba(255, 255, 255, 0.4)",
+                  color: isLight ? "rgba(9, 9, 11, 0.5)" : "rgba(255, 255, 255, 0.4)",
                   marginBottom: 6,
                 }}
               >
                 Lines Added / Removed
               </div>
               <div style={{ fontSize: "1.25rem", fontWeight: 600, display: "flex", gap: 10 }}>
-                <span style={{ color: "#69db7c" }}>+{selectedCommit.insertions ?? 120}</span>
-                <span style={{ color: "#ff6b6b" }}>-{selectedCommit.deletions ?? 35}</span>
+                <span style={{ color: isLight ? "#16a34a" : "#69db7c" }}>
+                  +{selectedCommit.insertions ?? 120}
+                </span>
+                <span style={{ color: isLight ? "#dc2626" : "#ff6b6b" }}>
+                  -{selectedCommit.deletions ?? 35}
+                </span>
               </div>
             </div>
 
@@ -516,8 +591,8 @@ export function DriftTimelineView({
               style={{
                 padding: "16px",
                 borderRadius: 10,
-                backgroundColor: "#0d0d11",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
+                backgroundColor: isLight ? "#f8f8fa" : "#0d0d11",
+                border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.08)"}`,
               }}
             >
               <div
@@ -525,7 +600,7 @@ export function DriftTimelineView({
                   fontFamily: "var(--mf-mono, monospace)",
                   fontSize: "0.625rem",
                   textTransform: "uppercase",
-                  color: "rgba(255, 255, 255, 0.4)",
+                  color: isLight ? "rgba(9, 9, 11, 0.5)" : "rgba(255, 255, 255, 0.4)",
                   marginBottom: 6,
                 }}
               >
@@ -537,10 +612,16 @@ export function DriftTimelineView({
                   fontWeight: 600,
                   color:
                     selectedCommit.risk_level === "high"
-                      ? "#ff6b6b"
+                      ? isLight
+                        ? "#dc2626"
+                        : "#ff6b6b"
                       : selectedCommit.risk_level === "moderate"
-                        ? "#ffc078"
-                        : "#69db7c",
+                      ? isLight
+                        ? "#d97706"
+                        : "#ffc078"
+                      : isLight
+                      ? "#16a34a"
+                      : "#69db7c",
                 }}
               >
                 {selectedCommit.risk_level ? selectedCommit.risk_level.toUpperCase() : "LOW"}
@@ -554,8 +635,8 @@ export function DriftTimelineView({
               style={{
                 padding: "18px 20px",
                 borderRadius: 12,
-                backgroundColor: "#0d0d11",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
+                backgroundColor: isLight ? "#f8f8fa" : "#0d0d11",
+                border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.08)"}`,
               }}
             >
               <div
@@ -563,7 +644,7 @@ export function DriftTimelineView({
                   fontFamily: "var(--mf-mono, monospace)",
                   fontSize: "0.6875rem",
                   textTransform: "uppercase",
-                  color: "rgba(255, 255, 255, 0.4)",
+                  color: isLight ? "rgba(9, 9, 11, 0.5)" : "rgba(255, 255, 255, 0.4)",
                   marginBottom: 12,
                 }}
               >
@@ -578,12 +659,12 @@ export function DriftTimelineView({
                       fontSize: "0.75rem",
                       padding: "4px 10px",
                       borderRadius: 6,
-                      background: "rgba(255, 255, 255, 0.08)",
-                      border: "1px solid rgba(255, 255, 255, 0.16)",
-                      color: "#ffffff",
+                      background: isLight ? "rgba(0, 0, 0, 0.05)" : "rgba(255, 255, 255, 0.08)",
+                      border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.12)" : "rgba(255, 255, 255, 0.16)"}`,
+                      color: isLight ? "#09090b" : "#ffffff",
                     }}
                   >
-                    📦 {dep}
+                    {dep}
                   </span>
                 ))}
               </div>
@@ -597,7 +678,7 @@ export function DriftTimelineView({
                 fontFamily: "var(--mf-mono, monospace)",
                 fontSize: "0.6875rem",
                 textTransform: "uppercase",
-                color: "rgba(255, 255, 255, 0.4)",
+                color: isLight ? "rgba(9, 9, 11, 0.5)" : "rgba(255, 255, 255, 0.4)",
                 marginBottom: 12,
               }}
             >
@@ -612,20 +693,19 @@ export function DriftTimelineView({
                   style={{
                     padding: "12px 16px",
                     borderRadius: 8,
-                    backgroundColor: "#0d0d11",
-                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                    backgroundColor: isLight ? "#f8f8fa" : "#0d0d11",
+                    border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.08)"}`,
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontSize: "0.875rem" }}>📄</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span
                       style={{
                         fontFamily: "var(--mf-mono, monospace)",
                         fontSize: "0.8125rem",
-                        color: "#ffffff",
+                        color: isLight ? "#09090b" : "#ffffff",
                       }}
                     >
                       {filePath}
@@ -639,9 +719,11 @@ export function DriftTimelineView({
                       style={{
                         padding: "4px 10px",
                         borderRadius: 6,
-                        background: "rgba(255, 255, 255, 0.05)",
-                        border: "1px solid rgba(255, 255, 255, 0.12)",
-                        color: "rgba(255, 255, 255, 0.8)",
+                        background: isLight
+                          ? "rgba(0, 0, 0, 0.04)"
+                          : "rgba(255, 255, 255, 0.05)",
+                        border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.12)" : "rgba(255, 255, 255, 0.12)"}`,
+                        color: isLight ? "#09090b" : "rgba(255, 255, 255, 0.8)",
                         fontFamily: "var(--mf-mono, monospace)",
                         fontSize: "0.6875rem",
                         cursor: "pointer",

@@ -9,6 +9,7 @@ import type { StudioTab } from "./studio-types";
 import { TelemetryModal } from "./telemetry-modal";
 import { StudioTopbar } from "./studio-topbar";
 import { ExplorerRail } from "./explorer-rail";
+import { PanelResizer } from "./panel-resizer";
 import { ArchitectureCanvas } from "./architecture-canvas";
 import { CodeFlowStepper } from "./code-flow-stepper";
 import { OnboardingDocView } from "./onboarding-doc-view";
@@ -36,6 +37,76 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
   const [activeFile, setActiveFile] = useState<string | null>(null);
   const [branch, setBranch] = useState("main");
   const [selectedLang, setSelectedLang] = useState<string | null>(null);
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("devlens-studio-theme");
+      if (saved === "light" || saved === "dark") return saved;
+    }
+    return "dark";
+  });
+
+  const toggleTheme = useCallback(() => {
+    setTheme((curr) => {
+      const next = curr === "dark" ? "light" : "dark";
+      if (typeof window !== "undefined") {
+        localStorage.setItem("devlens-studio-theme", next);
+      }
+      return next;
+    });
+  }, []);
+
+  const isLight = theme === "light";
+
+  const [explorerWidth, setExplorerWidth] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const saved = Number(localStorage.getItem("devlens-explorer-width"));
+      if (saved >= 180 && saved <= 480) return saved;
+    }
+    return 260;
+  });
+
+  const [copilotWidth, setCopilotWidth] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const saved = Number(localStorage.getItem("devlens-copilot-width"));
+      if (saved >= 280 && saved <= 600) return saved;
+    }
+    return 340;
+  });
+
+  const handleResizeExplorer = useCallback((deltaX: number) => {
+    setExplorerWidth((curr) => {
+      const next = Math.min(480, Math.max(180, curr + deltaX));
+      if (typeof window !== "undefined") {
+        localStorage.setItem("devlens-explorer-width", String(next));
+      }
+      return next;
+    });
+  }, []);
+
+  const handleResizeCopilot = useCallback((deltaX: number) => {
+    setCopilotWidth((curr) => {
+      const next = Math.min(600, Math.max(280, curr + deltaX));
+      if (typeof window !== "undefined") {
+        localStorage.setItem("devlens-copilot-width", String(next));
+      }
+      return next;
+    });
+  }, []);
+
+  const handleResetExplorerWidth = useCallback(() => {
+    setExplorerWidth(260);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("devlens-explorer-width", "260");
+    }
+  }, []);
+
+  const handleResetCopilotWidth = useCallback(() => {
+    setCopilotWidth(340);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("devlens-copilot-width", "340");
+    }
+  }, []);
+
   const [explorerCollapsed, setExplorerCollapsed] = useState(false);
   const [copilotCollapsed, setCopilotCollapsed] = useState(false);
   const [isProcessingDone, setIsProcessingDone] = useState(!!(jobId && sessionId));
@@ -264,11 +335,15 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
 
   return (
     <div
+      data-theme={theme}
+      data-lenis-prevent="true"
+      data-scroll-prevent="true"
       style={{
         position: "fixed",
         inset: 0,
         zIndex: 50,
-        backgroundColor: "#08080a",
+        backgroundColor: isLight ? "#fbfbfe" : "#08080a",
+        color: isLight ? "#09090b" : "#f4f4f5",
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
@@ -286,10 +361,12 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
         onSelectLang={setSelectedLang}
         onExport={handleExport}
         onClose={onClose}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
 
       {/* 3-Pane Studio Workspace Layout */}
-      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+      <div style={{ flex: 1, display: "flex", overflow: "hidden", position: "relative" }}>
         {/* Left Explorer Rail */}
         <ExplorerRail
           files={displayFiles}
@@ -302,10 +379,23 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
           }}
           collapsed={explorerCollapsed}
           onToggleCollapse={() => setExplorerCollapsed((v) => !v)}
+          width={explorerWidth}
+          theme={theme}
         />
 
-        {/* Center Stage: Architecture | Code Flow | Onboarding Doc */}
-        <main style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+        {/* Panel Resizer: Left (Explorer) */}
+        {!explorerCollapsed && (
+          <PanelResizer
+            side="left"
+            currentWidth={explorerWidth}
+            onResize={handleResizeExplorer}
+            onReset={handleResetExplorerWidth}
+            theme={theme}
+          />
+        )}
+
+        {/* Center Stage: Architecture | Code Flow | Drift Timeline | Onboarding Doc */}
+        <main style={{ flex: 1, position: "relative", overflow: "hidden", minWidth: 320 }}>
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -324,6 +414,7 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
                   onAskCopilotAboutFile={(path) => {
                     chat.sendMessage(`Explain the role, dependencies, and blast radius of ${path}`);
                   }}
+                  theme={theme}
                 />
               )}
 
@@ -335,6 +426,7 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
                     setActiveFile(path);
                     setActiveTab("architecture");
                   }}
+                  theme={theme}
                 />
               )}
 
@@ -348,15 +440,36 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
                     setActiveTab("architecture");
                   }}
                   onAskCopilot={(prompt) => chat.sendMessage(prompt)}
+                  theme={theme}
                 />
               )}
 
               {activeTab === "doc" && (
-                <OnboardingDocView repoLabel={repoLabel} markdownContent={onboardingDoc} />
+                <OnboardingDocView
+                  repoLabel={repoLabel}
+                  markdownContent={onboardingDoc}
+                  graphData={analysisState.graphData}
+                  onSelectFile={(path) => {
+                    setActiveFile(path);
+                    setActiveTab("architecture");
+                  }}
+                  theme={theme}
+                />
               )}
             </motion.div>
           </AnimatePresence>
         </main>
+
+        {/* Panel Resizer: Right (Copilot) */}
+        {!copilotCollapsed && (
+          <PanelResizer
+            side="right"
+            currentWidth={copilotWidth}
+            onResize={handleResizeCopilot}
+            onReset={handleResetCopilotWidth}
+            theme={theme}
+          />
+        )}
 
         {/* Right Copilot Rail */}
         <CopilotRail
@@ -373,6 +486,8 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
           onToggleCollapse={() => setCopilotCollapsed((v) => !v)}
           graphData={analysisState.graphData}
           activeFile={activeFile}
+          width={copilotWidth}
+          theme={theme}
         />
       </div>
 
@@ -380,15 +495,15 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
       <footer
         style={{
           height: 32,
-          borderTop: "1px solid rgba(255, 255, 255, 0.1)",
-          backgroundColor: "#09090b",
+          borderTop: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.1)",
+          backgroundColor: isLight ? "#f4f4f7" : "#09090b",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           padding: "0 16px",
           fontFamily: "var(--mf-mono, monospace)",
           fontSize: "0.6875rem",
-          color: "rgba(255, 255, 255, 0.5)",
+          color: isLight ? "rgba(0, 0, 0, 0.65)" : "rgba(255, 255, 255, 0.5)",
           flexShrink: 0,
           zIndex: 30,
         }}
@@ -400,7 +515,7 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
                 width: 6,
                 height: 6,
                 borderRadius: "50%",
-                background: graphStats.cycles === 0 ? "#ffffff" : "#ef4444",
+                background: graphStats.cycles === 0 ? (isLight ? "#09090b" : "#ffffff") : "#ef4444",
               }}
             />
             <span>
@@ -409,9 +524,9 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
                 : `${graphStats.cycles} CIRCULAR CYCLE${graphStats.cycles > 1 ? "S" : ""} DETECTED`}
             </span>
           </span>
-          <span style={{ color: "rgba(255,255,255,0.2)" }}>/</span>
+          <span style={{ color: isLight ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.2)" }}>/</span>
           <span>MAX FAN-OUT: {graphStats.maxFanOut} CALLERS</span>
-          <span style={{ color: "rgba(255,255,255,0.2)" }}>/</span>
+          <span style={{ color: isLight ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.2)" }}>/</span>
           <span>AVG MCCABE COMPLEXITY: {graphStats.avgComp}</span>
         </div>
 
@@ -421,7 +536,9 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
             <span
               style={{
                 color:
-                  analysisState.graphData?.meta?.search_mode === "semantic" ? "#ffffff" : "#eab308",
+                  analysisState.graphData?.meta?.search_mode === "semantic"
+                    ? (isLight ? "#09090b" : "#ffffff")
+                    : (isLight ? "#b45309" : "#eab308"),
               }}
             >
               {analysisState.graphData?.meta?.search_mode === "semantic"
@@ -429,12 +546,12 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
                 : "AST KEYWORD/HYBRID"}
             </span>
           </span>
-          <span style={{ color: "rgba(255,255,255,0.2)" }}>/</span>
+          <span style={{ color: isLight ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.2)" }}>/</span>
           <span>
             INDEX: {graphStats.nodeCount} MODULES ({graphStats.edgeCount} EDGES)
           </span>
-          <span style={{ color: "rgba(255,255,255,0.2)" }}>/</span>
-          <span style={{ color: "rgba(255,255,255,0.7)" }}>FASTAPI + AST</span>
+          <span style={{ color: isLight ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.2)" }}>/</span>
+          <span style={{ color: isLight ? "rgba(0,0,0,0.85)" : "rgba(255,255,255,0.7)" }}>FASTAPI + AST</span>
         </div>
       </footer>
 

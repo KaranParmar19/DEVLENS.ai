@@ -9,6 +9,8 @@ interface ExplorerRailProps {
   onSelectFile: (path: string) => void;
   collapsed: boolean;
   onToggleCollapse: () => void;
+  width?: number;
+  theme?: "dark" | "light";
 }
 
 export function ExplorerRail({
@@ -19,9 +21,12 @@ export function ExplorerRail({
   onSelectFile,
   collapsed,
   onToggleCollapse,
+  width = 260,
+  theme = "dark",
 }: ExplorerRailProps) {
   const [tab, setTab] = useState<ExplorerTab>("files");
   const [filter, setFilter] = useState("");
+  const isLight = theme === "light";
 
   const filteredFiles = useMemo(() => {
     if (!filter) return files;
@@ -46,14 +51,15 @@ export function ExplorerRail({
       <aside
         style={{
           width: 44,
-          borderRight: "1px solid rgba(255, 255, 255, 0.1)",
-          backgroundColor: "#0d0d10",
+          borderRight: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.1)"}`,
+          backgroundColor: isLight ? "#f8f8fa" : "#0d0d10",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           padding: "16px 0",
           gap: 16,
           flexShrink: 0,
+          transition: "background-color 0.2s ease, border-color 0.2s ease",
         }}
       >
         <button
@@ -62,7 +68,7 @@ export function ExplorerRail({
           style={{
             fontFamily: "var(--mf-mono, monospace)",
             fontSize: "0.75rem",
-            color: "rgba(255,255,255,0.6)",
+            color: isLight ? "rgba(9, 9, 11, 0.6)" : "rgba(255, 255, 255, 0.6)",
             background: "transparent",
             border: "none",
             cursor: "pointer",
@@ -78,30 +84,31 @@ export function ExplorerRail({
   return (
     <aside
       style={{
-        width: 260,
-        borderRight: "1px solid rgba(255, 255, 255, 0.1)",
-        backgroundColor: "#0c0c0f",
+        width,
+        borderRight: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.1)"}`,
+        backgroundColor: isLight ? "#ffffff" : "#0c0c0f",
         display: "flex",
         flexDirection: "column",
         fontFamily: "var(--mf-font, 'Geist', sans-serif)",
         flexShrink: 0,
         overflow: "hidden",
+        transition: "background-color 0.2s ease, border-color 0.2s ease",
       }}
     >
       {/* Search Input Bar */}
-      <div style={{ padding: "12px 14px", borderBottom: "1px solid rgba(255, 255, 255, 0.08)" }}>
+      <div style={{ padding: "12px 14px", borderBottom: `1px solid ${isLight ? "rgba(0, 0, 0, 0.06)" : "rgba(255, 255, 255, 0.08)"}` }}>
         <div
           style={{
             display: "flex",
             alignItems: "center",
             gap: 8,
-            background: "rgba(255, 255, 255, 0.05)",
-            border: "1px solid rgba(255, 255, 255, 0.1)",
+            background: isLight ? "rgba(0, 0, 0, 0.04)" : "rgba(255, 255, 255, 0.05)",
+            border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.1)" : "rgba(255, 255, 255, 0.1)"}`,
             borderRadius: 8,
             padding: "6px 10px",
           }}
         >
-          <span style={{ fontFamily: "var(--mf-mono, monospace)", fontSize: "0.75rem", color: "rgba(255, 255, 255, 0.4)" }}>
+          <span style={{ fontFamily: "var(--mf-mono, monospace)", fontSize: "0.75rem", color: isLight ? "rgba(9, 9, 11, 0.4)" : "rgba(255, 255, 255, 0.4)" }}>
             ⌕
           </span>
           <input
@@ -115,7 +122,7 @@ export function ExplorerRail({
               outline: "none",
               fontFamily: "var(--mf-mono, monospace)",
               fontSize: "0.75rem",
-              color: "#ffffff",
+              color: isLight ? "#09090b" : "#ffffff",
               width: "100%",
             }}
           />
@@ -126,7 +133,7 @@ export function ExplorerRail({
               style={{
                 background: "transparent",
                 border: "none",
-                color: "rgba(255,255,255,0.4)",
+                color: isLight ? "rgba(9, 9, 11, 0.4)" : "rgba(255, 255, 255, 0.4)",
                 cursor: "pointer",
                 fontSize: "0.6875rem",
               }}
@@ -141,8 +148,8 @@ export function ExplorerRail({
       <div
         style={{
           display: "flex",
-          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-          backgroundColor: "#09090b",
+          borderBottom: `1px solid ${isLight ? "rgba(0, 0, 0, 0.06)" : "rgba(255, 255, 255, 0.08)"}`,
+          backgroundColor: isLight ? "#fbfbfe" : "#09090b",
         }}
       >
         {(
@@ -167,8 +174,16 @@ export function ExplorerRail({
                 fontSize: "0.6875rem",
                 textTransform: "uppercase",
                 letterSpacing: "0.06em",
-                color: isActive ? "#ffffff" : "rgba(255, 255, 255, 0.45)",
-                borderBottom: isActive ? "2px solid #ffffff" : "2px solid transparent",
+                color: isActive
+                  ? isLight
+                    ? "#09090b"
+                    : "#ffffff"
+                  : isLight
+                  ? "rgba(9, 9, 11, 0.45)"
+                  : "rgba(255, 255, 255, 0.45)",
+                borderBottom: isActive
+                  ? `2px solid ${isLight ? "#09090b" : "#ffffff"}`
+                  : "2px solid transparent",
                 cursor: "pointer",
                 transition: "all 0.15s",
               }}
@@ -180,7 +195,7 @@ export function ExplorerRail({
       </div>
 
       {/* Explorer Content */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "8px 6px" }}>
+      <div className="devlens-scroll" style={{ flex: 1, overflowY: "auto", padding: "8px 6px" }}>
         {tab === "files" && (
           <div>
             {filteredFiles.length === 0 ? (
@@ -204,8 +219,22 @@ export function ExplorerRail({
                       padding: "4px 8px",
                       paddingLeft: `${Math.min(f.depth * 12 + 8, 48)}px`,
                       borderRadius: 6,
-                      background: isSelected ? "rgba(255, 255, 255, 0.12)" : "transparent",
-                      color: isSelected ? "#ffffff" : isDir ? "rgba(255,255,255,0.85)" : "rgba(255, 255, 255, 0.65)",
+                      background: isSelected
+                        ? isLight
+                          ? "rgba(0, 0, 0, 0.08)"
+                          : "rgba(255, 255, 255, 0.12)"
+                        : "transparent",
+                      color: isSelected
+                        ? isLight
+                          ? "#09090b"
+                          : "#ffffff"
+                        : isDir
+                        ? isLight
+                          ? "#09090b"
+                          : "rgba(255,255,255,0.85)"
+                        : isLight
+                        ? "rgba(9, 9, 11, 0.7)"
+                        : "rgba(255, 255, 255, 0.65)",
                       cursor: isDir ? "default" : "pointer",
                       fontSize: "0.75rem",
                       fontFamily: "var(--mf-mono, monospace)",
@@ -213,15 +242,19 @@ export function ExplorerRail({
                       transition: "background 0.12s",
                     }}
                     onMouseEnter={(e) => {
-                      if (!isSelected && !isDir) e.currentTarget.style.background = "rgba(255,255,255,0.05)";
+                      if (!isSelected && !isDir) {
+                        e.currentTarget.style.background = isLight ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.05)";
+                      }
                     }}
                     onMouseLeave={(e) => {
-                      if (!isSelected && !isDir) e.currentTarget.style.background = "transparent";
+                      if (!isSelected && !isDir) {
+                        e.currentTarget.style.background = "transparent";
+                      }
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
-                      <span style={{ opacity: isDir ? 0.9 : 0.4, fontSize: "0.6875rem", flexShrink: 0 }}>
-                        {isDir ? "📁" : "📄"}
+                      <span style={{ opacity: isDir ? 0.7 : 0.35, fontSize: "0.6875rem", flexShrink: 0, width: 10, textAlign: "center" }}>
+                        {isDir ? "▸" : "·"}
                       </span>
                       <span style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
                         {f.name}

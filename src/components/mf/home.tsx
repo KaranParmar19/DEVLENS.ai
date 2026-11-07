@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import {
@@ -280,7 +280,8 @@ function MiniGraph({
   onMouseDown,
   onMouseMove,
   onMouseUp,
-  onWheel,
+  onPanChange,
+  onZoomChange,
 }: {
   selectedNodeId: number;
   onSelectNode: (id: number) => void;
@@ -291,9 +292,72 @@ function MiniGraph({
   onMouseDown: (e: React.MouseEvent) => void;
   onMouseMove: (e: React.MouseEvent) => void;
   onMouseUp: () => void;
-  onWheel: (e: React.WheelEvent) => void;
+  onPanChange: React.Dispatch<React.SetStateAction<{ x: number; y: number }>>;
+  onZoomChange: React.Dispatch<React.SetStateAction<number>>;
 }) {
   const [hoveredNodeId, setHoveredNodeId] = useState<number | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const touchStartRef = useRef<{ dist: number; panX: number; panY: number; midX: number; midY: number } | null>(null);
+
+  // Smooth two-finger trackpad scroll & pinch zoom (non-passive listener)
+  useEffect(() => {
+    const el = svgRef.current;
+    if (!el) return;
+
+    const onNativeWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      if (e.ctrlKey || e.metaKey) {
+        // Pinch-to-zoom on trackpad (or Ctrl + mouse wheel)
+        const factor = Math.exp(-e.deltaY * 0.008);
+        onZoomChange((z) => Math.min(2.0, Math.max(0.5, +(z * factor).toFixed(3))));
+      } else {
+        // Smooth 2-finger scroll on trackpad pans the canvas
+        onPanChange((p) => ({
+          x: +(p.x - e.deltaX).toFixed(2),
+          y: +(p.y - e.deltaY).toFixed(2),
+        }));
+      }
+    };
+
+    el.addEventListener("wheel", onNativeWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onNativeWheel);
+  }, [onPanChange, onZoomChange]);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      const midX = (t1.clientX + t2.clientX) / 2;
+      const midY = (t1.clientY + t2.clientY) / 2;
+      touchStartRef.current = { dist, panX: pan.x, panY: pan.y, midX, midY };
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2 && touchStartRef.current) {
+      e.preventDefault();
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const newDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      const newMidX = (t1.clientX + t2.clientX) / 2;
+      const newMidY = (t1.clientY + t2.clientY) / 2;
+
+      const scale = newDist / touchStartRef.current.dist;
+      onZoomChange((z) => Math.min(2.0, Math.max(0.5, +(z * (1 + (scale - 1) * 0.5)).toFixed(3))));
+
+      const dx = newMidX - touchStartRef.current.midX;
+      const dy = newMidY - touchStartRef.current.midY;
+      onPanChange({
+        x: +(touchStartRef.current.panX + dx).toFixed(2),
+        y: +(touchStartRef.current.panY + dy).toFixed(2),
+      });
+    }
+  };
+
+  const handleTouchEnd = () => {
+    touchStartRef.current = null;
+  };
 
   // Direct connected edges
   const connectedEdges = GRAPH_EDGES.filter(
@@ -320,6 +384,7 @@ function MiniGraph({
 
   return (
     <svg
+      ref={svgRef}
       viewBox="0 0 1000 560"
       width="100%"
       height="100%"
@@ -328,11 +393,15 @@ function MiniGraph({
       onMouseDown={onMouseDown}
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
-      onWheel={onWheel}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
       style={{
         cursor: isDragging ? "grabbing" : "grab",
         userSelect: "none",
         display: "block",
+        touchAction: "none",
       }}
     >
       <defs>
@@ -697,12 +766,123 @@ const COPILOT_PREVIEWS: Record<number, { q: string; a: string; sources: string }
   },
 };
 
+const FLOW_PREVIEW_STEPS = [
+  {
+    step: "01",
+    func: "server.listen()",
+    file: "server.ts:18",
+    note: "Binds port 3000, attaches global telemetry and CORS handlers",
+    type: "Ingress",
+  },
+  {
+    step: "02",
+    func: "middleware.pipeline()",
+    file: "middleware.ts:42",
+    note: "Executes token bucket rate-limiter & request header validation",
+    type: "Filter",
+  },
+  {
+    step: "03",
+    func: "router.dispatch(req)",
+    file: "router.ts:54",
+    note: "Matches pathname to registered AppRouter endpoints and layouts",
+    type: "Route",
+  },
+  {
+    step: "04",
+    func: "auth.verifySession(req)",
+    file: "auth.ts:24",
+    note: "Validates Ed25519 signature & hydrates claims into session context",
+    type: "Security",
+  },
+  {
+    step: "05",
+    func: "db.pool.query()",
+    file: "db.ts:10",
+    note: "Executes parameterized Postgres read with cache memoization",
+    type: "Store",
+  },
+  {
+    step: "06",
+    func: "renderToReadableStream()",
+    file: "app-render.tsx:92",
+    note: "Renders React Server Component tree & streams suspended chunks",
+    type: "Render",
+  },
+  {
+    step: "07",
+    func: "streamResponse(sink)",
+    file: "stream.ts:31",
+    note: "Pipes chunked binary HTML stream to client socket with backpressure",
+    type: "Flush",
+  },
+];
+
+const DRIFT_PREVIEW_COMMITS = [
+  {
+    sha: "e4f82a1",
+    msg: "refactor: decouple router handler dispatch",
+    author: "alex.chen",
+    time: "2h ago",
+    impact: "Low impact",
+    impactColor: "#ffffff",
+    stat: "3 files touched · +42 -12 · 0 cycles",
+    files: [
+      { name: "router.ts", diff: "+24" },
+      { name: "server.ts", diff: "+18" },
+      { name: "context.ts", diff: "-12" },
+    ],
+  },
+  {
+    sha: "9c3b102",
+    msg: "perf: memoize connection pooling in db.ts",
+    author: "sarah.dev",
+    time: "1d ago",
+    impact: "Medium impact",
+    impactColor: "#f59e0b",
+    stat: "2 files touched · +18 -4 · 2 dependents updated",
+    files: [
+      { name: "db.ts", diff: "+14" },
+      { name: "cache.ts", diff: "+4" },
+    ],
+  },
+  {
+    sha: "a18f7d4",
+    msg: "feat: add rate-limiting token bucket middleware",
+    author: "marcus.k",
+    time: "2d ago",
+    impact: "High blast",
+    impactColor: "#ef4444",
+    stat: "5 files touched · +86 -14 · 14 sinks impacted",
+    files: [
+      { name: "middleware.ts", diff: "+48" },
+      { name: "router.ts", diff: "+22" },
+      { name: "server.ts", diff: "+16" },
+    ],
+  },
+  {
+    sha: "7d2e091",
+    msg: "chore: upgrade streaming renderer dependencies",
+    author: "infra-bot",
+    time: "3d ago",
+    impact: "Low impact",
+    impactColor: "#ffffff",
+    stat: "4 files touched · +12 -8 · 0 architectural drift",
+    files: [
+      { name: "stream.ts", diff: "+8" },
+      { name: "app-render.tsx", diff: "+4" },
+    ],
+  },
+];
+
 function ProductFrame() {
   const [frameTab, setFrameTab] = useState<"architecture" | "flow" | "drift" | "doc">(
     "architecture",
   );
   const [selectedNodeId, setSelectedNodeId] = useState(1);
   const [blastMode, setBlastMode] = useState(false);
+  const [selectedCommitSha, setSelectedCommitSha] = useState("e4f82a1");
+  const [activeFlowStep, setActiveFlowStep] = useState("02");
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -743,8 +923,15 @@ function ProductFrame() {
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
-    const delta = e.deltaY > 0 ? -0.08 : 0.08;
-    setZoom((z) => Math.min(1.7, Math.max(0.7, +(z + delta).toFixed(2))));
+    if (e.ctrlKey || e.metaKey) {
+      const factor = Math.exp(-e.deltaY * 0.008);
+      setZoom((z) => Math.min(2.0, Math.max(0.5, +(z * factor).toFixed(3))));
+    } else {
+      setPan((p) => ({
+        x: +(p.x - e.deltaX).toFixed(2),
+        y: +(p.y - e.deltaY).toFixed(2),
+      }));
+    }
   }, []);
 
   const handleZoomIn = () => setZoom((z) => Math.min(1.7, +(z + 0.15).toFixed(2)));
@@ -810,12 +997,14 @@ function ProductFrame() {
             </span>
           </div>
           <div
+            className="devlens-scroll"
             style={{
               display: "flex",
               flexDirection: "column",
               gap: 3,
               maxHeight: 460,
               overflowY: "auto",
+              paddingRight: 4,
             }}
           >
             {GRAPH_NODES.map((n) => {
@@ -871,7 +1060,17 @@ function ProductFrame() {
         {/* Center: Interactive Workspace Canvas */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {/* Studio Tab bar switcher */}
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+          <div
+            className="devlens-tab-scroll"
+            style={{
+              display: "flex",
+              gap: 6,
+              alignItems: "center",
+              overflowX: "auto",
+              maxWidth: "100%",
+              paddingBottom: 2,
+            }}
+          >
             {(
               [
                 { id: "architecture", label: "Architecture Map" },
@@ -887,6 +1086,7 @@ function ProductFrame() {
                   type="button"
                   onClick={() => setFrameTab(t.id)}
                   style={{
+                    flexShrink: 0,
                     padding: "5px 12px",
                     borderRadius: 999,
                     fontFamily: "var(--mf-mono, monospace)",
@@ -1028,7 +1228,7 @@ function ProductFrame() {
                       }}
                       title="Toggle Blast Radius Calculation"
                     >
-                      ⚡ Blast Radius
+                      Blast Radius
                     </button>
                   </div>
                 </div>
@@ -1044,7 +1244,8 @@ function ProductFrame() {
                   onMouseDown={handleMouseDown}
                   onMouseMove={handleMouseMove}
                   onMouseUp={handleMouseUp}
-                  onWheel={handleWheel}
+                  onPanChange={setPan}
+                  onZoomChange={setZoom}
                 />
 
                 {/* Bottom Left HUD Metadata Chips */}
@@ -1121,185 +1322,350 @@ function ProductFrame() {
                       letterSpacing: "0.03em",
                     }}
                   >
-                    Drag to pan · Scroll to zoom · Click node to focus
+                    2-Finger scroll to pan · Pinch to zoom · Drag to pan · Click node to focus
                   </span>
                 </div>
               </>
             )}
 
             {frameTab === "flow" && (
-              <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
-                <span
-                  className="mf-mono"
-                  style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.5)" }}
+              <div
+                className="devlens-scroll"
+                style={{
+                  padding: 20,
+                  height: "100%",
+                  maxHeight: 480,
+                  overflowY: "auto",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 12,
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 2,
+                  }}
                 >
-                  Incoming HTTP request trace
-                </span>
-                {[
-                  {
-                    step: "01",
-                    func: "server.listen()",
-                    file: "server.ts:18",
-                    note: "Binds port, attaches middleware",
-                  },
-                  {
-                    step: "02",
-                    func: "router.dispatch(req)",
-                    file: "router.ts:54",
-                    note: "Matches pathname to AppRouter route",
-                  },
-                  {
-                    step: "03",
-                    func: "renderToReadableStream()",
-                    file: "app-render.tsx:92",
-                    note: "Renders server component tree",
-                  },
-                  {
-                    step: "04",
-                    func: "streamResponse(sink)",
-                    file: "stream.ts:31",
-                    note: "Flushes chunked HTML to client socket",
-                  },
-                ].map((s) => (
-                  <div
-                    key={s.step}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 14,
-                      padding: "8px 12px",
-                      background: "rgba(255,255,255,0.03)",
-                      borderRadius: 8,
-                      border: "1px solid rgba(255,255,255,0.08)",
-                    }}
+                  <span
+                    className="mf-mono"
+                    style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.5)" }}
                   >
-                    <span className="mf-mono" style={{ color: "#ffffff", fontWeight: 600 }}>
-                      {s.step}
-                    </span>
-                    <span className="mf-mono" style={{ color: "#38bdf8", fontSize: "0.75rem" }}>
-                      {s.func}
-                    </span>
-                    <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.7)" }}>
-                      {s.note}
-                    </span>
-                    <span
-                      className="mf-mono"
+                    Incoming HTTP request trace · {FLOW_PREVIEW_STEPS.length} hops traced
+                  </span>
+                  <span
+                    className="mf-mono"
+                    style={{ fontSize: "0.625rem", color: "rgba(255,255,255,0.4)" }}
+                  >
+                    ↕ Scroll to inspect execution path
+                  </span>
+                </div>
+                {FLOW_PREVIEW_STEPS.map((s) => {
+                  const isActive = s.step === activeFlowStep;
+                  return (
+                    <div
+                      key={s.step}
+                      onClick={() => setActiveFlowStep(s.step)}
                       style={{
-                        marginLeft: "auto",
-                        fontSize: "0.625rem",
-                        color: "rgba(255,255,255,0.4)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 14,
+                        padding: "9px 12px",
+                        background: isActive ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.025)",
+                        borderRadius: 8,
+                        border: "1px solid",
+                        borderColor: isActive ? "rgba(255,255,255,0.24)" : "rgba(255,255,255,0.08)",
+                        cursor: "pointer",
+                        transition: "all 0.15s",
                       }}
                     >
-                      {s.file}
-                    </span>
-                  </div>
-                ))}
+                      <span
+                        className="mf-mono"
+                        style={{
+                          color: isActive ? "#ffffff" : "rgba(255,255,255,0.4)",
+                          fontWeight: 600,
+                          fontSize: "0.75rem",
+                        }}
+                      >
+                        {s.step}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "0.625rem",
+                          padding: "2px 6px",
+                          borderRadius: 4,
+                          background: "rgba(255,255,255,0.08)",
+                          color: "rgba(255,255,255,0.65)",
+                          fontFamily: "var(--mf-mono, monospace)",
+                          letterSpacing: "0.04em",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {s.type}
+                      </span>
+                      <span className="mf-mono" style={{ color: "#ffffff", fontSize: "0.75rem", fontWeight: 500 }}>
+                        {s.func}
+                      </span>
+                      <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.7)" }}>
+                        {s.note}
+                      </span>
+                      <span
+                        className="mf-mono"
+                        style={{
+                          marginLeft: "auto",
+                          fontSize: "0.625rem",
+                          color: "rgba(255,255,255,0.4)",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {s.file}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
             {frameTab === "drift" && (
-              <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
-                <span
-                  className="mf-mono"
-                  style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.5)" }}
-                >
-                  Recent commit impact
-                </span>
+              <div
+                className="devlens-scroll"
+                style={{
+                  padding: 20,
+                  height: "100%",
+                  maxHeight: 480,
+                  overflowY: "auto",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 12,
+                }}
+              >
                 <div
                   style={{
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    borderRadius: 10,
-                    padding: 14,
-                    background: "rgba(255,255,255,0.02)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 2,
                   }}
                 >
-                  <div
-                    style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}
+                  <span
+                    className="mf-mono"
+                    style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.5)" }}
                   >
-                    <span className="mf-mono" style={{ color: "#ffffff" }}>
-                      sha: e4f82a1 · refactor: decouple router handler
-                    </span>
-                    <span
-                      className="mf-pill"
-                      style={{ color: "#ffffff", borderColor: "rgba(255,255,255,0.2)" }}
-                    >
-                      Low impact
-                    </span>
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "0.8125rem",
-                      color: "rgba(255,255,255,0.7)",
-                      lineHeight: 1.5,
-                    }}
+                    Recent commit impact · {DRIFT_PREVIEW_COMMITS.length} commits indexed
+                  </span>
+                  <span
+                    className="mf-mono"
+                    style={{ fontSize: "0.625rem", color: "rgba(255,255,255,0.4)" }}
                   >
-                    3 files touched, 42 insertions, 12 deletions. 0 cyclic dependencies introduced.
-                  </div>
-                  <div style={{ marginTop: 8, display: "flex", gap: 6 }}>
-                    <span className="mf-pill" style={{ fontSize: "0.625rem" }}>
-                      router.ts (+24)
-                    </span>
-                    <span className="mf-pill" style={{ fontSize: "0.625rem" }}>
-                      server.ts (+18)
-                    </span>
-                  </div>
+                    ↕ Scroll to audit commit drift
+                  </span>
                 </div>
+                {DRIFT_PREVIEW_COMMITS.map((c) => {
+                  const isSelected = c.sha === selectedCommitSha;
+                  return (
+                    <div
+                      key={c.sha}
+                      onClick={() => setSelectedCommitSha(c.sha)}
+                      style={{
+                        border: "1px solid",
+                        borderColor: isSelected ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.08)",
+                        borderRadius: 10,
+                        padding: 14,
+                        background: isSelected ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.02)",
+                        cursor: "pointer",
+                        transition: "all 0.15s",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          marginBottom: 8,
+                          gap: 12,
+                        }}
+                      >
+                        <span className="mf-mono" style={{ color: "#ffffff", fontSize: "0.8125rem", fontWeight: 500 }}>
+                          sha: {c.sha} · {c.msg}
+                        </span>
+                        <span
+                          className="mf-pill"
+                          style={{
+                            color: c.impactColor,
+                            borderColor: "rgba(255,255,255,0.2)",
+                            fontSize: "0.625rem",
+                            padding: "2px 8px",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {c.impact}
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "0.75rem",
+                          color: "rgba(255,255,255,0.65)",
+                          lineHeight: 1.5,
+                          marginBottom: 10,
+                        }}
+                      >
+                        {c.stat} · committed by {c.author} ({c.time})
+                      </div>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        {c.files.map((f) => (
+                          <span
+                            key={f.name}
+                            className="mf-pill"
+                            style={{ fontSize: "0.625rem", padding: "2px 7px" }}
+                          >
+                            {f.name} ({f.diff})
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
             {frameTab === "doc" && (
               <div
+                className="devlens-scroll"
                 style={{
-                  padding: 20,
-                  maxHeight: 270,
+                  padding: "22px 24px",
+                  height: "100%",
+                  maxHeight: 480,
                   overflowY: "auto",
                   fontFamily: "var(--mf-mono, monospace)",
                   fontSize: "0.75rem",
                   color: "rgba(255,255,255,0.8)",
-                  lineHeight: 1.6,
+                  lineHeight: 1.65,
                 }}
               >
                 <div
                   style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 14,
+                    borderBottom: "1px solid rgba(255,255,255,0.1)",
+                    paddingBottom: 8,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "0.625rem",
+                      color: "rgba(255,255,255,0.45)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.06em",
+                    }}
+                  >
+                    Generated Walkthrough · Live AST Grounded
+                  </span>
+                  <span style={{ fontSize: "0.625rem", color: "rgba(255,255,255,0.4)" }}>
+                    ↕ Scroll to read guide
+                  </span>
+                </div>
+                <div
+                  style={{
                     color: "#ffffff",
                     fontWeight: 600,
-                    fontSize: "0.875rem",
+                    fontSize: "0.9375rem",
                     marginBottom: 8,
                   }}
                 >
                   # Architectural Onboarding Overview
                 </div>
-                <p style={{ color: "rgba(255,255,255,0.6)", margin: "0 0 12px" }}>
-                  This service is organized into a modular pipeline centered around
-                  `app-render.tsx`. Inbound connections enter through `server.ts` and dispatch
-                  through `router.ts`.
+                <p style={{ color: "rgba(255,255,255,0.65)", margin: "0 0 16px" }}>
+                  This service is organized into a modular pipeline centered around `app-render.tsx`. Inbound
+                  connections enter through `server.ts` and dispatch through `router.ts` into isolated render sinks.
                 </p>
-                <div style={{ color: "#38bdf8", fontWeight: 600, margin: "12px 0 4px" }}>
-                  ## Fragile Junctions
+
+                <div style={{ color: "#ffffff", fontWeight: 600, margin: "18px 0 6px", fontSize: "0.8125rem" }}>
+                  ## 01 / Ingress & Runtime Routing Topology
                 </div>
-                <p style={{ color: "rgba(255,255,255,0.6)", margin: 0 }}>
-                  High fan-out detected on `router.ts` (coupled with 6 downstream handlers).
-                  Modifications require updating integration tests in `tests/test_router.py`.
+                <p style={{ color: "rgba(255,255,255,0.65)", margin: "0 0 12px" }}>
+                  The HTTP server listens on port 3000 (`server.ts:18`), delegates incoming socket requests to
+                  `middleware.ts` for rate limiting, and hands off valid requests to `router.ts:54`. Route match
+                  lookups run in sub-millisecond time using a radix tree against registered AppRouter paths.
                 </p>
+
+                <div style={{ color: "#ffffff", fontWeight: 600, margin: "18px 0 6px", fontSize: "0.8125rem" }}>
+                  ## 02 / Component Streaming & Render Pipeline
+                </div>
+                <p style={{ color: "rgba(255,255,255,0.65)", margin: "0 0 12px" }}>
+                  Server components execute inside `app-render.tsx:92`. Suspense boundaries trigger immediate
+                  fallback emission while asynchronous data resolves, piping chunked binary streams through
+                  `stream.ts:31` down to the client socket without blocking the main event loop.
+                </p>
+
+                <div style={{ color: "#ffffff", fontWeight: 600, margin: "18px 0 6px", fontSize: "0.8125rem" }}>
+                  ## 03 / Persistence & Session Hydration
+                </div>
+                <p style={{ color: "rgba(255,255,255,0.65)", margin: "0 0 12px" }}>
+                  User authentication is verified in `auth.ts:24` with Ed25519 token signatures. Authenticated
+                  identities are stored in ephemeral `session.ts` structures, and queries are dispatched via
+                  `db.ts:10` pool connections with 300s TTL cache memoization in `cache.ts`.
+                </p>
+
+                <div style={{ color: "#f59e0b", fontWeight: 600, margin: "18px 0 6px", fontSize: "0.8125rem" }}>
+                  ## 04 / Fragile Junctions & Coupling Hazards
+                </div>
+                <p style={{ color: "rgba(255,255,255,0.65)", margin: "0 0 16px" }}>
+                  High fan-out detected on `router.ts` (coupling score: 0.88 with 14 downstream sinks). Any breaking
+                  signature changes require synchronous test updates in `tests/test_router.py`.
+                </p>
+
+                <div style={{ color: "#ffffff", fontWeight: 600, margin: "18px 0 6px", fontSize: "0.8125rem" }}>
+                  ## 05 / Suggested PR Verification Checklist
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, margin: "8px 0 0" }}>
+                  {[
+                    "Verify all router.ts dispatch calls include full request context headers",
+                    "Ensure db connection pool checkout times do not exceed 50ms in staging",
+                    "Run regression tests across both edge runtime and Node.js server targets",
+                    "Validate that no cyclic import dependencies are introduced between modules",
+                  ].map((item, idx) => (
+                    <div key={idx} style={{ display: "flex", alignItems: "center", gap: 8, color: "rgba(255,255,255,0.7)" }}>
+                      <span style={{ color: "#ffffff" }}>✓</span>
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
         </div>
 
         {/* Right: Cited Copilot Box */}
-        <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-          <div>
+        <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", height: "100%" }}>
+          <div
+            className="devlens-scroll"
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+              maxHeight: 430,
+              overflowY: "auto",
+              paddingRight: 4,
+            }}
+          >
             <div
               className="mf-mono"
               style={{
                 color: "#8a8a8a",
-                marginBottom: 12,
                 fontSize: "0.6875rem",
                 textTransform: "uppercase",
                 letterSpacing: "0.05em",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
               }}
             >
-              DevLens Copilot
+              <span>Code Q&A</span>
+              <span style={{ opacity: 0.5, fontSize: "0.625rem" }}>Exact Citations</span>
             </div>
             <div
               style={{
@@ -1308,7 +1674,6 @@ function ProductFrame() {
                 padding: "12px 14px",
                 fontSize: 13,
                 lineHeight: 1.45,
-                marginBottom: 12,
                 color: "#ffffff",
                 border: "1px solid rgba(255,255,255,0.12)",
                 fontFamily: "var(--mf-mono, monospace)",
@@ -1344,13 +1709,43 @@ function ProductFrame() {
                 ↳ {copilotData.sources}
               </div>
             </div>
+
+            {/* AST Module Metadata & Citations */}
+            <div
+              style={{
+                padding: "10px 12px",
+                borderRadius: 8,
+                background: "rgba(255, 255, 255, 0.02)",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+                fontSize: "0.6875rem",
+                fontFamily: "var(--mf-mono, monospace)",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", color: "rgba(255,255,255,0.4)" }}>
+                <span>INDEXED SCOPE</span>
+                <span style={{ color: "#ffffff" }}>{activeNode.label}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", color: "rgba(255,255,255,0.4)" }}>
+                <span>LAYER ROLE</span>
+                <span style={{ color: "#ffffff" }}>{activeNode.role}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", color: "rgba(255,255,255,0.4)" }}>
+                <span>COUPLING RATIO</span>
+                <span style={{ color: activeNode.coupling > 0.8 ? "#f59e0b" : "#ffffff" }}>
+                  {activeNode.coupling.toFixed(2)} ({activeNode.coupling > 0.8 ? "HIGH" : "NORMAL"})
+                </span>
+              </div>
+            </div>
           </div>
 
           <div
             style={{
-              marginTop: 16,
+              marginTop: 14,
               borderTop: "1px solid rgba(255,255,255,0.08)",
-              paddingTop: 12,
+              paddingTop: 10,
               display: "flex",
               flexDirection: "column",
               gap: 4,
@@ -1396,7 +1791,7 @@ export function HomePage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
           >
-            <Pill live>Tree-sitter AST Graph + Cited Copilot</Pill>
+            <Pill live>Tree-sitter AST Graph + Verified Code Search</Pill>
           </motion.div>
 
           <motion.h1

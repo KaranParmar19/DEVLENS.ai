@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { Sun, Moon } from "lucide-react";
 import type { StudioTab } from "./studio-types";
 
 interface StudioTopbarProps {
@@ -13,6 +14,8 @@ interface StudioTopbarProps {
   onSelectLang: (lang: string | null) => void;
   onExport: (format: "json" | "mermaid" | "plantuml" | "share") => void;
   onClose: () => void;
+  theme?: "dark" | "light";
+  onToggleTheme?: () => void;
 }
 
 const BRANCHES = ["main", "master", "develop", "staging"];
@@ -28,11 +31,14 @@ export function StudioTopbar({
   onSelectLang,
   onExport,
   onClose,
+  theme = "dark",
+  onToggleTheme,
 }: StudioTopbarProps) {
   const repoLabel = repoUrl.replace(/^https?:\/\/(www\.)?github\.com\//, "").replace(/\.git$/, "");
   const [branchOpen, setBranchOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const isLight = theme === "light";
 
   const handleShare = () => {
     onExport("share");
@@ -44,9 +50,9 @@ export function StudioTopbar({
     <header
       style={{
         height: 56,
-        borderBottom: "1px solid rgba(255, 255, 255, 0.12)",
-        backgroundColor: "#09090b",
-        color: "#ffffff",
+        borderBottom: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.12)"}`,
+        backgroundColor: isLight ? "#ffffff" : "#09090b",
+        color: isLight ? "#09090b" : "#ffffff",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
@@ -55,6 +61,7 @@ export function StudioTopbar({
         position: "relative",
         zIndex: 40,
         flexShrink: 0,
+        transition: "background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease",
       }}
     >
       {/* Left: Brand & Repo Breadcrumb */}
@@ -73,7 +80,7 @@ export function StudioTopbar({
             fontSize: "0.75rem",
             letterSpacing: "0.06em",
             textTransform: "uppercase",
-            color: "#ffffff",
+            color: isLight ? "#09090b" : "#ffffff",
             textDecoration: "none",
           }}
         >
@@ -82,20 +89,20 @@ export function StudioTopbar({
               width: 8,
               height: 8,
               borderRadius: "50%",
-              backgroundColor: "#ffffff",
+              backgroundColor: isLight ? "#09090b" : "#ffffff",
               display: "inline-block",
             }}
           />
           DevLens · Studio
         </a>
 
-        <div style={{ width: 1, height: 16, backgroundColor: "rgba(255, 255, 255, 0.15)" }} />
+        <div style={{ width: 1, height: 16, backgroundColor: isLight ? "rgba(0, 0, 0, 0.12)" : "rgba(255, 255, 255, 0.15)" }} />
 
         {/* Repo Label */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.875rem" }}>
           <span
             style={{
-              color: "rgba(255, 255, 255, 0.5)",
+              color: isLight ? "rgba(9, 9, 11, 0.5)" : "rgba(255, 255, 255, 0.5)",
               fontFamily: "var(--mf-mono, monospace)",
               fontSize: "0.75rem",
             }}
@@ -190,8 +197,8 @@ export function StudioTopbar({
           gap: 4,
           padding: 3,
           borderRadius: 999,
-          border: "1px solid rgba(255,255,255,0.14)",
-          background: "rgba(255,255,255,0.03)",
+          border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.09)" : "rgba(255, 255, 255, 0.14)"}`,
+          background: isLight ? "rgba(0, 0, 0, 0.04)" : "rgba(255, 255, 255, 0.03)",
         }}
       >
         {(
@@ -219,7 +226,13 @@ export function StudioTopbar({
                 border: "none",
                 cursor: "pointer",
                 background: "transparent",
-                color: isActive ? "#000000" : "rgba(255, 255, 255, 0.65)",
+                color: isActive
+                  ? isLight
+                    ? "#ffffff"
+                    : "#000000"
+                  : isLight
+                  ? "rgba(9, 9, 11, 0.65)"
+                  : "rgba(255, 255, 255, 0.65)",
                 fontWeight: isActive ? 600 : 400,
                 outline: "none",
               }}
@@ -232,7 +245,7 @@ export function StudioTopbar({
                     position: "absolute",
                     inset: 0,
                     borderRadius: 999,
-                    backgroundColor: "#ffffff",
+                    backgroundColor: isLight ? "#09090b" : "#ffffff",
                     zIndex: 0,
                   }}
                 />
@@ -385,6 +398,29 @@ export function StudioTopbar({
           </AnimatePresence>
         </div>
 
+        {/* Theme Toggle Button */}
+        {onToggleTheme && (
+          <button
+            type="button"
+            onClick={onToggleTheme}
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: "50%",
+              border: `1px solid ${isLight ? "rgba(0,0,0,0.14)" : "rgba(255,255,255,0.15)"}`,
+              background: isLight ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.06)",
+              color: isLight ? "#09090b" : "#ffffff",
+              display: "inline-grid",
+              placeItems: "center",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+            }}
+            title={isLight ? "Switch to Dark Studio" : "Switch to Light Studio"}
+          >
+            {isLight ? <Moon size={13} strokeWidth={2} /> : <Sun size={13} strokeWidth={2} />}
+          </button>
+        )}
+
         {/* Close Studio Button */}
         <button
           type="button"
@@ -393,14 +429,14 @@ export function StudioTopbar({
             width: 28,
             height: 28,
             borderRadius: "50%",
-            border: "1px solid rgba(255,255,255,0.15)",
+            border: `1px solid ${isLight ? "rgba(0,0,0,0.14)" : "rgba(255,255,255,0.15)"}`,
             background: "transparent",
-            color: "rgba(255,255,255,0.7)",
+            color: isLight ? "rgba(9,9,11,0.7)" : "rgba(255,255,255,0.7)",
             display: "inline-grid",
             placeItems: "center",
             cursor: "pointer",
             fontSize: "0.8125rem",
-            marginLeft: 4,
+            marginLeft: 2,
           }}
           title="Exit to Dashboard Hub"
         >

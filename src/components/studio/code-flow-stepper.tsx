@@ -5,6 +5,7 @@ interface CodeFlowStepperProps {
   graphData?: GraphData | null;
   onAskCopilot: (prompt: string) => void;
   onSelectFile?: (filePath: string) => void;
+  theme?: "dark" | "light";
 }
 
 interface FlowStep {
@@ -116,47 +117,48 @@ const FLOWS: FlowCategory[] = [
     ],
   },
   {
-    id: "rag",
-    title: "Q&A Vector Retrieval & Synthesis",
+    id: "symbol-resolution",
+    title: "AST Symbol Resolution & Call Graph",
     steps: [
       {
-        id: "rag-1",
+        id: "sym-1",
         stepNumber: "01",
-        stage: "Natural Language Query Embedding",
-        file: "backend/app/rag/retriever.py",
-        symbol: "embed_query_string(question: str)",
-        inputContract: "Question: 'What breaks if I modify router.ts?'",
-        outputContract: "Vector: Float32Array(1536)",
-        description: "Normalizes developer prompt and converts semantic intent into a 1536-dimensional embedding vector.",
-        failureRisk: "Embedding model downtime or latency spikes.",
+        stage: "Lexical & Syntax Tokenization",
+        file: "backend/app/core/lexer.py",
+        symbol: "tokenize_source_buffer(content: str)",
+        inputContract: "RawFileContentBuffer (TypeScript / Rust / Python)",
+        outputContract: "TokenStream { tokens, spans, positions }",
+        description: "Scans raw source bytes and produces typed token stream using language-specific Tree-sitter grammar tables.",
+        failureRisk: "Grammar syntax errors on incomplete or malformed source files.",
       },
       {
-        id: "rag-2",
+        id: "sym-2",
         stepNumber: "02",
-        stage: "HNSW Vector Cosine Distance Query",
-        file: "backend/app/rag/vector_store.py",
-        symbol: "similarity_search(query_vec, top_k=6)",
-        inputContract: "QueryVector + SessionId",
-        outputContract: "Array<RetrievedChunk { file, score, content }>",
-        description: "Executes cosine distance search `<=>` in pgvector indexed table to find highest-scoring AST code chunks.",
-        failureRisk: "Low recall if chunks are too granular or stripped of function signatures.",
+        stage: "Cross-File Symbol Table Linking",
+        file: "backend/app/core/linker.py",
+        symbol: "resolve_import_specifiers(symbol_table, graph)",
+        inputContract: "ExportManifest + ImportSpecifiers",
+        outputContract: "ResolvedSymbolTable { definitions, references }",
+        description: "Binds exported identifiers, classes, and function signatures across module boundaries to build a unified project symbol index.",
+        failureRisk: "Unresolved aliases or circular relative path imports.",
       },
       {
-        id: "rag-3",
+        id: "sym-3",
         stepNumber: "03",
-        stage: "LangChain ReAct Agent Reasoning",
-        file: "backend/app/agent/devlens_agent.py",
-        symbol: "synthesize_answer(context, question)",
-        inputContract: "RetrievedChunks + GraphTopologyMeta",
-        outputContract: "StreamingTokenBuffer",
-        description: "Constructs prompt context with file citations, calculates blast radius, and streams response over WebSocket.",
-        failureRisk: "LLM hallucination if prompt does not enforce strict source citation constraints.",
+        stage: "Downstream Blast Radius Reachability",
+        file: "backend/app/core/reachability.py",
+        symbol: "compute_blast_radius(target_symbol, call_graph)",
+        inputContract: "TargetSymbolId + DirectedGraph",
+        outputContract: "ReachabilityReport { affected_nodes, critical_paths }",
+        description: "Executes depth-first traversal across topological graph edges to compute exact impact radius and fragile downstream dependents.",
+        failureRisk: "Deep recursion limit on cyclic dependency graphs without visited set checks.",
       },
     ],
   },
 ];
 
-export function CodeFlowStepper({ onAskCopilot, onSelectFile }: CodeFlowStepperProps) {
+export function CodeFlowStepper({ onAskCopilot, onSelectFile, theme = "dark" }: CodeFlowStepperProps) {
+  const isLight = theme === "light";
   const [activeFlowId, setActiveFlowId] = useState("ingestion");
   const [activeStepIdx, setActiveStepIdx] = useState(0);
 
@@ -183,20 +185,31 @@ export function CodeFlowStepper({ onAskCopilot, onSelectFile }: CodeFlowStepperP
 
   return (
     <div
+      className="devlens-scroll"
       style={{
         width: "100%",
         height: "100%",
-        backgroundColor: "#08080a",
-        color: "#ffffff",
+        backgroundColor: isLight ? "#fbfbfe" : "#08080a",
+        color: isLight ? "#09090b" : "#ffffff",
         display: "flex",
         flexDirection: "column",
         padding: "clamp(24px, 4vw, 48px)",
         fontFamily: "var(--mf-font, 'Geist', sans-serif)",
         overflowY: "auto",
+        transition: "background-color 0.2s ease, color 0.2s ease",
       }}
     >
       {/* Top Header & Flow Category Switcher */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 32, flexWrap: "wrap", gap: 16 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-end",
+          marginBottom: 32,
+          flexWrap: "wrap",
+          gap: 16,
+        }}
+      >
         <div>
           <span
             style={{
@@ -204,12 +217,20 @@ export function CodeFlowStepper({ onAskCopilot, onSelectFile }: CodeFlowStepperP
               fontSize: "0.6875rem",
               textTransform: "uppercase",
               letterSpacing: "0.08em",
-              color: "rgba(255, 255, 255, 0.45)",
+              color: isLight ? "rgba(9, 9, 11, 0.5)" : "rgba(255, 255, 255, 0.45)",
             }}
           >
             Trace Execution Engine
           </span>
-          <h2 style={{ fontSize: "clamp(1.75rem, 3vw, 2.5rem)", fontWeight: 500, letterSpacing: "-0.03em", margin: "6px 0 0" }}>
+          <h2
+            style={{
+              fontSize: "clamp(1.75rem, 3vw, 2.5rem)",
+              fontWeight: 500,
+              letterSpacing: "-0.03em",
+              margin: "6px 0 0",
+              color: isLight ? "#09090b" : "#ffffff",
+            }}
+          >
             Runtime Request Flow
           </h2>
         </div>
@@ -219,8 +240,8 @@ export function CodeFlowStepper({ onAskCopilot, onSelectFile }: CodeFlowStepperP
           style={{
             display: "flex",
             gap: 6,
-            background: "rgba(255, 255, 255, 0.04)",
-            border: "1px solid rgba(255, 255, 255, 0.12)",
+            background: isLight ? "rgba(0, 0, 0, 0.04)" : "rgba(255, 255, 255, 0.04)",
+            border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.12)" : "rgba(255, 255, 255, 0.12)"}`,
             borderRadius: 999,
             padding: 4,
           }}
@@ -239,8 +260,14 @@ export function CodeFlowStepper({ onAskCopilot, onSelectFile }: CodeFlowStepperP
                   padding: "6px 14px",
                   borderRadius: 999,
                   border: "none",
-                  background: isActive ? "#ffffff" : "transparent",
-                  color: isActive ? "#000000" : "rgba(255, 255, 255, 0.65)",
+                  background: isActive ? (isLight ? "#09090b" : "#ffffff") : "transparent",
+                  color: isActive
+                    ? isLight
+                      ? "#ffffff"
+                      : "#000000"
+                    : isLight
+                    ? "rgba(9, 9, 11, 0.7)"
+                    : "rgba(255, 255, 255, 0.65)",
                   fontFamily: "var(--mf-mono, monospace)",
                   fontSize: "0.6875rem",
                   fontWeight: isActive ? 600 : 400,
@@ -256,8 +283,21 @@ export function CodeFlowStepper({ onAskCopilot, onSelectFile }: CodeFlowStepperP
       </div>
 
       {/* Stepper Navigation Strip */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <span style={{ fontFamily: "var(--mf-mono, monospace)", fontSize: "0.75rem", color: "rgba(255, 255, 255, 0.5)" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 20,
+        }}
+      >
+        <span
+          style={{
+            fontFamily: "var(--mf-mono, monospace)",
+            fontSize: "0.75rem",
+            color: isLight ? "rgba(9, 9, 11, 0.55)" : "rgba(255, 255, 255, 0.5)",
+          }}
+        >
           Hop {activeStepIdx + 1} of {currentFlow.steps.length} · {current.stage}
         </span>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -268,9 +308,16 @@ export function CodeFlowStepper({ onAskCopilot, onSelectFile }: CodeFlowStepperP
             style={{
               padding: "5px 12px",
               borderRadius: 999,
-              border: "1px solid rgba(255, 255, 255, 0.15)",
+              border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.15)" : "rgba(255, 255, 255, 0.15)"}`,
               background: "transparent",
-              color: activeStepIdx === 0 ? "rgba(255, 255, 255, 0.2)" : "#ffffff",
+              color:
+                activeStepIdx === 0
+                  ? isLight
+                    ? "rgba(9, 9, 11, 0.25)"
+                    : "rgba(255, 255, 255, 0.2)"
+                  : isLight
+                  ? "#09090b"
+                  : "#ffffff",
               fontFamily: "var(--mf-mono, monospace)",
               fontSize: "0.6875rem",
               cursor: activeStepIdx === 0 ? "not-allowed" : "pointer",
@@ -285,9 +332,21 @@ export function CodeFlowStepper({ onAskCopilot, onSelectFile }: CodeFlowStepperP
             style={{
               padding: "5px 12px",
               borderRadius: 999,
-              border: "1px solid rgba(255, 255, 255, 0.15)",
-              background: activeStepIdx === currentFlow.steps.length - 1 ? "transparent" : "#ffffff",
-              color: activeStepIdx === currentFlow.steps.length - 1 ? "rgba(255, 255, 255, 0.2)" : "#000000",
+              border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.15)" : "rgba(255, 255, 255, 0.15)"}`,
+              background:
+                activeStepIdx === currentFlow.steps.length - 1
+                  ? "transparent"
+                  : isLight
+                  ? "#09090b"
+                  : "#ffffff",
+              color:
+                activeStepIdx === currentFlow.steps.length - 1
+                  ? isLight
+                    ? "rgba(9, 9, 11, 0.25)"
+                    : "rgba(255, 255, 255, 0.2)"
+                  : isLight
+                  ? "#ffffff"
+                  : "#000000",
               fontFamily: "var(--mf-mono, monospace)",
               fontSize: "0.6875rem",
               fontWeight: 500,
@@ -320,13 +379,48 @@ export function CodeFlowStepper({ onAskCopilot, onSelectFile }: CodeFlowStepperP
                 padding: "12px",
                 borderRadius: 10,
                 border: "1px solid",
-                borderColor: isActive ? "#ffffff" : isPassed ? "rgba(255, 255, 255, 0.25)" : "rgba(255, 255, 255, 0.08)",
-                background: isActive ? "rgba(255, 255, 255, 0.1)" : "rgba(255, 255, 255, 0.02)",
+                borderColor: isActive
+                  ? isLight
+                    ? "#09090b"
+                    : "#ffffff"
+                  : isPassed
+                  ? isLight
+                    ? "rgba(0, 0, 0, 0.2)"
+                    : "rgba(255, 255, 255, 0.25)"
+                  : isLight
+                  ? "rgba(0, 0, 0, 0.08)"
+                  : "rgba(255, 255, 255, 0.08)",
+                background: isActive
+                  ? isLight
+                    ? "rgba(0, 0, 0, 0.06)"
+                    : "rgba(255, 255, 255, 0.1)"
+                  : isLight
+                  ? "rgba(0, 0, 0, 0.02)"
+                  : "rgba(255, 255, 255, 0.02)",
                 transition: "all 0.2s",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                <span style={{ fontFamily: "var(--mf-mono, monospace)", fontSize: "0.6875rem", color: isActive ? "#ffffff" : "rgba(255, 255, 255, 0.4)" }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 6,
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: "var(--mf-mono, monospace)",
+                    fontSize: "0.6875rem",
+                    color: isActive
+                      ? isLight
+                        ? "#09090b"
+                        : "#ffffff"
+                      : isLight
+                      ? "rgba(9, 9, 11, 0.45)"
+                      : "rgba(255, 255, 255, 0.4)",
+                  }}
+                >
                   {s.stepNumber}
                 </span>
                 <span
@@ -334,11 +428,36 @@ export function CodeFlowStepper({ onAskCopilot, onSelectFile }: CodeFlowStepperP
                     width: 6,
                     height: 6,
                     borderRadius: "50%",
-                    background: isActive ? "#ffffff" : isPassed ? "rgba(255, 255, 255, 0.5)" : "rgba(255, 255, 255, 0.15)",
+                    background: isActive
+                      ? isLight
+                        ? "#09090b"
+                        : "#ffffff"
+                      : isPassed
+                      ? isLight
+                        ? "rgba(0, 0, 0, 0.45)"
+                        : "rgba(255, 255, 255, 0.5)"
+                      : isLight
+                      ? "rgba(0, 0, 0, 0.15)"
+                      : "rgba(255, 255, 255, 0.15)",
                   }}
                 />
               </div>
-              <div style={{ fontSize: "0.8125rem", fontWeight: 500, color: isActive ? "#ffffff" : "rgba(255, 255, 255, 0.7)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              <div
+                style={{
+                  fontSize: "0.8125rem",
+                  fontWeight: 500,
+                  color: isActive
+                    ? isLight
+                      ? "#09090b"
+                      : "#ffffff"
+                    : isLight
+                    ? "rgba(9, 9, 11, 0.7)"
+                    : "rgba(255, 255, 255, 0.7)",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
                 {s.stage}
               </div>
             </div>
@@ -349,24 +468,46 @@ export function CodeFlowStepper({ onAskCopilot, onSelectFile }: CodeFlowStepperP
       {/* Active Step Detailed Card */}
       <div
         style={{
-          background: "#111114",
-          border: "1px solid rgba(255, 255, 255, 0.14)",
+          background: isLight ? "#ffffff" : "#111114",
+          border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.12)" : "rgba(255, 255, 255, 0.14)"}`,
           borderRadius: 16,
           padding: "clamp(24px, 4vw, 36px)",
           display: "flex",
           flexDirection: "column",
           gap: 24,
           maxWidth: 960,
+          boxShadow: isLight ? "0 4px 20px rgba(0, 0, 0, 0.05)" : "none",
         }}
       >
         <div>
-          <span style={{ fontFamily: "var(--mf-mono, monospace)", fontSize: "0.75rem", color: "rgba(255, 255, 255, 0.5)" }}>
+          <span
+            style={{
+              fontFamily: "var(--mf-mono, monospace)",
+              fontSize: "0.75rem",
+              color: isLight ? "rgba(9, 9, 11, 0.5)" : "rgba(255, 255, 255, 0.5)",
+            }}
+          >
             STAGE {current.stepNumber} · EXECUTION HOP
           </span>
-          <h3 style={{ fontSize: "1.75rem", fontWeight: 500, margin: "8px 0 12px", letterSpacing: "-0.03em" }}>
+          <h3
+            style={{
+              fontSize: "1.75rem",
+              fontWeight: 500,
+              margin: "8px 0 12px",
+              letterSpacing: "-0.03em",
+              color: isLight ? "#09090b" : "#ffffff",
+            }}
+          >
             {current.stage}
           </h3>
-          <p style={{ fontSize: "0.9375rem", lineHeight: 1.6, color: "rgba(255, 255, 255, 0.8)", margin: 0 }}>
+          <p
+            style={{
+              fontSize: "0.9375rem",
+              lineHeight: 1.6,
+              color: isLight ? "rgba(9, 9, 11, 0.8)" : "rgba(255, 255, 255, 0.8)",
+              margin: 0,
+            }}
+          >
             {current.description}
           </p>
         </div>
@@ -374,30 +515,52 @@ export function CodeFlowStepper({ onAskCopilot, onSelectFile }: CodeFlowStepperP
         {/* Function & File Signature Box */}
         <div
           style={{
-            background: "#08080a",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
+            background: isLight ? "#f4f4f7" : "#08080a",
+            border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.08)"}`,
             borderRadius: 10,
             padding: "16px 20px",
           }}
         >
-          <div style={{ fontFamily: "var(--mf-mono, monospace)", fontSize: "0.6875rem", color: "rgba(255, 255, 255, 0.4)", marginBottom: 6 }}>
+          <div
+            style={{
+              fontFamily: "var(--mf-mono, monospace)",
+              fontSize: "0.6875rem",
+              color: isLight ? "rgba(9, 9, 11, 0.45)" : "rgba(255, 255, 255, 0.4)",
+              marginBottom: 6,
+            }}
+          >
             INVOCATION TARGET
           </div>
-          <div style={{ fontFamily: "var(--mf-mono, monospace)", fontSize: "0.875rem", color: "#ffffff", marginBottom: 6 }}>
+          <div
+            style={{
+              fontFamily: "var(--mf-mono, monospace)",
+              fontSize: "0.875rem",
+              color: isLight ? "#09090b" : "#ffffff",
+              marginBottom: 6,
+            }}
+          >
             {current.symbol}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
-            <span style={{ fontFamily: "var(--mf-mono, monospace)", fontSize: "0.75rem", color: "rgba(255, 255, 255, 0.5)" }}>file:</span>
+            <span
+              style={{
+                fontFamily: "var(--mf-mono, monospace)",
+                fontSize: "0.75rem",
+                color: isLight ? "rgba(9, 9, 11, 0.55)" : "rgba(255, 255, 255, 0.5)",
+              }}
+            >
+              file:
+            </span>
             {onSelectFile ? (
               <button
                 type="button"
                 onClick={() => onSelectFile(current.file)}
                 style={{
-                  background: "rgba(255,255,255,0.08)",
-                  border: "1px solid rgba(255,255,255,0.16)",
+                  background: isLight ? "rgba(0, 0, 0, 0.06)" : "rgba(255,255,255,0.08)",
+                  border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.12)" : "rgba(255,255,255,0.16)"}`,
                   borderRadius: 4,
                   padding: "2px 8px",
-                  color: "#ffffff",
+                  color: isLight ? "#09090b" : "#ffffff",
                   fontFamily: "var(--mf-mono, monospace)",
                   fontSize: "0.75rem",
                   cursor: "pointer",
@@ -411,37 +574,99 @@ export function CodeFlowStepper({ onAskCopilot, onSelectFile }: CodeFlowStepperP
                 <span style={{ fontSize: "0.625rem", opacity: 0.6 }}>↗</span>
               </button>
             ) : (
-              <span style={{ fontFamily: "var(--mf-mono, monospace)", fontSize: "0.75rem", color: "#ffffff" }}>{current.file}</span>
+              <span
+                style={{
+                  fontFamily: "var(--mf-mono, monospace)",
+                  fontSize: "0.75rem",
+                  color: isLight ? "#09090b" : "#ffffff",
+                }}
+              >
+                {current.file}
+              </span>
             )}
           </div>
         </div>
 
         {/* Input / Output Contracts Grid */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-          <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: 12 }}>
-            <div style={{ fontFamily: "var(--mf-mono, monospace)", fontSize: "0.625rem", color: "rgba(255,255,255,0.4)", marginBottom: 4 }}>
+          <div
+            style={{
+              background: isLight ? "#f4f4f7" : "rgba(255,255,255,0.03)",
+              border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255,255,255,0.08)"}`,
+              borderRadius: 8,
+              padding: 12,
+            }}
+          >
+            <div
+              style={{
+                fontFamily: "var(--mf-mono, monospace)",
+                fontSize: "0.625rem",
+                color: isLight ? "rgba(9, 9, 11, 0.45)" : "rgba(255,255,255,0.4)",
+                marginBottom: 4,
+              }}
+            >
               INBOUND DATA CONTRACT
             </div>
-            <div style={{ fontFamily: "var(--mf-mono, monospace)", fontSize: "0.75rem", color: "#ffffff" }}>
+            <div
+              style={{
+                fontFamily: "var(--mf-mono, monospace)",
+                fontSize: "0.75rem",
+                color: isLight ? "#09090b" : "#ffffff",
+              }}
+            >
               {current.inputContract}
             </div>
           </div>
-          <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: 12 }}>
-            <div style={{ fontFamily: "var(--mf-mono, monospace)", fontSize: "0.625rem", color: "rgba(255,255,255,0.4)", marginBottom: 4 }}>
+          <div
+            style={{
+              background: isLight ? "#f4f4f7" : "rgba(255,255,255,0.03)",
+              border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255,255,255,0.08)"}`,
+              borderRadius: 8,
+              padding: 12,
+            }}
+          >
+            <div
+              style={{
+                fontFamily: "var(--mf-mono, monospace)",
+                fontSize: "0.625rem",
+                color: isLight ? "rgba(9, 9, 11, 0.45)" : "rgba(255,255,255,0.4)",
+                marginBottom: 4,
+              }}
+            >
               OUTBOUND RESULT CONTRACT
             </div>
-            <div style={{ fontFamily: "var(--mf-mono, monospace)", fontSize: "0.75rem", color: "#ffffff" }}>
+            <div
+              style={{
+                fontFamily: "var(--mf-mono, monospace)",
+                fontSize: "0.75rem",
+                color: isLight ? "#09090b" : "#ffffff",
+              }}
+            >
               {current.outputContract}
             </div>
           </div>
         </div>
 
         {/* Failure Impact Alert */}
-        <div style={{ borderLeft: "2px solid #ffffff", paddingLeft: 16 }}>
-          <div style={{ fontFamily: "var(--mf-mono, monospace)", fontSize: "0.6875rem", textTransform: "uppercase", color: "rgba(255, 255, 255, 0.5)", marginBottom: 4 }}>
+        <div style={{ borderLeft: `2px solid ${isLight ? "#09090b" : "#ffffff"}`, paddingLeft: 16 }}>
+          <div
+            style={{
+              fontFamily: "var(--mf-mono, monospace)",
+              fontSize: "0.6875rem",
+              textTransform: "uppercase",
+              color: isLight ? "rgba(9, 9, 11, 0.5)" : "rgba(255, 255, 255, 0.5)",
+              marginBottom: 4,
+            }}
+          >
             Failure Consequence & Blast Radius
           </div>
-          <div style={{ fontSize: "0.875rem", color: "rgba(255, 255, 255, 0.75)", lineHeight: 1.5 }}>
+          <div
+            style={{
+              fontSize: "0.875rem",
+              color: isLight ? "rgba(9, 9, 11, 0.75)" : "rgba(255, 255, 255, 0.75)",
+              lineHeight: 1.5,
+            }}
+          >
             {current.failureRisk}
           </div>
         </div>
@@ -450,20 +675,24 @@ export function CodeFlowStepper({ onAskCopilot, onSelectFile }: CodeFlowStepperP
         <div>
           <button
             type="button"
-            onClick={() => onAskCopilot(`Explain the execution flow hop "${current.stage}" at ${current.file} in detail.`)}
+            onClick={() =>
+              onAskCopilot(
+                `Explain the execution flow hop "${current.stage}" at ${current.file} in detail.`,
+              )
+            }
             style={{
               padding: "8px 18px",
               borderRadius: 999,
-              border: "1px solid #ffffff",
-              background: "#ffffff",
-              color: "#000000",
+              border: `1px solid ${isLight ? "#09090b" : "#ffffff"}`,
+              background: isLight ? "#09090b" : "#ffffff",
+              color: isLight ? "#ffffff" : "#000000",
               fontFamily: "var(--mf-font, 'Geist', sans-serif)",
               fontSize: "0.8125rem",
               fontWeight: 500,
               cursor: "pointer",
             }}
           >
-            Ask Copilot to deep-dive this hop ↗
+            Inspect hop dependencies ↗
           </button>
         </div>
       </div>

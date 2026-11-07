@@ -34,7 +34,7 @@ export function CommandPalette({ open, onClose, actions, files = [], onFileSelec
     id: `file:${f}`,
     label: f.split('/').pop() ?? f,
     description: f,
-    icon: '📄',
+    icon: '·',
     group: 'Files',
     onSelect: () => {
       onFileSelect?.(f);

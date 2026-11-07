@@ -12,4 +12,19 @@ export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
   },
+  vite: {
+    server: {
+      watch: {
+        ignored: [
+          "**/backend/**",
+          "**/.venv/**",
+          "**/dist/**",
+          "**/launch-video/**",
+          "**/.git/**",
+          "**/*.mp4",
+          "**/*.wav",
+        ],
+      },
+    },
+  },
 });
