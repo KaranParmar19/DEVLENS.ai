@@ -375,6 +375,8 @@ async def _ingest_pipeline(
                 chunk_count=chunk_count,
                 is_monorepo=is_monorepo,
                 latest_commit_sha=meta.latest_commit_sha,
+                embedding_model=settings.openai_embedding_model if vector_store.semantic_enabled else None,
+                embedding_dimensions=(settings.openai_embedding_dimensions or 1536) if vector_store.semantic_enabled else None,
                 default_branch=effective_branch,  # BUG-02 FIX: persist real branch
                 graph_cache=graph_cache,
                 indexed_at=now,

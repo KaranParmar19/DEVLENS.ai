@@ -66,6 +66,10 @@ class Repository(Base):
     # ── Incremental indexing: skip if commit_sha matches latest ───────────
     latest_commit_sha: Mapped[str | None] = mapped_column(String(40), nullable=True)
 
+    # ── Embedding Metadata ─────────────────────────────────────────────────
+    embedding_model: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    embedding_dimensions: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
     # ── Indexing Status ────────────────────────────────────────────────────
     status: Mapped[RepoStatus] = mapped_column(
         Enum(
