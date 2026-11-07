@@ -30,12 +30,14 @@ class CarefulFileItem(BaseModel):
     test_dependents_count: int = Field(default=0, description="Test files importing this file")
     coupling: float = Field(default=0.0, description="Coupling score (0.0 to 1.0)")
     reason: str = Field(default="", description="Why this file has a high blast radius and how to verify changes")
+    evidence_quote: str | None = Field(default=None, description="Exact verbatim substring from the file's first 30 lines snippet proving its role")
 
 
 class GotchaItem(BaseModel):
     title: str = Field(description="Trap or architectural constraint title")
     description: str = Field(description="Explanation of the constraint or invariant")
     evidence_path: str = Field(description="Repository file proving this constraint exists")
+    evidence_quote: str | None = Field(default=None, description="Exact verbatim substring from evidence_path proving this constraint")
 
 
 class StarterTaskItem(BaseModel):
@@ -63,6 +65,7 @@ class GlossaryItem(BaseModel):
         validation_alias=AliasChoices("seen_in", "defined_in"),
         description="File path where this term or symbol appears",
     )
+    evidence_quote: str | None = Field(default=None, description="Exact verbatim substring from seen_in where this term appears")
 
 
 class OnboardingDocSchema(BaseModel):

@@ -130,14 +130,16 @@ REQUIRED JSON SCHEMA:
       "source_dependents_count": 0,
       "test_dependents_count": 5,
       "coupling": 0.5,
-      "reason": "Why this file has a high blast radius and how to verify changes"
+      "reason": "Single prose sentence describing the file strictly from its snippet",
+      "evidence_quote": "Exact verbatim substring from the file's first 30 lines snippet proving its role, or null"
     }}
   ],
   "gotchas": [
     {{
       "title": "Invariant or trap title",
       "description": "Explanation grounded in repository facts or cycles",
-      "evidence_path": "Existing repository file path proving this constraint"
+      "evidence_path": "Existing repository file path proving this constraint",
+      "evidence_quote": "Exact verbatim substring from evidence_path proving this constraint"
     }}
   ],
   "first_task": {{
@@ -159,7 +161,8 @@ REQUIRED JSON SCHEMA:
     {{
       "term": "Key term, acronym, or central symbol",
       "definition": "Clear explanation grounded in code",
-      "seen_in": "File path where this term or symbol appears"
+      "seen_in": "File path where this term or symbol appears",
+      "evidence_quote": "Exact verbatim substring from seen_in containing this term"
     }}
   ]
 }}

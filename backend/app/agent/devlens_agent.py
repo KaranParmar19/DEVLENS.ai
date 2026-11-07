@@ -910,15 +910,76 @@ class DevLensAgent:
         except Exception:
             self.last_raw_structured_doc = {}
 
-        # Clean prose citations in summary and how_it_works
+        # Clean prose citations in summary and how_it_works to log any ungrounded model citations
         if parsed_schema.summary:
-            parsed_schema.summary = _clean_markdown_citations(
+            _clean_markdown_citations(
                 parsed_schema.summary, all_known_paths, drops, drops_by_section
             )
         if parsed_schema.how_it_works:
-            parsed_schema.how_it_works = _clean_markdown_citations(
+            _clean_markdown_citations(
                 parsed_schema.how_it_works, all_known_paths, drops, drops_by_section
             )
+
+        # Build summary strictly from README (when present) and computed repository counts
+        langs = [
+            f"{lang} ({cnt})"
+            for lang, cnt in sorted(facts.get("language_breakdown", {}).items(), key=lambda x: x[1], reverse=True)
+        ]
+        lang_summary = f" Languages: {', '.join(langs)}." if langs else ""
+        metrics_summary = (
+            f"Indexed snapshot contains {facts.get('total_modules', 0)} total files "
+            f"({facts.get('source_modules_count', 0)} source modules, "
+            f"{facts.get('test_modules_count', 0)} test modules, "
+            f"{facts.get('config_modules_count', 0)} config files, "
+            f"{facts.get('docs_and_assets_count', 0)} docs/assets) "
+            f"and {facts.get('total_edges', 0)} dependency edges "
+            f"({facts.get('cycles_count', 0)} circular import cycles).{lang_summary}"
+        )
+        if facts.get("readme_summary"):
+            parsed_schema.summary = f"{facts['readme_summary']}\n\n{metrics_summary}"
+        else:
+            parsed_schema.summary = f"No README is declared in this repository.\n\n{metrics_summary}"
+
+        # Build how_it_works strictly from computed entry points, outgoing edges, and high-risk modules
+        how_lines: list[str] = []
+        if facts.get("entry_points"):
+            for ep in facts["entry_points"]:
+                ep_path = ep["path"]
+                ep_out = ep.get("dependencies", [])
+                if ep_out:
+                    out_links = ", ".join(f"[[{d}]]" for d in ep_out[:6])
+                    more = f" (+{len(ep_out) - 6} more)" if len(ep_out) > 6 else ""
+                    how_lines.append(
+                        f"- Entry point [[{ep_path}]] imports {len(ep_out)} local modules: {out_links}{more}."
+                    )
+                else:
+                    how_lines.append(
+                        f"- Entry point [[{ep_path}]] has {ep.get('source_dependents_count', 0)} source dependents "
+                        f"and {ep.get('dependencies_count', 0)} local outgoing dependencies."
+                    )
+        if facts.get("high_risk_files"):
+            for hr in facts["high_risk_files"][:3]:
+                hr_path = hr["path"]
+                src_callers = hr.get("source_dependents", [])
+                tst_callers = hr.get("test_dependents", [])
+                if src_callers:
+                    caller_links = ", ".join(f"[[{c}]]" for c in src_callers[:5])
+                    more_c = f" (+{len(src_callers) - 5} more)" if len(src_callers) > 5 else ""
+                    how_lines.append(
+                        f"- Shared module [[{hr_path}]] is imported by {len(src_callers)} source modules ({caller_links}{more_c})."
+                    )
+                elif tst_callers:
+                    caller_links = ", ".join(f"[[{c}]]" for c in tst_callers[:5])
+                    more_c = f" (+{len(tst_callers) - 5} more)" if len(tst_callers) > 5 else ""
+                    how_lines.append(
+                        f"- Core module [[{hr_path}]] is imported by {len(tst_callers)} test modules ({caller_links}{more_c})."
+                    )
+        if not how_lines:
+            how_lines.append(
+                f"- Repository index contains {facts.get('source_modules_count', 0)} source modules "
+                f"and {facts.get('total_edges', 0)} resolved import edges."
+            )
+        parsed_schema.how_it_works = "\n".join(how_lines)
 
         # 1. Overwrite quick start with ground truth from manifest
         test_cmd = manifest.get("test_command")
@@ -935,36 +996,15 @@ class DevLensAgent:
             env_variables=facts.get("env_variables", []),
         )
 
-        # 1b. Overwrite folder_map sample_files and file_count strictly from computed facts
-        computed_fb_by_path = {
-            fb["path"].strip().rstrip("/"): fb
-            for fb in facts.get("folder_breakdown", [])
-        }
+        # 1b. Overwrite folder_map strictly from computed folder_breakdown (no unverified role prose)
         valid_folder_map: list[FolderMapItem] = []
-        for fm in (parsed_schema.folder_map if parsed_schema else []):
-            clean_p = fm.path.strip().rstrip("/")
-            if clean_p in computed_fb_by_path:
-                fb = computed_fb_by_path[clean_p]
-                fm.path = clean_p
-                fm.file_count = int(fb.get("file_count", 0))
-                fm.sample_files = fb.get("sample_files", "")
-                valid_folder_map.append(fm)
-            elif clean_p.lower() in {k.lower(): k for k in computed_fb_by_path}:
-                canonical_k = {k.lower(): k for k in computed_fb_by_path}[clean_p.lower()]
-                fb = computed_fb_by_path[canonical_k]
-                fm.path = canonical_k
-                fm.file_count = int(fb.get("file_count", 0))
-                fm.sample_files = fb.get("sample_files", "")
-                valid_folder_map.append(fm)
-
-        if not valid_folder_map and facts.get("folder_breakdown"):
-            for fb in facts.get("folder_breakdown", []):
-                valid_folder_map.append(FolderMapItem(
-                    path=fb["path"],
-                    role="",
-                    file_count=int(fb.get("file_count", 0)),
-                    sample_files=fb.get("sample_files", ""),
-                ))
+        for fb in facts.get("folder_breakdown", []):
+            valid_folder_map.append(FolderMapItem(
+                path=fb["path"].strip().rstrip("/"),
+                role="",
+                file_count=int(fb.get("file_count", 0)),
+                sample_files=fb.get("sample_files", ""),
+            ))
         parsed_schema.folder_map = valid_folder_map
 
         # 1c. Overwrite tech_stack strictly from runtime_dependencies only (exclude devDependencies, @types/*)
@@ -976,7 +1016,7 @@ class DevLensAgent:
         ]
 
         # 2. Choose careful_files in code: Render every High-risk file from computed data
-        # The model may only write the explanation, and only from the snippet
+        # Reason is verified via docstring/leading comment or exact evidence_quote from snippet
         computed_hr_paths = {hr["path"] for hr in facts.get("high_risk_files", [])}
         for cf in (parsed_schema.careful_files if parsed_schema else []):
             clean_cf = cf.path.replace("[[", "").replace("]]", "").strip()
@@ -985,35 +1025,44 @@ class DevLensAgent:
                 drops.append(f"paths: {msg}")
                 drops_by_section["paths"].append(msg)
 
-        model_reasons_by_path = {
-            cf.path.replace("[[", "").replace("]]", "").strip(): cf.reason
+        model_cf_by_path = {
+            cf.path.replace("[[", "").replace("]]", "").strip(): cf
             for cf in (parsed_schema.careful_files if parsed_schema else [])
         }
 
         computed_careful_files: list[CarefulFileItem] = []
         for hr in facts.get("high_risk_files", []):
             path = hr["path"]
-            has_snippet = bool(hr.get("first_30_lines") and hr["first_30_lines"].strip())
-            model_reason = model_reasons_by_path.get(path)
+            snippet = hr.get("first_30_lines")
+            has_snippet = bool(snippet and snippet.strip())
+            model_cf = model_cf_by_path.get(path)
 
             source_deps = hr.get("source_dependents_count", 0)
             test_deps = hr.get("test_dependents_count", 0)
 
-            # Model may only write explanation if snippet is present and explanation is grounded
-            if has_snippet and model_reason and len(model_reason.strip()) > 10 and "not verified" not in model_reason.lower():
-                reason = model_reason.strip()
+            verified_hr_purpose = "purpose not verified"
+            valid_hr_quote = None
+            if has_snippet:
+                m_reason = model_cf.reason if model_cf else None
+                m_quote = model_cf.evidence_quote if model_cf else None
+                verified_hr_purpose = _extract_purpose_from_snippet(
+                    snippet,
+                    model_purpose=m_reason,
+                    evidence_quote=m_quote,
+                )
+                if m_quote and m_quote.strip() and m_quote.strip() in (snippet or "") and verified_hr_purpose != "purpose not verified":
+                    valid_hr_quote = m_quote.strip()
+
+            if verified_hr_purpose != "purpose not verified":
+                reason = (
+                    f"{verified_hr_purpose} Imported by {hr['dependents_count']} modules "
+                    f"(Source: {source_deps}, Tests: {test_deps})."
+                )
             else:
-                leading_doc = _extract_leading_comment_or_docstring(hr.get("first_30_lines") or "") if has_snippet else None
-                if leading_doc:
-                    reason = (
-                        f"{leading_doc} Imported by {hr['dependents_count']} modules "
-                        f"(Source: {source_deps}, Tests: {test_deps})."
-                    )
-                else:
-                    reason = (
-                        f"Imported by {hr['dependents_count']} modules "
-                        f"(Source: {source_deps}, Tests: {test_deps}, Outgoing dependencies: {hr.get('dependencies_count', 0)})."
-                    )
+                reason = (
+                    f"Imported by {hr['dependents_count']} modules "
+                    f"(Source: {source_deps}, Tests: {test_deps}, Outgoing dependencies: {hr.get('dependencies_count', 0)})."
+                )
 
             computed_careful_files.append(CarefulFileItem(
                 path=path,
@@ -1023,10 +1072,11 @@ class DevLensAgent:
                 test_dependents_count=test_deps,
                 coupling=hr.get("coupling", 0.0),
                 reason=reason,
+                evidence_quote=valid_hr_quote,
             ))
         parsed_schema.careful_files = computed_careful_files
 
-        # 3. Filter gotchas: require resolved graph path and that evidence chunk contains the claimed term
+        # 3. Filter gotchas: require resolved graph path AND an exact evidence_quote substring in that file
         valid_gotchas: list[GotchaItem] = []
         for g in parsed_schema.gotchas:
             resolved_evidence = _resolve_graph_path(g.evidence_path, all_known_paths)
@@ -1043,15 +1093,14 @@ class DevLensAgent:
                 drops_by_section["gotchas"].append(msg)
                 continue
 
-            # Verify that the evidence chunk contains the claimed term or title tokens
-            title_tokens = [w for w in re.findall(r"[A-Za-z0-9_]+", g.title) if len(w) >= 4]
-            term_matches = (g.title.lower() in content.lower()) or (title_tokens and any(tok.lower() in content.lower() for tok in title_tokens))
-            if term_matches:
+            quote = (g.evidence_quote or "").strip()
+            if len(quote) >= 5 and quote in content:
                 g.evidence_path = resolved_evidence
+                g.evidence_quote = quote
                 g.description = _clean_markdown_citations(g.description, all_known_paths, drops, drops_by_section)
                 valid_gotchas.append(g)
             else:
-                msg = f"dropped rule '{g.title}' (claimed term not found in chunk of '{resolved_evidence}')"
+                msg = f"dropped rule '{g.title}' (missing or unverified evidence_quote in '{resolved_evidence}')"
                 drops.append(f"gotchas: {msg}")
                 drops_by_section["gotchas"].append(msg)
         parsed_schema.gotchas = valid_gotchas
@@ -1214,13 +1263,15 @@ class DevLensAgent:
                 drops_by_section["glossary"].append(msg)
                 continue
 
-            # Require that the evidence file contains the claimed term
-            if item.term.lower().strip() in content.lower():
+            # Require that the evidence file contains both the claimed term and an exact evidence_quote
+            gl_quote = (item.evidence_quote or "").strip()
+            if item.term.lower().strip() in content.lower() and len(gl_quote) >= 3 and gl_quote in content:
                 item.seen_in = resolved_p
+                item.evidence_quote = gl_quote
                 item.definition = _clean_markdown_citations(item.definition, all_known_paths, drops, drops_by_section)
                 valid_glossary.append(item)
             else:
-                msg = f"dropped term '{item.term}' (term not found in any chunk of '{resolved_p}')"
+                msg = f"dropped term '{item.term}' (missing/unverified evidence_quote or term not found in '{resolved_p}')"
                 drops.append(f"glossary: {msg}")
                 drops_by_section["glossary"].append(msg)
 
