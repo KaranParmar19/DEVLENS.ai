@@ -1116,6 +1116,48 @@ def test_snapshot_footer_age_and_staleness_note():
     assert "Note: Snapshot is older than 14 days; re-ingest for latest changes" in stale_footer
 
 
+def test_python_relative_and_package_root_imports():
+    from app.core.graph_builder import _extract_python_imports
+
+    # 1. markupsafe pattern: indented relative import inside try/except + src/ package root
+    markupsafe_paths = {
+        "src/markupsafe/__init__.py",
+        "src/markupsafe/_native.py",
+        "tests/test_markupsafe.py",
+    }
+    init_code = (
+        "try:\n"
+        "    from ._speedups import _escape_inner\n"
+        "except ImportError:\n"
+        "    from ._native import _escape_inner\n"
+    )
+    init_deps = _extract_python_imports(init_code, "src/markupsafe/__init__.py", markupsafe_paths)
+    assert init_deps == ["src/markupsafe/_native.py"]
+
+    test_code = "from markupsafe import Markup, escape\n"
+    test_deps = _extract_python_imports(test_code, "tests/test_markupsafe.py", markupsafe_paths)
+    assert test_deps == ["src/markupsafe/__init__.py"]
+
+    # 2. Luminary pattern: backend/ package root + from-package submodule imports
+    luminary_paths = {
+        "backend/main.py",
+        "backend/database.py",
+        "backend/routers/auth.py",
+        "backend/routers/documents.py",
+    }
+    main_code = (
+        "from database import engine, Base\n"
+        "from routers import auth, documents\n"
+    )
+    main_deps = _extract_python_imports(main_code, "backend/main.py", luminary_paths)
+    assert set(main_deps) == {
+        "backend/database.py",
+        "backend/routers/auth.py",
+        "backend/routers/documents.py",
+    }
+
+
+
 
 
 

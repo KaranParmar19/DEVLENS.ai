@@ -26,16 +26,97 @@ logger = structlog.get_logger(__name__)
 # ── Import Pattern Extractors ─────────────────────────────────────────────
 
 def _extract_python_imports(content: str, file_path: str, all_paths: set[str]) -> list[str]:
-    """Extract imported local modules from Python source."""
-    deps = []
-    for match in re.finditer(
-        r"^(?:from|import)\s+([\w.]+)", content, re.MULTILINE
-    ):
-        mod = match.group(1).replace(".", "/")
-        for candidate in [f"{mod}.py", f"{mod}/__init__.py"]:
-            if candidate in all_paths:
-                deps.append(candidate)
-    return list(set(deps))
+    """
+    Extract imported local modules from Python source.
+    Supports top-level and indented imports, relative imports (., ..),
+    from-package submodule imports (e.g. `from routers import auth`),
+    and common package root prefixes (`src/`, `backend/`).
+    """
+    import ast
+
+    deps: set[str] = set()
+    norm_file = file_path.replace("\\", "/")
+    cur_dir = posixpath.dirname(norm_file)
+
+    prefixes = ["", "src", "backend"]
+    if "/" in norm_file:
+        top_seg = norm_file.split("/", 1)[0]
+        if top_seg not in prefixes:
+            prefixes.append(top_seg)
+
+    def _add_candidates(mod_rel: str, base_prefixes: list[str]) -> None:
+        clean_rel = mod_rel.strip("/")
+        if not clean_rel or clean_rel == ".":
+            return
+        for pref in base_prefixes:
+            full_mod = posixpath.normpath(posixpath.join(pref, clean_rel)) if pref else clean_rel
+            for candidate in (f"{full_mod}.py", f"{full_mod}/__init__.py"):
+                if candidate in all_paths and candidate != norm_file:
+                    deps.add(candidate)
+
+    parsed_ok = False
+    try:
+        tree = ast.parse(content)
+        parsed_ok = True
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    _add_candidates(alias.name.replace(".", "/"), prefixes)
+            elif isinstance(node, ast.ImportFrom):
+                level = node.level or 0
+                mod_part = (node.module or "").replace(".", "/")
+                alias_names = [a.name for a in node.names if a.name != "*"]
+                if level > 0:
+                    base_dir = cur_dir
+                    for _ in range(level - 1):
+                        base_dir = posixpath.dirname(base_dir)
+                    target_base = posixpath.normpath(posixpath.join(base_dir, mod_part)) if mod_part else base_dir
+                    if mod_part:
+                        _add_candidates(target_base, [""])
+                    for a_name in alias_names:
+                        sub_rel = posixpath.normpath(posixpath.join(target_base, a_name))
+                        _add_candidates(sub_rel, [""])
+                else:
+                    if mod_part:
+                        _add_candidates(mod_part, prefixes)
+                        for a_name in alias_names:
+                            _add_candidates(f"{mod_part}/{a_name}", prefixes)
+    except Exception:
+        parsed_ok = False
+
+    if not parsed_ok:
+        for match in re.finditer(
+            r"^\s*(?:from\s+(\.*[\w.]*)\s+import\s+([^\n#]+)|import\s+([\w.]+))",
+            content,
+            re.MULTILINE,
+        ):
+            from_mod, from_names, imp_mod = match.group(1), match.group(2), match.group(3)
+            if imp_mod:
+                _add_candidates(imp_mod.replace(".", "/"), prefixes)
+            elif from_mod is not None:
+                dots = len(from_mod) - len(from_mod.lstrip("."))
+                mod_clean = from_mod.lstrip(".").replace(".", "/")
+                names = [
+                    n.strip().split(" as ")[0].strip()
+                    for n in (from_names or "").strip("() ").split(",")
+                    if n.strip() and n.strip() != "*"
+                ]
+                if dots > 0:
+                    base_dir = cur_dir
+                    for _ in range(dots - 1):
+                        base_dir = posixpath.dirname(base_dir)
+                    target_base = posixpath.normpath(posixpath.join(base_dir, mod_clean)) if mod_clean else base_dir
+                    if mod_clean:
+                        _add_candidates(target_base, [""])
+                    for a_name in names:
+                        _add_candidates(posixpath.normpath(posixpath.join(target_base, a_name)), [""])
+                else:
+                    if mod_clean:
+                        _add_candidates(mod_clean, prefixes)
+                        for a_name in names:
+                            _add_candidates(f"{mod_clean}/{a_name}", prefixes)
+
+    return sorted(deps)
 
 
 def _extract_js_ts_imports(content: str, file_path: str, all_paths: set[str]) -> list[str]:

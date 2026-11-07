@@ -852,6 +852,8 @@ class FactsExtractor:
                     "or participate in central application flows."
                 )
 
+        graph_incomplete = bool(len(edges) == 0 and len(source_modules) > 1)
+
         return {
             "total_modules": len(nodes),
             "source_modules_count": len(source_modules),
@@ -860,6 +862,7 @@ class FactsExtractor:
             "config_modules_count": len(config_modules),
             "language_breakdown": language_breakdown,
             "total_edges": len(edges),
+            "graph_incomplete": graph_incomplete,
             "cycles": cycles,
             "cycles_count": len(cycles),
             "entry_points": entry_points,
@@ -1778,6 +1781,7 @@ class FactsExtractor:
             "config_modules_count": metrics["config_modules_count"],
             "language_breakdown": metrics["language_breakdown"],
             "total_edges": metrics["total_edges"],
+            "graph_incomplete": metrics.get("graph_incomplete", False),
             "cycles_count": metrics["cycles_count"],
             "cycles": metrics["cycles"],
             "entry_points": metrics["entry_points"][:5],
