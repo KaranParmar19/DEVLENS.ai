@@ -685,6 +685,17 @@ class DevLensAgent:
             "starters": [],
         }
 
+        # Store raw model output and citations before cleaning
+        raw_summary_citations = re.findall(r"\[\[(.*?)\]\]", parsed_schema.summary or "")
+        raw_how_citations = re.findall(r"\[\[(.*?)\]\]", parsed_schema.how_it_works or "")
+        self.last_raw_citations_before_clean = raw_summary_citations + raw_how_citations
+        self.last_raw_summary = parsed_schema.summary
+        self.last_raw_how_it_works = parsed_schema.how_it_works
+        try:
+            self.last_raw_structured_doc = parsed_schema.model_dump()
+        except Exception:
+            self.last_raw_structured_doc = {}
+
         # Clean prose citations in summary and how_it_works
         if parsed_schema.summary:
             parsed_schema.summary = _clean_markdown_citations(

@@ -1,0 +1,1609 @@
+{
+  "candidate_starters": [
+    {
+      "complexity": 0,
+      "coupling": 0.154,
+      "dependencies": [
+        "src/components/Character/Scene.tsx"
+      ],
+      "dependencies_count": 1,
+      "dependents": [
+        "src/App.tsx"
+      ],
+      "dependents_count": 1,
+      "first_30_lines": "const CharacterModel = () => {\n  return <Scene />;\n};",
+      "id": "src/components/Character/index.tsx",
+      "is_entry": false,
+      "label": "index",
+      "line_count": 8,
+      "nearby_test": null,
+      "path": "src/components/Character/index.tsx",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/App.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    {
+      "complexity": 0,
+      "coupling": 0.077,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [
+        "src/components/Character/utils/character.ts"
+      ],
+      "dependents_count": 1,
+      "first_30_lines": "async function generateAESKey(password: string): Promise<CryptoKey> {\n  const passwordBuffer = new TextEncoder().encode(password);\n  const hashedPassword = await crypto.subtle.digest(\"SHA-256\", passwordBuffer);\n  return crypto.subtle.importKey(\n    \"raw\",\n    hashedPassword.slice(0, 32),\n    { name: \"AES-CBC\" },\n    false,\n    [\"encrypt\", \"decrypt\"]\n  );\n}export const decryptFile = async (\n  url: string,",
+      "id": "src/components/Character/utils/decrypt.ts",
+      "is_entry": false,
+      "label": "decrypt",
+      "line_count": 24,
+      "nearby_test": null,
+      "path": "src/components/Character/utils/decrypt.ts",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/components/Character/utils/character.ts"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    {
+      "complexity": 0,
+      "coupling": 0.154,
+      "dependencies": [
+        "src/components/utils/GsapScroll.ts"
+      ],
+      "dependencies_count": 1,
+      "dependents": [
+        "src/components/Character/Scene.tsx"
+      ],
+      "dependents_count": 1,
+      "first_30_lines": "import * as THREE from \"three\";\nimport { ScrollTrigger } from \"gsap/ScrollTrigger\";\nimport { setCharTimeline, setAllTimeline } from \"../../utils/GsapScroll\";\n\nexport default function handleResize(\n  renderer: THREE.WebGLRenderer,\n  camera: THREE.PerspectiveCamera,\n  canvasDiv: React.RefObject<HTMLDivElement>,\n  character: THREE.Object3D\n) {\n  if (!canvasDiv.current) return;\n  let canvas3d = canvasDiv.current.getBoundingClientRect();\n  const width = canvas3d.width;\n  const height = canvas3d.height;\n  renderer.setSize(width, height);\n  camera.aspect = width / height;\n  camera.updateProjectionMatrix();\n  const workTrigger = ScrollTrigger.getById(\"work\");\n  ScrollTrigger.getAll().forEach((trigger) => {\n    if (trigger != workTrigger) {\n      trigger.kill();\n    }\n  });\n  setCharTimeline(character, camera);\n  setAllTimeline();\n}",
+      "id": "src/components/Character/utils/resizeUtils.ts",
+      "is_entry": false,
+      "label": "resizeUtils",
+      "line_count": 27,
+      "nearby_test": null,
+      "path": "src/components/Character/utils/resizeUtils.ts",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/components/Character/Scene.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    {
+      "complexity": 0,
+      "coupling": 0.077,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [
+        "src/components/Character/Scene.tsx"
+      ],
+      "dependents_count": 1,
+      "first_30_lines": "export const setProgress = (setLoading: (value: number) => void) => {\n  let percent: number = 0;\n\n  let interval = setInterval(() => {\n    if (percent <= 50) {\n      let rand = Math.round(Math.random() * 5);\n      percent = Math.min(percent + rand, 100);\n      setLoading(percent);\n    } else {\n      clearInterval(interval);\n      interval = setInterval(() => {\n        percent = Math.min(percent + Math.round(Math.random()), 100);\n        setLoading(percent);\n        if (percent > 91) {\n          clearInterval(interval);\n        }\n      }, 2000);\n    }\n  }, 100);\n\n  function clear() {\n    clearInterval(interval);\n    setLoading(100);\n  }\n\n  function loaded() {\n    return new Promise<number>((resolve) => {\n      clearInterval(interval);\n      interval = setInterval(() => {\n        if (percent < 100) {",
+      "id": "src/components/utils/setProgress.ts",
+      "is_entry": false,
+      "label": "setProgress",
+      "line_count": 42,
+      "nearby_test": null,
+      "path": "src/components/utils/setProgress.ts",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/components/Character/Scene.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    {
+      "complexity": 0,
+      "coupling": 0.077,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [
+        "src/components/MainContainer.tsx"
+      ],
+      "dependents_count": 1,
+      "first_30_lines": "const SocialIcons = () => {\n  return (\n    <div className=\"icons-section\">\n      <div className=\"social-icons\" id=\"social\" data-cursor=\"icons\">\n        <a\n          href=\"https://github.com/KaranParmar19/\"\n          target=\"_blank\"\n          className=\"social-icon-link\"\n          data-cursor=\"disable\"\n          aria-label=\"GitHub\"\n        >\n          <FaGithub />\n        </a>\n        <a\n          href=\"https://www.linkedin.com/in/karan-parmar-280991274/\"\n          target=\"_blank\"\n          className=\"social-icon-link\"\n          data-cursor=\"disable\"\n          aria-label=\"LinkedIn\"\n        >\n          <FaLinkedinIn />\n        </a>\n        <a\n          href=\"https://www.instagram.com/karrxn.__/\"\n          target=\"_blank\"\n          className=\"social-icon-link\"\n          data-cursor=\"disable\"\n          aria-label=\"Instagram\"\n        >\n          <FaInstagram />",
+      "id": "src/components/SocialIcons.tsx",
+      "is_entry": false,
+      "label": "SocialIcons",
+      "line_count": 51,
+      "nearby_test": null,
+      "path": "src/components/SocialIcons.tsx",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/components/MainContainer.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    }
+  ],
+  "commit_sha": "unknown",
+  "config_modules_count": 9,
+  "cycles": [],
+  "cycles_count": 0,
+  "docs_and_assets_count": 1,
+  "entry_points": [
+    {
+      "complexity": 0,
+      "coupling": 0.077,
+      "dependencies": [
+        "src/App.tsx"
+      ],
+      "dependencies_count": 1,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/main.tsx",
+      "is_entry": true,
+      "label": "main",
+      "line_count": 11,
+      "path": "src/main.tsx",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    }
+  ],
+  "env_usage": {},
+  "env_variables": [],
+  "file_metrics": {
+    ".gitignore": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": ".gitignore",
+      "is_entry": false,
+      "label": ".gitignore",
+      "line_count": 28,
+      "path": ".gitignore",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "LICENSE": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "LICENSE",
+      "is_entry": false,
+      "label": "LICENSE",
+      "line_count": 22,
+      "path": "LICENSE",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "README.md": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "README.md",
+      "is_entry": false,
+      "label": "README",
+      "line_count": 49,
+      "path": "README.md",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "eslint.config.js": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "eslint.config.js",
+      "is_entry": false,
+      "label": "eslint.config",
+      "line_count": 29,
+      "path": "eslint.config.js",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "index.html": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "index.html",
+      "is_entry": false,
+      "label": "index",
+      "line_count": 16,
+      "path": "index.html",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "package.json": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "package.json",
+      "is_entry": false,
+      "label": "package",
+      "line_count": 42,
+      "path": "package.json",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "public/models/.gitattributes": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "public/models/.gitattributes",
+      "is_entry": false,
+      "label": ".gitattributes",
+      "line_count": 2,
+      "path": "public/models/.gitattributes",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "public/models/encrypt.cjs": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "public/models/encrypt.cjs",
+      "is_entry": false,
+      "label": "encrypt",
+      "line_count": 17,
+      "path": "public/models/encrypt.cjs",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/App.css": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/App.css",
+      "is_entry": false,
+      "label": "App",
+      "line_count": 6,
+      "path": "src/App.css",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/App.tsx": {
+      "complexity": 0,
+      "coupling": 0.308,
+      "dependencies": [
+        "src/context/LoadingProvider.tsx",
+        "src/components/Character/index.tsx",
+        "src/components/MainContainer.tsx"
+      ],
+      "dependencies_count": 3,
+      "dependents": [
+        "src/main.tsx"
+      ],
+      "dependents_count": 1,
+      "id": "src/App.tsx",
+      "is_entry": false,
+      "label": "App",
+      "line_count": 25,
+      "path": "src/App.tsx",
+      "risk_level": "Medium",
+      "source_dependents": [
+        "src/main.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/About.tsx": {
+      "complexity": 0,
+      "coupling": 0.077,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [
+        "src/components/MainContainer.tsx"
+      ],
+      "dependents_count": 1,
+      "id": "src/components/About.tsx",
+      "is_entry": false,
+      "label": "About",
+      "line_count": 57,
+      "path": "src/components/About.tsx",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/components/MainContainer.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/Achievements.tsx": {
+      "complexity": 0,
+      "coupling": 0.077,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [
+        "src/components/MainContainer.tsx"
+      ],
+      "dependents_count": 1,
+      "id": "src/components/Achievements.tsx",
+      "is_entry": false,
+      "label": "Achievements",
+      "line_count": 75,
+      "path": "src/components/Achievements.tsx",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/components/MainContainer.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/Career.tsx": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/Career.tsx",
+      "is_entry": false,
+      "label": "Career",
+      "line_count": 64,
+      "path": "src/components/Career.tsx",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/Character/Scene.tsx": {
+      "complexity": 0,
+      "coupling": 0.615,
+      "dependencies": [
+        "src/components/Character/utils/lighting.ts",
+        "src/components/Character/utils/mouseUtils.ts",
+        "src/context/LoadingProvider.tsx",
+        "src/components/Character/utils/animationUtils.ts",
+        "src/components/Character/utils/resizeUtils.ts",
+        "src/components/Character/utils/character.ts",
+        "src/components/utils/setProgress.ts"
+      ],
+      "dependencies_count": 7,
+      "dependents": [
+        "src/components/Character/index.tsx"
+      ],
+      "dependents_count": 1,
+      "id": "src/components/Character/Scene.tsx",
+      "is_entry": false,
+      "label": "Scene",
+      "line_count": 161,
+      "path": "src/components/Character/Scene.tsx",
+      "risk_level": "Medium",
+      "source_dependents": [
+        "src/components/Character/index.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/Character/exports.ts": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/Character/exports.ts",
+      "is_entry": false,
+      "label": "exports",
+      "line_count": 1,
+      "path": "src/components/Character/exports.ts",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/Character/index.tsx": {
+      "complexity": 0,
+      "coupling": 0.154,
+      "dependencies": [
+        "src/components/Character/Scene.tsx"
+      ],
+      "dependencies_count": 1,
+      "dependents": [
+        "src/App.tsx"
+      ],
+      "dependents_count": 1,
+      "id": "src/components/Character/index.tsx",
+      "is_entry": false,
+      "label": "index",
+      "line_count": 8,
+      "path": "src/components/Character/index.tsx",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/App.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/Character/utils/animationUtils.ts": {
+      "complexity": 0,
+      "coupling": 0.154,
+      "dependencies": [
+        "src/data/boneData.ts"
+      ],
+      "dependencies_count": 1,
+      "dependents": [
+        "src/components/Character/Scene.tsx"
+      ],
+      "dependents_count": 1,
+      "id": "src/components/Character/utils/animationUtils.ts",
+      "is_entry": false,
+      "label": "animationUtils",
+      "line_count": 119,
+      "path": "src/components/Character/utils/animationUtils.ts",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/components/Character/Scene.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/Character/utils/character.ts": {
+      "complexity": 0,
+      "coupling": 0.231,
+      "dependencies": [
+        "src/components/utils/GsapScroll.ts",
+        "src/components/Character/utils/decrypt.ts"
+      ],
+      "dependencies_count": 2,
+      "dependents": [
+        "src/components/Character/Scene.tsx"
+      ],
+      "dependents_count": 1,
+      "id": "src/components/Character/utils/character.ts",
+      "is_entry": false,
+      "label": "character",
+      "line_count": 80,
+      "path": "src/components/Character/utils/character.ts",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/components/Character/Scene.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/Character/utils/decrypt.ts": {
+      "complexity": 0,
+      "coupling": 0.077,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [
+        "src/components/Character/utils/character.ts"
+      ],
+      "dependents_count": 1,
+      "id": "src/components/Character/utils/decrypt.ts",
+      "is_entry": false,
+      "label": "decrypt",
+      "line_count": 24,
+      "path": "src/components/Character/utils/decrypt.ts",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/components/Character/utils/character.ts"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/Character/utils/lighting.ts": {
+      "complexity": 0,
+      "coupling": 0.077,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [
+        "src/components/Character/Scene.tsx"
+      ],
+      "dependents_count": 1,
+      "id": "src/components/Character/utils/lighting.ts",
+      "is_entry": false,
+      "label": "lighting",
+      "line_count": 62,
+      "path": "src/components/Character/utils/lighting.ts",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/components/Character/Scene.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/Character/utils/mouseUtils.ts": {
+      "complexity": 0,
+      "coupling": 0.077,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [
+        "src/components/Character/Scene.tsx"
+      ],
+      "dependents_count": 1,
+      "id": "src/components/Character/utils/mouseUtils.ts",
+      "is_entry": false,
+      "label": "mouseUtils",
+      "line_count": 83,
+      "path": "src/components/Character/utils/mouseUtils.ts",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/components/Character/Scene.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/Character/utils/resizeUtils.ts": {
+      "complexity": 0,
+      "coupling": 0.154,
+      "dependencies": [
+        "src/components/utils/GsapScroll.ts"
+      ],
+      "dependencies_count": 1,
+      "dependents": [
+        "src/components/Character/Scene.tsx"
+      ],
+      "dependents_count": 1,
+      "id": "src/components/Character/utils/resizeUtils.ts",
+      "is_entry": false,
+      "label": "resizeUtils",
+      "line_count": 27,
+      "path": "src/components/Character/utils/resizeUtils.ts",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/components/Character/Scene.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/Contact.tsx": {
+      "complexity": 0,
+      "coupling": 0.077,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [
+        "src/components/MainContainer.tsx"
+      ],
+      "dependents_count": 1,
+      "id": "src/components/Contact.tsx",
+      "is_entry": false,
+      "label": "Contact",
+      "line_count": 77,
+      "path": "src/components/Contact.tsx",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/components/MainContainer.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/Cursor.tsx": {
+      "complexity": 0,
+      "coupling": 0.077,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [
+        "src/components/MainContainer.tsx"
+      ],
+      "dependents_count": 1,
+      "id": "src/components/Cursor.tsx",
+      "is_entry": false,
+      "label": "Cursor",
+      "line_count": 54,
+      "path": "src/components/Cursor.tsx",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/components/MainContainer.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/HoverLinks.tsx": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/HoverLinks.tsx",
+      "is_entry": false,
+      "label": "HoverLinks",
+      "line_count": 14,
+      "path": "src/components/HoverLinks.tsx",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/Landing.tsx": {
+      "complexity": 0,
+      "coupling": 0.077,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [
+        "src/components/MainContainer.tsx"
+      ],
+      "dependents_count": 1,
+      "id": "src/components/Landing.tsx",
+      "is_entry": false,
+      "label": "Landing",
+      "line_count": 89,
+      "path": "src/components/Landing.tsx",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/components/MainContainer.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/Loading.tsx": {
+      "complexity": 0,
+      "coupling": 0.231,
+      "dependencies": [
+        "src/context/LoadingProvider.tsx",
+        "src/components/utils/initialFX.ts"
+      ],
+      "dependencies_count": 2,
+      "dependents": [
+        "src/context/LoadingProvider.tsx"
+      ],
+      "dependents_count": 1,
+      "id": "src/components/Loading.tsx",
+      "is_entry": false,
+      "label": "Loading",
+      "line_count": 132,
+      "path": "src/components/Loading.tsx",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/context/LoadingProvider.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/MainContainer.tsx": {
+      "complexity": 0,
+      "coupling": 1.0,
+      "dependencies": [
+        "src/components/Contact.tsx",
+        "src/components/Work.tsx",
+        "src/components/utils/splitText.ts",
+        "src/components/About.tsx",
+        "src/components/Navbar.tsx",
+        "src/components/SocialIcons.tsx",
+        "src/components/WhatIDo.tsx",
+        "src/components/TechStack.tsx",
+        "src/components/Achievements.tsx",
+        "src/components/Landing.tsx",
+        "src/components/Cursor.tsx",
+        "src/components/SoftSkills.tsx"
+      ],
+      "dependencies_count": 12,
+      "dependents": [
+        "src/App.tsx"
+      ],
+      "dependents_count": 1,
+      "id": "src/components/MainContainer.tsx",
+      "is_entry": false,
+      "label": "MainContainer",
+      "line_count": 64,
+      "path": "src/components/MainContainer.tsx",
+      "risk_level": "Medium",
+      "source_dependents": [
+        "src/App.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/Navbar.tsx": {
+      "complexity": 0,
+      "coupling": 0.154,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [
+        "src/components/MainContainer.tsx",
+        "src/components/utils/initialFX.ts"
+      ],
+      "dependents_count": 2,
+      "id": "src/components/Navbar.tsx",
+      "is_entry": false,
+      "label": "Navbar",
+      "line_count": 87,
+      "path": "src/components/Navbar.tsx",
+      "risk_level": "Medium",
+      "source_dependents": [
+        "src/components/MainContainer.tsx",
+        "src/components/utils/initialFX.ts"
+      ],
+      "source_dependents_count": 2,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/SocialIcons.tsx": {
+      "complexity": 0,
+      "coupling": 0.077,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [
+        "src/components/MainContainer.tsx"
+      ],
+      "dependents_count": 1,
+      "id": "src/components/SocialIcons.tsx",
+      "is_entry": false,
+      "label": "SocialIcons",
+      "line_count": 51,
+      "path": "src/components/SocialIcons.tsx",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/components/MainContainer.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/SoftSkills.tsx": {
+      "complexity": 0,
+      "coupling": 0.077,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [
+        "src/components/MainContainer.tsx"
+      ],
+      "dependents_count": 1,
+      "id": "src/components/SoftSkills.tsx",
+      "is_entry": false,
+      "label": "SoftSkills",
+      "line_count": 75,
+      "path": "src/components/SoftSkills.tsx",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/components/MainContainer.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/TechStack.tsx": {
+      "complexity": 0,
+      "coupling": 0.077,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [
+        "src/components/MainContainer.tsx"
+      ],
+      "dependents_count": 1,
+      "id": "src/components/TechStack.tsx",
+      "is_entry": false,
+      "label": "TechStack",
+      "line_count": 87,
+      "path": "src/components/TechStack.tsx",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/components/MainContainer.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/WhatIDo.tsx": {
+      "complexity": 0,
+      "coupling": 0.077,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [
+        "src/components/MainContainer.tsx"
+      ],
+      "dependents_count": 1,
+      "id": "src/components/WhatIDo.tsx",
+      "is_entry": false,
+      "label": "WhatIDo",
+      "line_count": 67,
+      "path": "src/components/WhatIDo.tsx",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/components/MainContainer.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/Work.tsx": {
+      "complexity": 0,
+      "coupling": 0.077,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [
+        "src/components/MainContainer.tsx"
+      ],
+      "dependents_count": 1,
+      "id": "src/components/Work.tsx",
+      "is_entry": false,
+      "label": "Work",
+      "line_count": 97,
+      "path": "src/components/Work.tsx",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/components/MainContainer.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/WorkImage.tsx": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/WorkImage.tsx",
+      "is_entry": false,
+      "label": "WorkImage",
+      "line_count": 47,
+      "path": "src/components/WorkImage.tsx",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/styles/About.css": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/styles/About.css",
+      "is_entry": false,
+      "label": "About",
+      "line_count": 135,
+      "path": "src/components/styles/About.css",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/styles/Achievements.css": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/styles/Achievements.css",
+      "is_entry": false,
+      "label": "Achievements",
+      "line_count": 151,
+      "path": "src/components/styles/Achievements.css",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/styles/Career.css": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/styles/Career.css",
+      "is_entry": false,
+      "label": "Career",
+      "line_count": 244,
+      "path": "src/components/styles/Career.css",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/styles/Contact.css": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/styles/Contact.css",
+      "is_entry": false,
+      "label": "Contact",
+      "line_count": 179,
+      "path": "src/components/styles/Contact.css",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/styles/Cursor.css": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/styles/Cursor.css",
+      "is_entry": false,
+      "label": "Cursor",
+      "line_count": 51,
+      "path": "src/components/styles/Cursor.css",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/styles/Landing.css": {
+      "complexity": 1,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/styles/Landing.css",
+      "is_entry": false,
+      "label": "Landing",
+      "line_count": 334,
+      "path": "src/components/styles/Landing.css",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/styles/Loading.css": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/styles/Loading.css",
+      "is_entry": false,
+      "label": "Loading",
+      "line_count": 205,
+      "path": "src/components/styles/Loading.css",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/styles/Navbar.css": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/styles/Navbar.css",
+      "is_entry": false,
+      "label": "Navbar",
+      "line_count": 185,
+      "path": "src/components/styles/Navbar.css",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/styles/SocialIcons.css": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/styles/SocialIcons.css",
+      "is_entry": false,
+      "label": "SocialIcons",
+      "line_count": 96,
+      "path": "src/components/styles/SocialIcons.css",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/styles/SoftSkills.css": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/styles/SoftSkills.css",
+      "is_entry": false,
+      "label": "SoftSkills",
+      "line_count": 137,
+      "path": "src/components/styles/SoftSkills.css",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/styles/TechStack.css": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/styles/TechStack.css",
+      "is_entry": false,
+      "label": "TechStack",
+      "line_count": 147,
+      "path": "src/components/styles/TechStack.css",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/styles/WhatIDo.css": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/styles/WhatIDo.css",
+      "is_entry": false,
+      "label": "WhatIDo",
+      "line_count": 157,
+      "path": "src/components/styles/WhatIDo.css",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/styles/Work.css": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/styles/Work.css",
+      "is_entry": false,
+      "label": "Work",
+      "line_count": 216,
+      "path": "src/components/styles/Work.css",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/styles/style.css": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/styles/style.css",
+      "is_entry": false,
+      "label": "style",
+      "line_count": 21,
+      "path": "src/components/styles/style.css",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/utils/GsapScroll.ts": {
+      "complexity": 0,
+      "coupling": 0.154,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [
+        "src/components/Character/utils/character.ts",
+        "src/components/Character/utils/resizeUtils.ts"
+      ],
+      "dependents_count": 2,
+      "id": "src/components/utils/GsapScroll.ts",
+      "is_entry": false,
+      "label": "GsapScroll",
+      "line_count": 192,
+      "path": "src/components/utils/GsapScroll.ts",
+      "risk_level": "Medium",
+      "source_dependents": [
+        "src/components/Character/utils/character.ts",
+        "src/components/Character/utils/resizeUtils.ts"
+      ],
+      "source_dependents_count": 2,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/utils/initialFX.ts": {
+      "complexity": 0,
+      "coupling": 0.154,
+      "dependencies": [
+        "src/components/Navbar.tsx"
+      ],
+      "dependencies_count": 1,
+      "dependents": [
+        "src/components/Loading.tsx"
+      ],
+      "dependents_count": 1,
+      "id": "src/components/utils/initialFX.ts",
+      "is_entry": false,
+      "label": "initialFX",
+      "line_count": 148,
+      "path": "src/components/utils/initialFX.ts",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/components/Loading.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/utils/setProgress.ts": {
+      "complexity": 0,
+      "coupling": 0.077,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [
+        "src/components/Character/Scene.tsx"
+      ],
+      "dependents_count": 1,
+      "id": "src/components/utils/setProgress.ts",
+      "is_entry": false,
+      "label": "setProgress",
+      "line_count": 42,
+      "path": "src/components/utils/setProgress.ts",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/components/Character/Scene.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/utils/splitText.ts": {
+      "complexity": 0,
+      "coupling": 0.077,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [
+        "src/components/MainContainer.tsx"
+      ],
+      "dependents_count": 1,
+      "id": "src/components/utils/splitText.ts",
+      "is_entry": false,
+      "label": "splitText",
+      "line_count": 80,
+      "path": "src/components/utils/splitText.ts",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/components/MainContainer.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/context/LoadingProvider.tsx": {
+      "complexity": 0,
+      "coupling": 0.308,
+      "dependencies": [
+        "src/components/Loading.tsx"
+      ],
+      "dependencies_count": 1,
+      "dependents": [
+        "src/components/Loading.tsx",
+        "src/App.tsx",
+        "src/components/Character/Scene.tsx"
+      ],
+      "dependents_count": 3,
+      "id": "src/context/LoadingProvider.tsx",
+      "is_entry": false,
+      "label": "LoadingProvider",
+      "line_count": 44,
+      "path": "src/context/LoadingProvider.tsx",
+      "risk_level": "Medium",
+      "source_dependents": [
+        "src/components/Loading.tsx",
+        "src/App.tsx",
+        "src/components/Character/Scene.tsx"
+      ],
+      "source_dependents_count": 3,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/data/boneData.ts": {
+      "complexity": 0,
+      "coupling": 0.077,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [
+        "src/components/Character/utils/animationUtils.ts"
+      ],
+      "dependents_count": 1,
+      "id": "src/data/boneData.ts",
+      "is_entry": false,
+      "label": "boneData",
+      "line_count": 59,
+      "path": "src/data/boneData.ts",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/components/Character/utils/animationUtils.ts"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/index.css": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/index.css",
+      "is_entry": false,
+      "label": "index",
+      "line_count": 222,
+      "path": "src/index.css",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/main.tsx": {
+      "complexity": 0,
+      "coupling": 0.077,
+      "dependencies": [
+        "src/App.tsx"
+      ],
+      "dependencies_count": 1,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/main.tsx",
+      "is_entry": true,
+      "label": "main",
+      "line_count": 11,
+      "path": "src/main.tsx",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/vite-env.d.ts": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/vite-env.d.ts",
+      "is_entry": false,
+      "label": "vite-env.d",
+      "line_count": 2,
+      "path": "src/vite-env.d.ts",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "test.js": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "test.js",
+      "is_entry": false,
+      "label": "test",
+      "line_count": 18,
+      "path": "test.js",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "tsconfig.app.json": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "tsconfig.app.json",
+      "is_entry": false,
+      "label": "tsconfig.app",
+      "line_count": 25,
+      "path": "tsconfig.app.json",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "tsconfig.app.tsbuildinfo": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "tsconfig.app.tsbuildinfo",
+      "is_entry": false,
+      "label": "tsconfig.app",
+      "line_count": 1,
+      "path": "tsconfig.app.tsbuildinfo",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "tsconfig.json": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "tsconfig.json",
+      "is_entry": false,
+      "label": "tsconfig",
+      "line_count": 8,
+      "path": "tsconfig.json",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "tsconfig.node.json": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "tsconfig.node.json",
+      "is_entry": false,
+      "label": "tsconfig.node",
+      "line_count": 23,
+      "path": "tsconfig.node.json",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "tsconfig.node.tsbuildinfo": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "tsconfig.node.tsbuildinfo",
+      "is_entry": false,
+      "label": "tsconfig.node",
+      "line_count": 1,
+      "path": "tsconfig.node.tsbuildinfo",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "vite.config.ts": {
+      "complexity": 0,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "vite.config.ts",
+      "is_entry": false,
+      "label": "vite.config",
+      "line_count": 8,
+      "path": "vite.config.ts",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    }
+  },
+  "folder_breakdown": [
+    {
+      "file_count": "43",
+      "path": "src/components",
+      "sample_files": "decrypt.ts, Navbar.tsx, SoftSkills.css"
+    },
+    {
+      "file_count": "13",
+      "path": "root",
+      "sample_files": "README.md, tsconfig.json, package.json"
+    },
+    {
+      "file_count": "5",
+      "path": "src",
+      "sample_files": "index.css, App.css, main.tsx"
+    },
+    {
+      "file_count": "2",
+      "path": "public",
+      "sample_files": "encrypt.cjs, .gitattributes"
+    },
+    {
+      "file_count": "1",
+      "path": "src/data",
+      "sample_files": "boneData.ts"
+    },
+    {
+      "file_count": "1",
+      "path": "src/context",
+      "sample_files": "LoadingProvider.tsx"
+    }
+  ],
+  "grouped_env_variables": {},
+  "high_risk_files": [],
+  "indexed_at": "2026-05-31T11:38:10.246100+00:00",
+  "language_breakdown": {
+    "CSS": 16,
+    "HTML": 1,
+    "JSON": 4,
+    "JavaScript": 3,
+    "Markdown": 1,
+    "TypeScript": 35,
+    "Unknown": 5
+  },
+  "manifest": {
+    "build_command": "npm run build (runs: vite build)",
+    "dev_command": "npm run dev (runs: vite --host)",
+    "dev_dependencies": [
+      "@eslint/js",
+      "@types/react",
+      "@types/react-dom",
+      "@vitejs/plugin-react",
+      "eslint",
+      "eslint-plugin-react-hooks",
+      "eslint-plugin-react-refresh",
+      "globals",
+      "typescript",
+      "typescript-eslint",
+      "vite"
+    ],
+    "install_command": "npm install",
+    "install_command_provenance": "common default, not declared in repo",
+    "manifest_type": "package.json",
+    "monorepo_packages": [],
+    "project_name": "rajesh-portfolio",
+    "run_command": "npm run dev (runs: vite --host)",
+    "run_command_provenance": "package.json:7 (scripts.dev)",
+    "runtime_dependencies": [
+      "@gsap/react",
+      "@react-three/cannon",
+      "@react-three/drei",
+      "@react-three/fiber",
+      "@react-three/postprocessing",
+      "@react-three/rapier",
+      "@types/three",
+      "@vercel/analytics",
+      "gsap",
+      "react",
+      "react-dom",
+      "react-fast-marquee",
+      "react-icons",
+      "three",
+      "three-stdlib"
+    ],
+    "scripts": {
+      "build": "vite build",
+      "dev": "vite --host",
+      "lint": "eslint .",
+      "preview": "vite preview"
+    },
+    "tech_stack": [
+      "@gsap/react",
+      "@react-three/cannon",
+      "@react-three/drei",
+      "@react-three/fiber",
+      "@react-three/postprocessing",
+      "@react-three/rapier",
+      "@types/three",
+      "@vercel/analytics",
+      "gsap",
+      "react",
+      "react-dom",
+      "react-fast-marquee",
+      "react-icons",
+      "three",
+      "three-stdlib"
+    ],
+    "test_command": "no tests found",
+    "test_command_type": "no test files found in indexed files"
+  },
+  "readme_summary": "Welcome to the open-source repository for my personal portfolio website.\n\n**Live Link:** https://karan-portfolio-v38j.onrender.com/",
+  "repo_full_name": "KaranParmar19/Portfolio",
+  "source_modules_count": 55,
+  "starter_empty_reason": null,
+  "test_modules_count": 0,
+  "total_edges": 32,
+  "total_modules": 65
+}

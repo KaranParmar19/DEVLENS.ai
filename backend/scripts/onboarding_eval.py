@@ -1,7 +1,7 @@
 """
 DevLens AI - Onboarding Dossier Evaluation Script
 Runs automated verification checks on the output of DevLensAgent.generate_onboarding_doc():
-1. No em-dashes (strictly no \u2014 or —)
+1. No em-dashes (strictly no em-dash character)
 2. No banned AI buzzwords (delve, elevate, robust, testament, comprehensive, seamless, etc.)
 3. All cited [[paths]] exist in the repository AST index or recognized manifest/readme
 4. Commands match manifest facts (or 'no tests found' when test modules == 0)
@@ -79,7 +79,7 @@ async def evaluate_repo(db, repo_full_name: str) -> dict[str, Any]:
     known_paths = {n.get("path") or n.get("id", "") for n in all_nodes}
 
     # 1. No em-dashes
-    has_em_dash = ("\u2014" in doc_md) or ("—" in doc_md)
+    has_em_dash = ("\u2014" in doc_md) or (chr(8212) in doc_md)
     check_em_dash = not has_em_dash
 
     # 2. No banned words
@@ -140,6 +140,95 @@ async def evaluate_repo(db, repo_full_name: str) -> dict[str, Any]:
                 check_narrative = False
                 narrative_error = f"Rationale leaked unverified filename tokens: {leaked_tokens}"
 
+    # 7. Pre-clean model citations inspection
+    raw_citations = getattr(agent, "last_raw_citations_before_clean", [])
+    raw_invalid_citations = [
+        c for c in raw_citations if not _is_valid_source_file(c, known_paths)
+    ]
+
+    # 8. Count Invariant check: every number in generated text must match computed facts
+    invariant_errors = []
+
+    # Check careful files dependents counts
+    careful_files_facts = {cf["path"]: cf for cf in facts.get("high_risk_files", [])}
+    careful_matches = re.findall(
+        r"-\s+\*\*\[\[(.*?)\]\]\*\*\s+\(Risk:\s+\w+,\s+Total Dependents:\s+(\d+)\s+\(Source:\s+(\d+),\s+Tests:\s+(\d+)\)",
+        doc_md,
+    )
+    for path, tot_s, src_s, tst_s in careful_matches:
+        if path in careful_files_facts:
+            cf = careful_files_facts[path]
+            if int(tot_s) != int(cf.get("dependents_count", 0)):
+                invariant_errors.append(
+                    f"Careful file {path} total dependents {tot_s} != fact {cf.get('dependents_count')}"
+                )
+            if int(src_s) != int(cf.get("source_dependents_count", 0)):
+                invariant_errors.append(
+                    f"Careful file {path} source dependents {src_s} != fact {cf.get('source_dependents_count')}"
+                )
+            if int(tst_s) != int(cf.get("test_dependents_count", 0)):
+                invariant_errors.append(
+                    f"Careful file {path} test dependents {tst_s} != fact {cf.get('test_dependents_count')}"
+                )
+
+    # Check starter files dependents counts
+    starter_facts = {sf["path"]: sf for sf in facts.get("low_risk_starters", [])}
+    starter_matches = re.findall(
+        r"-\s+\*\*\[\[(.*?)\]\]\*\*\s+\((\d+)\s+lines,\s+(\d+)\s+source dependents",
+        doc_md,
+    )
+    for path, lines_s, src_s in starter_matches:
+        if path in starter_facts:
+            sf = starter_facts[path]
+            if int(src_s) != int(sf.get("source_dependents_count", 0)):
+                invariant_errors.append(
+                    f"Starter file {path} source dependents {src_s} != fact {sf.get('source_dependents_count')}"
+                )
+
+    # Check folder file counts
+    folder_facts = {fb["path"].strip().rstrip("/"): fb for fb in facts.get("folder_breakdown", [])}
+    folder_matches = re.findall(r"-\s+\*\*`([^`]+)/`\*\*\s+\((\d+)\s+files?", doc_md)
+    for f_path, cnt_s in folder_matches:
+        clean_fp = f_path.strip().rstrip("/")
+        if clean_fp in folder_facts:
+            fb = folder_facts[clean_fp]
+            if int(cnt_s) != int(fb.get("file_count", 0)):
+                invariant_errors.append(
+                    f"Folder {clean_fp} count {cnt_s} != fact {fb.get('file_count')}"
+                )
+
+    # Check explicit numbers claimed in prose for total files, source files, test files
+    total_files_fact = facts.get("file_count", 0)
+    source_files_fact = facts.get("source_modules_count", 0)
+    test_files_fact = facts.get("test_modules_count", 0)
+
+    for m in re.finditer(r"\b(\d+)\s+(?:total\s+files|files\s+in\s+total)\b", doc_md, re.IGNORECASE):
+        num = int(m.group(1))
+        if num != total_files_fact and num != source_files_fact:
+            invariant_errors.append(f"Prose claimed {num} total files, expected {total_files_fact}")
+
+    for m in re.finditer(r"\b(\d+)\s+source\s+(?:modules|files)\b", doc_md, re.IGNORECASE):
+        num = int(m.group(1))
+        if num != source_files_fact:
+            invariant_errors.append(f"Prose claimed {num} source files, expected {source_files_fact}")
+
+    for m in re.finditer(r"\b(\d+)\s+test\s+(?:modules|files)\b", doc_md, re.IGNORECASE):
+        num = int(m.group(1))
+        if num != test_files_fact:
+            invariant_errors.append(f"Prose claimed {num} test files, expected {test_files_fact}")
+
+    check_invariants = (len(invariant_errors) == 0)
+
+    # Save golden facts block for repository
+    import json
+    from pathlib import Path
+    golden_dir = Path(__file__).resolve().parent.parent / "tests" / "golden"
+    golden_dir.mkdir(parents=True, exist_ok=True)
+    slug = repo_full_name.split("/")[-1]
+    golden_path = golden_dir / f"{slug}.facts.json"
+    with open(golden_path, "w", encoding="utf-8") as f:
+        json.dump(facts, f, indent=2, sort_keys=True)
+
     all_passed = (
         check_em_dash
         and check_banned_words
@@ -147,6 +236,7 @@ async def evaluate_repo(db, repo_full_name: str) -> dict[str, Any]:
         and check_commands
         and check_numbering
         and check_narrative
+        and check_invariants
     )
 
     drops_by_section = getattr(agent, "last_drops_by_section", {}) or {
@@ -170,11 +260,15 @@ async def evaluate_repo(db, repo_full_name: str) -> dict[str, Any]:
             "banned_found": found_banned,
             "paths_exist": check_paths_exist,
             "invalid_citations": invalid_citations,
+            "raw_citations_count": len(raw_citations),
+            "raw_invalid_citations": raw_invalid_citations,
             "commands_verified": check_commands,
             "sequential_numbering": check_numbering,
             "section_nums": section_nums,
             "narrative_guard": check_narrative,
             "narrative_error": narrative_error,
+            "count_invariants": check_invariants,
+            "invariant_errors": invariant_errors,
         },
         "passed": all_passed,
     }
@@ -198,10 +292,15 @@ async def main():
     print("=" * 80)
     header = (
         f"| {'Repository':<30} | {'No Em-Dash':<10} | {'No Banned':<10} | "
-        f"{'Paths Grounded':<14} | {'Commands Valid':<14} | {'Numbering':<10} | {'Narrative Guard':<16} | {'Verdict':<8} |"
+        f"{'Paths Grounded':<14} | {'Commands Valid':<14} | {'Numbering':<10} | "
+        f"{'Narrative Guard':<16} | {'Invariants':<10} | {'Verdict':<8} |"
     )
     print(header)
-    print("|" + "-" * 32 + "|" + "-" * 12 + "|" + "-" * 12 + "|" + "-" * 16 + "|" + "-" * 16 + "|" + "-" * 12 + "|" + "-" * 18 + "|" + "-" * 10 + "|")
+    print(
+        "|" + "-" * 32 + "|" + "-" * 12 + "|" + "-" * 12 + "|"
+        + "-" * 16 + "|" + "-" * 16 + "|" + "-" * 12 + "|"
+        + "-" * 18 + "|" + "-" * 12 + "|" + "-" * 10 + "|"
+    )
 
     for r in results:
         c = r.get("checks", {})
@@ -211,13 +310,40 @@ async def main():
         cmd_str = "PASS" if c.get("commands_verified") else "FAIL"
         num_str = "PASS" if c.get("sequential_numbering") else f"FAIL ({c.get('section_nums')})"
         narr_str = "PASS" if c.get("narrative_guard") else "FAIL"
+        inv_str = "PASS" if c.get("count_invariants") else f"FAIL ({len(c.get('invariant_errors', []))})"
         verd_str = "PASS" if r.get("passed") else "FAIL"
 
         row = (
             f"| {r['repo']:<30} | {em_str:<10} | {ban_str:<10} | "
-            f"{path_str:<14} | {cmd_str:<14} | {num_str:<10} | {narr_str:<16} | {verd_str:<8} |"
+            f"{path_str:<14} | {cmd_str:<14} | {num_str:<10} | "
+            f"{narr_str:<16} | {inv_str:<10} | {verd_str:<8} |"
         )
         print(row)
+
+    print("\n" + "=" * 80)
+    print("PRE-CLEAN CITATIONS VERIFICATION (RAW MODEL OUTPUT)")
+    print("=" * 80)
+    for r in results:
+        c = r.get("checks", {})
+        raw_cnt = c.get("raw_citations_count", 0)
+        raw_inv = c.get("raw_invalid_citations", [])
+        status_txt = "ALL GROUNDED" if len(raw_inv) == 0 else f"{len(raw_inv)} UNGROUNDED DROPPED"
+        print(f"- {r['repo']}: {raw_cnt} raw citations in model prose -> {status_txt}")
+        if raw_inv:
+            print(f"  Ungrounded raw citations caught & cleaned: {raw_inv}")
+
+    print("\n" + "=" * 80)
+    print("COUNT INVARIANT VERIFICATION DETAILS")
+    print("=" * 80)
+    for r in results:
+        c = r.get("checks", {})
+        errs = c.get("invariant_errors", [])
+        if errs:
+            print(f"- {r['repo']}: FAIL ({len(errs)} mismatch errors)")
+            for e in errs:
+                print(f"  * {e}")
+        else:
+            print(f"- {r['repo']}: PASS (all file counts, dependents, and metrics match computed facts)")
 
     print("\n" + "=" * 80)
     print("GLOSSARY TERMS RETURNED VS KEPT")
