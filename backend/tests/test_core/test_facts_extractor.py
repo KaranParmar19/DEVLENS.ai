@@ -685,7 +685,7 @@ def test_zero_test_modules_guard():
     with patch.object(extractor, "extract_file_content", AsyncMock(side_effect=lambda p: pkg_json if p == "package.json" else None)):
         manifest = asyncio.run(extractor.extract_manifest_facts(test_modules_count=0))
         assert manifest["test_command"] == "no tests found"
-        assert "0 test modules detected" in manifest["test_command_type"]
+        assert "no test files found in indexed files" in manifest["test_command_type"]
 
 
 def test_monorepo_multi_manifest_support():
@@ -761,7 +761,15 @@ def test_grouped_env_variables_and_code_usage():
         graph_cache=mock_graph,
     )
 
-    env_content = "DATABASE_URL=postgres://localhost/db\nAUTH_SECRET=secret123\nMISC_SETTING=foo\n"
+    env_content = (
+        "DATABASE_URL=postgres://localhost/db\n"
+        "AUTH_SECRET=secret123\n"
+        "MISC_SETTING=foo\n"
+        "REDIS_URL=redis://localhost:6379\n"
+        "API_KEY=xyz123\n"
+        "PORT=8000\n"
+        "DEBUG=true\n"
+    )
     code_content = "const db = process.env.DATABASE_URL;\nconst secret = process.env['AUTH_SECRET'];\n"
 
     def mock_fetch(p: str):

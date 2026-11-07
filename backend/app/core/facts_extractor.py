@@ -815,7 +815,7 @@ class FactsExtractor:
         # Never recommend a test command when facts show 0 test modules. Say "no tests found".
         if test_modules_count is not None and test_modules_count == 0:
             manifest_facts["test_command"] = "no tests found"
-            manifest_facts["test_command_type"] = "verified (0 test modules detected in repository)"
+            manifest_facts["test_command_type"] = "no test files found in indexed files"
             for pkg in manifest_facts.get("monorepo_packages", []):
                 pkg["test_command"] = "no tests found"
 
