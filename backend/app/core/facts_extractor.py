@@ -163,6 +163,90 @@ def find_makefile_target_line(content: str | None, target: str) -> int | None:
     return None
 
 
+CORE_TECH_PILLARS = {
+    "fastapi", "celery", "pgvector", "sqlalchemy", "redis", "react", "next", "vue",
+    "svelte", "express", "django", "flask", "bottle", "motor", "pymongo",
+    "pinecone", "pinecone-client", "openai", "google-generativeai", "tailwindcss",
+    "networkx",
+}
+
+MULTI_PKG_PREFIXES = (
+    "langchain", "tree-sitter", "pydantic", "opentelemetry", "firebase", "supabase",
+)
+
+
+def group_tech_stack(deps: list[str], max_groups: int = 12) -> list[str]:
+    """
+    Group runtime dependencies by @scope/* or known multi-package prefixes,
+    prioritize core architecture pillars, and return at most `max_groups` items.
+    """
+    if not deps:
+        return []
+
+    clean_deps: list[str] = []
+    for d in deps:
+        s = str(d).strip()
+        if not s or s.endswith("(dev)") or s.startswith("@types/"):
+            continue
+        if s not in clean_deps:
+            clean_deps.append(s)
+
+    scope_buckets: dict[str, list[str]] = {}
+    prefix_buckets: dict[str, list[str]] = {}
+    for d in clean_deps:
+        if d.startswith("@") and "/" in d:
+            scope = d.split("/", 1)[0]
+            scope_buckets.setdefault(scope, []).append(d)
+        else:
+            d_low = d.lower()
+            for pref in MULTI_PKG_PREFIXES:
+                if d_low == pref or d_low.startswith((f"{pref}-", f"{pref}_")):
+                    prefix_buckets.setdefault(pref, []).append(d)
+                    break
+
+    emitted_scopes: set[str] = set()
+    emitted_prefixes: set[str] = set()
+    groups: list[tuple[int, int, str]] = []
+
+    for idx, d in enumerate(clean_deps):
+        if d.startswith("@") and "/" in d:
+            scope = d.split("/", 1)[0]
+            if scope in emitted_scopes:
+                continue
+            emitted_scopes.add(scope)
+            members = scope_buckets[scope]
+            if len(members) >= 2:
+                label = f"{scope}/* ({len(members)} packages)"
+                tier = 0 if scope in ("@radix-ui", "@tanstack", "@react-three") else 1
+            else:
+                label = d
+                tier = 2
+            groups.append((tier, idx, label))
+            continue
+
+        d_low = d.lower()
+        matched_pref = None
+        for pref in MULTI_PKG_PREFIXES:
+            if d_low == pref or d_low.startswith((f"{pref}-", f"{pref}_")):
+                matched_pref = pref
+                break
+
+        if matched_pref and len(prefix_buckets.get(matched_pref, [])) >= 2:
+            if matched_pref in emitted_prefixes:
+                continue
+            emitted_prefixes.add(matched_pref)
+            cnt = len(prefix_buckets[matched_pref])
+            label = f"{matched_pref}* ({cnt} packages)"
+            groups.append((0, idx, label))
+            continue
+
+        tier = 0 if d_low in CORE_TECH_PILLARS else 2
+        groups.append((tier, idx, d))
+
+    groups.sort(key=lambda item: (item[0], item[1]))
+    return [g[2] for g in groups[:max_groups]]
+
+
 ENTRY_FILENAMES = frozenset({
     "server.ts",
     "server.js",
@@ -954,6 +1038,47 @@ class FactsExtractor:
         else:
             manifest_facts["monorepo_packages"] = []
 
+        # Merge runtime dependencies from all valid manifests in the repository (monorepo merging)
+        merged_runtime: list[str] = list(manifest_facts.get("runtime_dependencies") or [])
+        dev_only_py = {"pytest", "pytest-asyncio", "pytest-cov", "factory-boy", "aiosqlite", "ruff", "black", "mypy", "flake8"}
+        for mp in sorted(all_manifest_paths):
+            mp_name = PurePosixPath(mp).name
+            m_content = await self.extract_file_content(mp)
+            if not m_content:
+                continue
+            if mp_name == "package.json":
+                try:
+                    pdata = json.loads(m_content)
+                    for k in pdata.get("dependencies", {}).keys():
+                        if not str(k).startswith("@types/") and k not in merged_runtime:
+                            merged_runtime.append(k)
+                except Exception:
+                    pass
+            elif mp_name == "pyproject.toml":
+                try:
+                    try:
+                        import tomllib
+                    except ImportError:
+                        import tomli as tomllib  # type: ignore
+                    py_data = tomllib.loads(m_content)
+                    for d in py_data.get("project", {}).get("dependencies", []):
+                        name = re.split(r"[><=~^;\[\s]", str(d))[0].strip()
+                        if name and name not in merged_runtime:
+                            merged_runtime.append(name)
+                except Exception:
+                    pass
+            elif mp_name.startswith("requirements") and mp_name.endswith(".txt"):
+                for line in m_content.splitlines():
+                    clean = line.strip()
+                    if clean and not clean.startswith("#"):
+                        name = re.split(r"[><=~^;\[\s]", clean)[0].strip()
+                        if name and name.lower() not in dev_only_py and name not in merged_runtime:
+                            merged_runtime.append(name)
+
+        manifest_facts["runtime_dependencies"] = merged_runtime
+        manifest_facts["tech_stack"] = merged_runtime
+        manifest_facts["grouped_tech_stack"] = group_tech_stack(merged_runtime, max_groups=12)
+
         # 0 test modules guard across the repository:
         # Never recommend a test command when facts show 0 test modules. Say "no tests found".
         if test_modules_count is not None and test_modules_count == 0:
@@ -1365,6 +1490,9 @@ class FactsExtractor:
                     lines.append(f"  Test: `{pkg['test_command']}` ({pkg.get('test_provenance') or 'common default, not declared in repo'})")
                 else:
                     lines.append(f"  Test: no tests found")
+            if manifest.get("runtime_dependencies"):
+                grouped_rt = group_tech_stack(manifest["runtime_dependencies"], max_groups=12)
+                lines.append(f"- Runtime Dependencies: {', '.join(grouped_rt)}")
         elif manifest["manifest_type"]:
             lines.append(f"\n[Verified Build & Package Setup ({manifest['manifest_type']})]:")
             if manifest["project_name"]:
@@ -1387,7 +1515,8 @@ class FactsExtractor:
             if manifest["build_command"]:
                 lines.append(f"- Build Command: {manifest['build_command']}")
             if manifest.get("runtime_dependencies"):
-                lines.append(f"- Runtime Dependencies: {', '.join(manifest['runtime_dependencies'][:12])}")
+                grouped_rt = group_tech_stack(manifest["runtime_dependencies"], max_groups=12)
+                lines.append(f"- Runtime Dependencies: {', '.join(grouped_rt)}")
             if manifest.get("dev_dependencies"):
                 lines.append(f"- Dev Dependencies: {', '.join(manifest['dev_dependencies'][:8])}")
 
@@ -1557,9 +1686,11 @@ def build_deterministic_fallback_doc(facts: dict[str, Any]) -> str:
 
     cmd_lines = []
     if manifest.get("runtime_dependencies"):
-        cmd_lines.append(f"- **Runtime Dependencies**: {', '.join(manifest['runtime_dependencies'][:12])}")
+        grouped_rt = group_tech_stack(manifest["runtime_dependencies"], max_groups=12)
+        cmd_lines.append(f"- **Runtime Dependencies**: {', '.join(grouped_rt)}")
     elif manifest.get("tech_stack"):
-        cmd_lines.append(f"- **Dependencies**: {', '.join(manifest['tech_stack'][:12])}")
+        grouped_ts = group_tech_stack(manifest["tech_stack"], max_groups=12)
+        cmd_lines.append(f"- **Dependencies**: {', '.join(grouped_ts)}")
     if manifest.get("dev_dependencies"):
         cmd_lines.append(f"- **Dev Dependencies**: {', '.join(manifest['dev_dependencies'][:8])}")
 

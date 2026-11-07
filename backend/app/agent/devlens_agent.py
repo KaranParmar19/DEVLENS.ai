@@ -626,10 +626,13 @@ class DevLensAgent:
         else:
             quick_start_lines.append("- **Environment Variables**: No .env.example declared in repository.")
 
+        from app.core.facts_extractor import group_tech_stack
+
         tech_stack = doc.tech_stack if (hasattr(doc, "tech_stack") and doc.tech_stack) else (manifest.get("runtime_dependencies") or [])
         tech_stack = [str(t) for t in tech_stack if not str(t).endswith("(dev)") and not str(t).startswith("@types/")]
-        if tech_stack:
-            quick_start_lines.append(f"- **Tech Stack**: {', '.join(tech_stack)}")
+        grouped_stack = group_tech_stack(tech_stack, max_groups=12)
+        if grouped_stack:
+            quick_start_lines.append(f"- **Tech Stack**: {', '.join(grouped_stack)}")
 
         if quick_start_lines:
             lines.append(f"\n## {sec_idx}. Quick Start")

@@ -990,4 +990,24 @@ def test_core_file_imported_by_tests_only_in_high_risk():
         assert hr["source_dependents_count"] == 0
 
 
+def test_group_tech_stack_and_monorepo_merging():
+    from app.core.facts_extractor import group_tech_stack
+
+    raw_deps = (
+        [f"@radix-ui/react-pkg-{i}" for i in range(28)]
+        + ["@tanstack/react-query", "@tanstack/react-router", "@tanstack/react-start", "@tanstack/router-plugin"]
+        + ["react", "react-dom", "tailwindcss", "three", "zod", "clsx", "cmdk", "sonner", "vaul", "lenis"]
+        + ["fastapi", "uvicorn", "celery", "pgvector", "sqlalchemy", "redis", "langchain", "langchain-openai", "langchain-core"]
+    )
+    grouped = group_tech_stack(raw_deps, max_groups=12)
+    assert len(grouped) <= 12
+    assert "@radix-ui/* (28 packages)" in grouped
+    assert "@tanstack/* (4 packages)" in grouped
+    assert "langchain* (3 packages)" in grouped
+    assert "fastapi" in grouped
+    assert "celery" in grouped
+    assert "pgvector" in grouped
+
+
+
 
