@@ -26,6 +26,21 @@ logger = structlog.get_logger(__name__)
 settings = get_settings()
 
 
+def _extract_purpose_from_snippet(snippet: str | None) -> str:
+    """Extract a verified single sentence from code docstrings/comments, or return 'purpose not verified'."""
+    if not snippet or not snippet.strip():
+        return "purpose not verified"
+    lines = [l.strip() for l in snippet.splitlines() if l.strip()]
+    for line in lines[:15]:
+        clean = re.sub(r"^(/{2,}|#+|/\*+|\*+|\"\"\"|\'\'\')\s*", "", line).strip()
+        clean = clean.rstrip("*/\"'")
+        if clean and len(clean) >= 15 and not clean.startswith(("@", "import ", "from ", "export ", "const ", "def ", "class ", "<!", "type ", "interface ")):
+            sentence = re.split(r"\.\s+", clean)[0].strip()
+            if len(sentence) >= 15 and "todo" not in sentence.lower():
+                return sentence + ("." if not sentence.endswith(".") else "")
+    return "purpose not verified"
+
+
 def _is_valid_source_file(path: str, known_paths: set[str]) -> bool:
     """Validate if path is an indexed module, README, or build manifest."""
     clean = path.replace("[[", "").replace("]]", "").strip()
@@ -798,13 +813,9 @@ class DevLensAgent:
 
         # 4. Choose first_task in code, not the model. Pick starters from computed candidate_starters.
         computed_starters: list[StarterTaskItem] = []
-        model_purposes = {
-            st.path.replace("[[", "").replace("]]", "").strip(): st.verified_purpose
-            for st in (parsed_schema.first_task.suggested_files if parsed_schema and parsed_schema.first_task else [])
-        }
-
         candidate_starters = facts.get("candidate_starters", [])
         computed_starter_paths = {cs["path"] for cs in candidate_starters[:3]}
+
         for st in (parsed_schema.first_task.suggested_files if parsed_schema and parsed_schema.first_task else []):
             clean_st = st.path.replace("[[", "").replace("]]", "").strip()
             if clean_st not in computed_starter_paths:
@@ -819,11 +830,8 @@ class DevLensAgent:
             if not has_snippet:
                 verified_purpose = "purpose not verified"
             else:
-                model_exp = model_purposes.get(cs_path)
-                if model_exp and model_exp.strip() and model_exp.strip().lower() != "purpose not verified":
-                    verified_purpose = model_exp.strip()
-                else:
-                    verified_purpose = "Low-risk module verified from graph metrics."
+                snippet_purpose = _extract_purpose_from_snippet(cs.get("first_30_lines"))
+                verified_purpose = snippet_purpose if snippet_purpose != "purpose not verified" else "purpose not verified"
 
             computed_starters.append(StarterTaskItem(
                 path=cs_path,
@@ -835,7 +843,7 @@ class DevLensAgent:
 
         parsed_schema.first_task.suggested_files = computed_starters
 
-        # Guard title and rationale of first_task (never infer from filename when purpose not verified)
+        # Build title, rationale, and verification steps entirely in code
         if computed_starters:
             top_st = computed_starters[0]
             file_name = PurePosixPath(top_st.path).name
@@ -848,38 +856,38 @@ class DevLensAgent:
                     "verifies the local development setup without risk of breaking other modules."
                 )
             else:
-                raw_title = (
-                    parsed_schema.first_task.title.strip()
-                    if (parsed_schema and parsed_schema.first_task and parsed_schema.first_task.title)
-                    else ""
+                task_title = f"Add a test for {file_name}"
+                clean_purpose = top_st.verified_purpose.rstrip(".")
+                task_rationale = (
+                    f"Module [[{top_st.path}]] ({clean_purpose}) is an isolated leaf with "
+                    f"{top_st.source_dependents_count} downstream source dependents. Adding unit tests "
+                    "provides a safe, self-contained first PR."
                 )
-                if not raw_title or raw_title in ("Explore Low-Risk Modules", "Recommended First Task"):
-                    task_title = f"Add a test for {file_name}"
+
+            test_cmd = facts.get("manifest", {}).get("test_command")
+            if facts.get("test_modules_count", 0) > 0 and test_cmd and test_cmd != "no tests found":
+                if top_st.nearby_test:
+                    verification_steps = f"Run `{test_cmd}` (targeting `[[{top_st.nearby_test}]]`) to verify changes."
                 else:
-                    task_title = raw_title
-
-                raw_rationale = (
-                    parsed_schema.first_task.rationale.strip()
-                    if (parsed_schema and parsed_schema.first_task and parsed_schema.first_task.rationale)
-                    else ""
-                )
-                task_rationale = raw_rationale or (
-                    f"Module [[{top_st.path}]] is an isolated leaf with {top_st.source_dependents_count} source dependents."
-                )
-
-            verification_steps = (
-                parsed_schema.first_task.verification_steps.strip()
-                if (parsed_schema and parsed_schema.first_task and parsed_schema.first_task.verification_steps)
-                else (f"Run the test suite using `{facts.get('manifest', {}).get('test_command') or 'test runner'}` to verify changes.")
-            )
+                    verification_steps = f"Run `{test_cmd}` to verify that existing test suites pass."
+            else:
+                run_cmd = facts.get("manifest", {}).get("run_command") or "application run command"
+                entry_file = facts.get("entry_points", [{}])[0].get("path") if facts.get("entry_points") else top_st.path
+                verification_steps = f"Read `[[{entry_file}]]`, then run `{run_cmd}`."
         else:
             task_title = "Explore Repository Architecture"
             empty_reason = facts.get(
                 "starter_empty_reason",
-                "No low-risk starter modules identified: all core source modules have active dependents or are imported across the test suite."
+                "No low-risk starter modules identified: all core source modules have active dependents or participate in central application flows."
             )
             task_rationale = empty_reason
-            verification_steps = "Inspect entry points and run the verified test suite."
+            entry_file = facts.get("entry_points", [{}])[0].get("path") if facts.get("entry_points") else "entry module"
+            run_cmd = facts.get("manifest", {}).get("run_command") or "application run command"
+            test_cmd = facts.get("manifest", {}).get("test_command")
+            if facts.get("test_modules_count", 0) == 0 or not test_cmd or test_cmd == "no tests found":
+                verification_steps = f"Read `[[{entry_file}]]`, then run `{run_cmd}`."
+            else:
+                verification_steps = f"Run the test suite using `{test_cmd}` to verify the baseline setup."
 
         parsed_schema.first_task.title = task_title
         parsed_schema.first_task.rationale = task_rationale
