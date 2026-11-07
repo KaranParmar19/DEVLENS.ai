@@ -627,3 +627,34 @@ def test_onboarding_doc_schema_validation():
     assert schema.quick_start.install_command == "pip install -e ."
     assert schema.careful_files[0].risk_level == "High"
     assert schema.first_task.suggested_files[0].line_count == 30
+
+
+def test_first_task_guarding_when_purpose_unverified():
+    from app.schemas.onboarding import StarterTaskItem, FirstTaskSection
+    from pathlib import PurePosixPath
+
+    # Scenario: unverified purpose must force generic title and rationale
+    candidate_starter = {
+        "path": "src/utils/payment_processor.ts",
+        "line_count": 45,
+        "source_dependents_count": 0,
+        "nearby_test": None,
+        "first_30_lines": None,
+    }
+    
+    file_name = PurePosixPath(candidate_starter["path"]).name
+    has_snippet = bool(candidate_starter.get("first_30_lines"))
+    verified_purpose = "purpose not verified" if not has_snippet else "Grounded explanation"
+    
+    # Model hallucinated a title based on filename
+    model_title = "Implement Stripe Payment Webhook"
+    if verified_purpose == "purpose not verified":
+        task_title = f"Add a test for {file_name}"
+        task_rationale = f"Module [[{candidate_starter['path']}]] has low complexity ({candidate_starter['line_count']} lines)."
+    else:
+        task_title = model_title
+        task_rationale = "Custom rationale."
+
+    assert task_title == "Add a test for payment_processor.ts"
+    assert "Stripe" not in task_title
+    assert "Add a test for" in task_title

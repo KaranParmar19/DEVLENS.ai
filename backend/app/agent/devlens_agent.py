@@ -642,6 +642,56 @@ class DevLensAgent:
 
         parsed_schema.first_task.suggested_files = computed_starters
 
+        # Guard title and rationale of first_task (never infer from filename when purpose not verified)
+        if computed_starters:
+            top_st = computed_starters[0]
+            file_name = PurePosixPath(top_st.path).name
+
+            if top_st.verified_purpose == "purpose not verified":
+                task_title = f"Add a test for {file_name}"
+                task_rationale = (
+                    f"Module [[{top_st.path}]] has low complexity ({top_st.line_count} lines) and "
+                    f"{top_st.source_dependents_count} downstream source dependents. Adding unit test coverage "
+                    "verifies the local development setup without risk of breaking other modules."
+                )
+            else:
+                raw_title = (
+                    parsed_schema.first_task.title.strip()
+                    if (parsed_schema and parsed_schema.first_task and parsed_schema.first_task.title)
+                    else ""
+                )
+                if not raw_title or raw_title in ("Explore Low-Risk Modules", "Recommended First Task"):
+                    task_title = f"Add a test for {file_name}"
+                else:
+                    task_title = raw_title
+
+                raw_rationale = (
+                    parsed_schema.first_task.rationale.strip()
+                    if (parsed_schema and parsed_schema.first_task and parsed_schema.first_task.rationale)
+                    else ""
+                )
+                task_rationale = raw_rationale or (
+                    f"Module [[{top_st.path}]] is an isolated leaf with {top_st.source_dependents_count} source dependents."
+                )
+
+            verification_steps = (
+                parsed_schema.first_task.verification_steps.strip()
+                if (parsed_schema and parsed_schema.first_task and parsed_schema.first_task.verification_steps)
+                else (f"Run the test suite using `{facts.get('manifest', {}).get('test_command') or 'test runner'}` to verify changes.")
+            )
+        else:
+            task_title = "Explore Repository Architecture"
+            empty_reason = facts.get(
+                "starter_empty_reason",
+                "No low-risk starter modules identified: all core source modules have active dependents or are imported across the test suite."
+            )
+            task_rationale = empty_reason
+            verification_steps = "Inspect entry points and run the verified test suite."
+
+        parsed_schema.first_task.title = task_title
+        parsed_schema.first_task.rationale = task_rationale
+        parsed_schema.first_task.verification_steps = verification_steps
+
         # 5. Filter glossary: defined_in must exist in repo
         valid_glossary = []
         for item in parsed_schema.glossary:
