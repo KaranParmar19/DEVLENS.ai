@@ -45,19 +45,21 @@ def test_file_type_classifiers():
 
 
 def test_chunk_reassembly_deduplication():
-    # Simulate a text with sliding window overlap
-    part1 = "DevLens AI analyzes repository dependency graphs and generates architectural guides."
-    overlap = part1[-25:]
-    part2 = overlap + " Contributors can explore high-risk junctions and safe starter files."
+    # Simulate sliding-window overlap of exact length used by chunker (256 chars = 64 tokens * 4)
+    prefix = "A" * 1800
+    overlap = "X" * 256
+    suffix = "B" * 1800
+    part1 = prefix + overlap
+    part2 = overlap + suffix
 
     # Joining raw parts has duplicated overlap text
     raw_joined = part1 + part2
     assert raw_joined.count(overlap) == 2
 
-    # join_chunks_without_overlap detects the duplicate suffix/prefix and removes it
+    # join_chunks_without_overlap detects the exact chunker overlap length and removes it
     deduped = join_chunks_without_overlap([part1, part2])
     assert deduped.count(overlap) == 1
-    assert deduped == "DevLens AI analyzes repository dependency graphs and generates architectural guides. Contributors can explore high-risk junctions and safe starter files."
+    assert deduped == prefix + overlap + suffix
 
 
 def test_risk_classification():
@@ -72,25 +74,28 @@ def test_risk_classification():
 
     # Entry point with 0 dependents must NOT read "High"
     assert classify_risk_level(0, 0, 0.0, is_entry=True, source_dependents_count=0, thresholds=custom_thresholds) == "Low"
-    assert classify_risk_level(0, 2, 0.0, is_entry=True, source_dependents_count=0, thresholds=custom_thresholds) == "Medium"
+    assert classify_risk_level(0, 2, 0.0, is_entry=True, source_dependents_count=0, thresholds=custom_thresholds) == "Low"
+
+    # Core file imported by tests only (bottle.py pattern: 0 source importers, 28 test importers)
+    assert classify_risk_level(28, 0, 0.0, is_entry=False, source_dependents_count=0, test_dependents_count=28) == "Core file, imported by tests only"
 
     # Entry point with active callers is High
     assert classify_risk_level(2, 2, 0.1, is_entry=True, source_dependents_count=2, thresholds=custom_thresholds) == "High"
 
     # High dependents
-    assert classify_risk_level(5, 2, 0.1, is_entry=False, thresholds=custom_thresholds) == "High"
+    assert classify_risk_level(5, 2, 0.1, is_entry=False, source_dependents_count=5, thresholds=custom_thresholds) == "High"
 
     # High combined dependents and coupling
     assert classify_risk_level(3, 2, 0.6, is_entry=False, source_dependents_count=3, thresholds=custom_thresholds) == "High"
 
     # Medium risk
-    assert classify_risk_level(2, 2, 0.1, is_entry=False, thresholds=custom_thresholds) == "Medium"
-    assert classify_risk_level(0, 10, 0.1, is_entry=False, thresholds=custom_thresholds) == "Medium"
-    assert classify_risk_level(0, 2, 0.4, is_entry=False, thresholds=custom_thresholds) == "Medium"
+    assert classify_risk_level(2, 2, 0.1, is_entry=False, source_dependents_count=2, thresholds=custom_thresholds) == "Medium"
+    assert classify_risk_level(0, 10, 0.1, is_entry=False, source_dependents_count=0, thresholds=custom_thresholds) == "Medium"
+    assert classify_risk_level(0, 2, 0.4, is_entry=False, source_dependents_count=0, thresholds=custom_thresholds) == "Medium"
 
     # Low risk (isolated leaf)
-    assert classify_risk_level(1, 2, 0.1, is_entry=False, thresholds=custom_thresholds) == "Low"
-    assert classify_risk_level(0, 2, 0.1, is_entry=False, thresholds=custom_thresholds) == "Low"
+    assert classify_risk_level(1, 2, 0.1, is_entry=False, source_dependents_count=1, thresholds=custom_thresholds) == "Low"
+    assert classify_risk_level(0, 2, 0.1, is_entry=False, source_dependents_count=0, thresholds=custom_thresholds) == "Low"
 
 
 def test_graph_metrics_and_starter_selection():
@@ -439,13 +444,37 @@ def test_deterministic_fallback_document():
 
 def test_chunk_boundary_no_overlap_shared_suffix_prefix():
     # Chunk 1 ends with a pattern and Chunk 2 starts with the exact same 9-char pattern
-    # even though there was NO intentional overlap produced by a sliding window.
-    chunk1 = "First function ends here:\nreturn 0;"
+    # when there was NO intentional sliding window overlap (e.g. separate AST symbol chunks).
+    chunk1 = "First function ends here:\nreturn 0;\n"
     chunk2 = "return 0;\nSecond function begins here."
-    # The heuristic looks for matching suffix/prefix >= 6 chars and merges them:
     merged = join_chunks_without_overlap([chunk1, chunk2])
-    # The 9-character shared string "return 0;" is coalesced by the heuristic
-    assert merged == "First function ends here:\nreturn 0;\nSecond function begins here."
+    # Both lines must survive because arbitrary short matches are NOT sliding window overlaps
+    assert merged == "First function ends here:\nreturn 0;\nreturn 0;\nSecond function begins here."
+
+
+def test_real_readme_round_trip_chunking_and_reassembly():
+    from app.core.chunker import chunk_file
+    import re
+
+    real_readme = (
+        "# Sample Project\n\n"
+        "A comprehensive demonstration of DevLens facts extraction and chunking pipeline.\n\n"
+        "## Installation\n\n"
+        "```bash\npip install -e .\n```\n\n"
+        "## Architecture Overview\n\n"
+        "DevLens uses a multi-layered static analysis pipeline to inspect repositories.\n"
+        "It traces imports, builds graph models, and extracts grounded facts without hallucinations.\n\n"
+    ) + ("\n## Section Details\n\nThis section describes feature components in detail with exhaustive context.\n" * 40)
+
+    chunks = chunk_file("README.md", real_readme, "Markdown")
+    assert len(chunks) > 1, "Expected multi-chunk split for test coverage"
+
+    # Strip the file header added by _chunk_generic
+    clean_chunks = [re.sub(r"^# File: [^\n]+\n\n", "", c.content) for c in chunks]
+
+    # Reconstruct the original document
+    reconstructed = join_chunks_without_overlap(clean_chunks)
+    assert reconstructed == real_readme
 
 
 def test_makefile_test_target_precedence_over_pyproject():

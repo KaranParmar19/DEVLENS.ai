@@ -7,7 +7,7 @@ The `embedding` column is the pgvector type for similarity search.
 
 import uuid
 from datetime import datetime
-from sqlalchemy import String, Integer, Text, DateTime, ForeignKey, func
+from sqlalchemy import String, Integer, Text, DateTime, ForeignKey, func, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 from pgvector.sqlalchemy import Vector
@@ -20,6 +20,9 @@ settings = get_settings()
 
 class CodeChunk(Base):
     __tablename__ = "code_chunks"
+    __table_args__ = (
+        UniqueConstraint("repo_id", "file_path", "chunk_index", name="uq_code_chunks_repo_file_chunk"),
+    )
 
     # ── Primary Key ────────────────────────────────────────────────────────
     id: Mapped[uuid.UUID] = mapped_column(

@@ -111,22 +111,31 @@ def join_chunks_without_overlap(chunks: list[str]) -> str:
     """
     Concatenate multi-chunk file contents, deduplicating the sliding-window
     token overlap produced by split_by_token_budget.
+    Only removes an overlap of the exact length the chunker uses (OVERLAP_TOKENS * 4 = 256 or 200),
+    verified by string equality. Symbol chunks and arbitrary repeated lines are never trimmed.
     """
     if not chunks:
         return ""
     if len(chunks) == 1:
         return chunks[0]
 
+    # Valid exact overlap lengths produced by split_by_token_budget / _chunk_generic
+    valid_exact_lengths = (256, 200)
+
     reconstructed = chunks[0]
     for next_chunk in chunks[1:]:
-        # Find the maximum overlap between the end of reconstructed and start of next_chunk
-        max_overlap_search = min(len(reconstructed), len(next_chunk), 400)
-        overlap_len = 0
-        for l in range(max_overlap_search, 5, -1):
-            if reconstructed.endswith(next_chunk[:l]):
-                overlap_len = l
+        trimmed = False
+        for expected_len in valid_exact_lengths:
+            if (
+                len(reconstructed) >= expected_len
+                and len(next_chunk) >= expected_len
+                and reconstructed[-expected_len:] == next_chunk[:expected_len]
+            ):
+                reconstructed += next_chunk[expected_len:]
+                trimmed = True
                 break
-        reconstructed += next_chunk[overlap_len:]
+        if not trimmed:
+            reconstructed += next_chunk
     return reconstructed
 
 
@@ -153,27 +162,31 @@ def classify_risk_level(
     coupling: float,
     is_entry: bool,
     source_dependents_count: int = 0,
+    test_dependents_count: int = 0,
     thresholds: RiskThresholds = RISK_THRESHOLDS,
 ) -> str:
     """
-    Classify file risk level as High, Medium, or Low.
-    Rules follow explicit, documented thresholds:
-    - An entry file with 0 dependents must NOT read "High".
-    - Test importers are counted separately from source importers.
+    Classify file risk level.
+    Rules follow explicit, documented criteria:
+    - Files with 0 source dependents but active test dependents: "Core file, imported by tests only".
+    - Entry files with 0 dependents: "Low".
+    - Files with >= HIGH_DEPENDENTS_MIN source dependents: "High".
+    - Files with >= MEDIUM_DEPENDENTS_MIN source dependents or medium coupling: "Medium".
+    - Otherwise: "Low".
     """
-    # An entry file with 0 dependents must not read "High"
-    if is_entry and source_dependents_count == 0 and dependents_count == 0:
-        return "Medium" if dependencies_count > 0 else "Low"
+    # 0 source dependents, but active test dependents (e.g. single-file core module imported by tests)
+    actual_test_deps = test_dependents_count if test_dependents_count > 0 else max(0, dependents_count - source_dependents_count)
+    if source_dependents_count == 0 and actual_test_deps > 0:
+        return "Core file, imported by tests only"
 
-    # High blast radius:
-    # 1. High source dependents count
-    # 2. Or high overall dependents (e.g. heavily imported across test suite)
-    # 3. Or entry point that has active callers/dependents
-    # 4. Or significant combined dependents and coupling
+    # Standalone entry file with 0 callers
+    if is_entry and source_dependents_count == 0 and dependents_count == 0:
+        return "Low"
+
+    # High blast radius based on source dependents and coupling
     if (
-        (is_entry and (source_dependents_count > 0 or dependents_count > 0))
+        (is_entry and source_dependents_count > 0)
         or source_dependents_count >= thresholds.HIGH_DEPENDENTS_MIN
-        or dependents_count >= thresholds.HIGH_DEPENDENTS_MIN
         or (source_dependents_count >= thresholds.HIGH_COMBINED_DEPS_MIN and coupling >= thresholds.HIGH_COUPLING_MIN)
     ):
         return "High"
@@ -181,7 +194,6 @@ def classify_risk_level(
     if (
         is_entry
         or source_dependents_count >= thresholds.MEDIUM_DEPENDENTS_MIN
-        or dependents_count >= thresholds.MEDIUM_DEPENDENTS_MIN
         or dependencies_count >= thresholds.MEDIUM_DEPENDENCIES_MIN
         or coupling >= thresholds.MEDIUM_COUPLING_MIN
     ):
@@ -223,17 +235,23 @@ class FactsExtractor:
         res = await self.db.execute(stmt)
         chunks = res.all()
 
-        matching_chunks: list[str] = []
-        matched_path: str | None = None
-        seen_indices: set[int] = set()
-
-        for path, content, idx in chunks:
+        # Identify the single best target file path to avoid concatenating multiple distinct files
+        best_path: str | None = None
+        for path, _, _ in chunks:
             p_lower = path.lower().replace("\\", "/")
-            if p_lower == clean_target or p_lower.endswith("/" + clean_target):
-                if idx in seen_indices:
-                    continue
-                seen_indices.add(idx)
-                matched_path = path
+            if p_lower == clean_target:
+                best_path = path
+                break
+            if p_lower.endswith("/" + clean_target):
+                if best_path is None or len(path) < len(best_path):
+                    best_path = path
+
+        if not best_path:
+            return None
+
+        matching_chunks: list[str] = []
+        for path, content, idx in chunks:
+            if path == best_path:
                 # Strip generic chunk header if present
                 clean_content = re.sub(r"^# File: [^\n]+\n\n", "", content)
                 clean_content = re.sub(r"^// File: [^\n]+\n// [^\n]+\n\n", "", clean_content)
@@ -295,6 +313,7 @@ class FactsExtractor:
                 coupling=coupling,
                 is_entry=is_entry,
                 source_dependents_count=len(source_deps),
+                test_dependents_count=len(test_deps),
             )
 
             metrics = {
@@ -638,7 +657,7 @@ class FactsExtractor:
                     clean = line.strip()
                     if clean and not clean.startswith("#") and "=" in clean:
                         key = clean.split("=")[0].strip()
-                        if key:
+                        if key and key not in keys:
                             keys.append(key)
                 if keys:
                     return keys

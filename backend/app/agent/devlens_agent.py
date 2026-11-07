@@ -539,6 +539,8 @@ class DevLensAgent:
         # ── Post-processing Validation & Grounding Enforcement ──────────────────
         manifest = facts.get("manifest", {})
 
+        drops: list[str] = []
+
         # 1. Overwrite quick start with ground truth from manifest
         parsed_schema.quick_start = QuickStartInfo(
             install_command=manifest.get("install_command") or "",
@@ -561,6 +563,8 @@ class DevLensAgent:
                 cf.test_dependents_count = m["test_dependents_count"]
                 cf.coupling = m["coupling"]
                 valid_careful_files.append(cf)
+            else:
+                drops.append(f"careful_files: dropped '{cf.path}' (not in repository graph metrics)")
 
         if not valid_careful_files and facts.get("high_risk_files"):
             for hr in facts["high_risk_files"][:4]:
@@ -582,6 +586,8 @@ class DevLensAgent:
             if clean_evidence in all_known_paths:
                 g.evidence_path = clean_evidence
                 valid_gotchas.append(g)
+            else:
+                drops.append(f"gotchas: dropped rule '{g.title}' (evidence_path '{g.evidence_path}' is not an indexed file)")
         parsed_schema.gotchas = valid_gotchas
 
         # 4. Filter starter tasks: must exist in repo and respect verified_purpose
@@ -598,6 +604,8 @@ class DevLensAgent:
                 if not cs.get("first_30_lines"):
                     st.verified_purpose = "purpose not verified"
                 valid_starters.append(st)
+            else:
+                drops.append(f"starter_tasks: dropped '{st.path}' (not in candidate starters list)")
 
         if not valid_starters and facts.get("candidate_starters"):
             for cs in facts["candidate_starters"][:3]:
@@ -617,7 +625,12 @@ class DevLensAgent:
             if clean_p in all_known_paths:
                 item.defined_in = clean_p
                 valid_glossary.append(item)
+            else:
+                drops.append(f"glossary: dropped term '{item.term}' (defined_in '{item.defined_in}' is not an indexed file)")
         parsed_schema.glossary = valid_glossary
 
+        self.last_facts_block = facts_block
+        self.last_raw_json = raw_output
+        self.last_drops = drops
         self.last_structured_doc = parsed_schema.model_dump()
         return self._render_schema_to_markdown(parsed_schema, facts)

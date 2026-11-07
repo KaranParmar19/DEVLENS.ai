@@ -24,7 +24,7 @@ class FolderMapItem(BaseModel):
 
 class CarefulFileItem(BaseModel):
     path: str = Field(description="File path in repository")
-    risk_level: Literal["High", "Medium", "Low"] = Field(default="Medium", description="Computed risk level")
+    risk_level: str = Field(default="Medium", description="Computed risk level")
     dependents_count: int = Field(default=0, description="Total downstream dependents")
     source_dependents_count: int = Field(default=0, description="Source code modules importing this file")
     test_dependents_count: int = Field(default=0, description="Test files importing this file")

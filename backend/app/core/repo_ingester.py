@@ -218,7 +218,7 @@ class RepoIngester:
         await emit("Indexing for Q&A", {"status": "embedding code chunks"})
 
         # Delete existing chunks for this repo (re-indexing case)
-        await self.vector_store.delete_by_repo(repo_id)
+        await self.vector_store.delete_all()
 
         # Embed in batches
         await self.embedder.embed_and_store(all_chunks, self.vector_store, repo_id)
