@@ -119,6 +119,48 @@ def is_generated_file(path: str) -> bool:
     return any(pat in p for pat in GENERATED_PATTERNS)
 
 
+def find_nearby_test(path: str, all_file_paths: list[str]) -> str | None:
+    """
+    Find a dedicated unit test file for `path` by exact module stem conventions:
+    `test_<stem>`, `<stem>_test`, `<stem>.test`, `<stem>.spec`.
+    Never matches package markers (`__init__.py`) or generic test helpers (`conftest.py`).
+    """
+    p_posix = PurePosixPath(path.replace("\\", "/"))
+    raw_stem = p_posix.stem.lower()
+    if raw_stem in ("__init__", "index"):
+        parent_name = p_posix.parent.name.lower()
+        if not parent_name or parent_name in (".", "src", "app", "lib", "backend", "frontend"):
+            return None
+        stem = parent_name
+    else:
+        stem = raw_stem.lstrip("_") or raw_stem
+
+    excluded_test_names = {
+        "__init__.py", "conftest.py", "setup_test.py", "helpers.py",
+        "tools.py", "test_utils.py", "test_helper.py",
+    }
+    valid_test_stems = {
+        f"test_{stem}",
+        f"{stem}_test",
+        f"{stem}.test",
+        f"{stem}.spec",
+        f"test_{raw_stem}",
+        f"{raw_stem}_test",
+        f"{raw_stem}.test",
+        f"{raw_stem}.spec",
+    }
+
+    for cand in all_file_paths:
+        if not is_test_file(cand):
+            continue
+        c_posix = PurePosixPath(cand.replace("\\", "/"))
+        if c_posix.name.lower() in excluded_test_names:
+            continue
+        if c_posix.stem.lower() in valid_test_stems:
+            return cand
+    return None
+
+
 def is_source_module(path: str) -> bool:
     """Check if a file path is a runtime source module (excluding tests, config, generated, and docs/assets)."""
     p_lower = path.lower().replace("\\", "/")
@@ -802,12 +844,8 @@ class FactsExtractor:
                 if m["source_dependents_count"] not in (0, 1):
                     continue
 
-            # Check if there is a nearby test file
-            base_name = PurePosixPath(path).stem
-            nearby_test = next(
-                (p for p in all_file_paths if is_test_file(p) and base_name in p),
-                None,
-            )
+            # Check if there is a nearby test file by exact stem convention
+            nearby_test = find_nearby_test(path, all_file_paths)
 
             candidate_starters.append({
                 **m,
@@ -1660,21 +1698,28 @@ class FactsExtractor:
         dir_files: dict[str, list[str]] = {}
 
         for n in nodes:
-            path = n.get("path") or n.get("id", "")
-            parts = PurePosixPath(path.replace("\\", "/")).parts
+            path = (n.get("path") or n.get("id", "")).replace("\\", "/")
+            parts = PurePosixPath(path).parts
             if len(parts) > 1:
                 top_dir = parts[0]
                 if top_dir == "src" and len(parts) > 2:
                     top_dir = f"src/{parts[1]}"
                 dir_counts[top_dir] = dir_counts.get(top_dir, 0) + 1
-                dir_files.setdefault(top_dir, []).append(parts[-1])
+                rel_in_dir = path[len(top_dir) + 1 :] if path.startswith(top_dir + "/") else parts[-1]
+                if rel_in_dir not in dir_files.setdefault(top_dir, []):
+                    dir_files[top_dir].append(rel_in_dir)
             else:
                 dir_counts["root"] = dir_counts.get("root", 0) + 1
-                dir_files.setdefault("root", []).append(parts[0])
+                if parts and parts[0] not in dir_files.setdefault("root", []):
+                    dir_files["root"].append(parts[0])
 
         folder_map = []
         for d, count in sorted(dir_counts.items(), key=lambda x: x[1], reverse=True)[:8]:
-            sample = ", ".join(dir_files[d][:3])
+            ordered_files = sorted(
+                dir_files.get(d, []),
+                key=lambda f: (1 if PurePosixPath(f).name == "__init__.py" else 0, f),
+            )
+            sample = ", ".join(ordered_files[:3])
             clean_d = d.strip().rstrip("/")
             folder_map.append({
                 "path": clean_d,

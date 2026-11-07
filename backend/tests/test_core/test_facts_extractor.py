@@ -1157,6 +1157,38 @@ def test_python_relative_and_package_root_imports():
     }
 
 
+def test_nearby_test_exact_stem_and_docstring_header_stopping():
+    from app.core.facts_extractor import find_nearby_test
+    from app.agent.devlens_agent import _extract_purpose_from_snippet
+
+    all_paths = [
+        "src/markupsafe/__init__.py",
+        "src/markupsafe/_native.py",
+        "tests/__init__.py",
+        "tests/conftest.py",
+        "tests/test_markupsafe.py",
+    ]
+    # __init__.py in markupsafe matches test_markupsafe.py (parent package stem), never tests/__init__.py
+    assert find_nearby_test("src/markupsafe/__init__.py", all_paths) == "tests/test_markupsafe.py"
+    # _native.py has no dedicated test_native.py, and must not match tests/__init__.py
+    assert find_nearby_test("src/markupsafe/_native.py", all_paths) is None
+
+    # Multi-line docstring with section underline and ALL-CAPS header stops at first title line
+    luminary_docstring = (
+        '"""\n'
+        "security.py - Password Hashing and JWT Tokens\n"
+        "───────────────────────────────────────────────\n"
+        "WHY PASSLIB + BCRYPT?\n"
+        "  Never store plain-text passwords in the database!\n"
+        '"""\n'
+    )
+    assert (
+        _extract_purpose_from_snippet(luminary_docstring)
+        == "security.py - Password Hashing and JWT Tokens."
+    )
+
+
+
 
 
 

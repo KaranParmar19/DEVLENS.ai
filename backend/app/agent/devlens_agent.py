@@ -75,12 +75,16 @@ def _extract_leading_comment_or_docstring(snippet: str) -> str | None:
     """
     If snippet starts with a module docstring or leading comment (ignoring blank lines,
     shebang, encoding declarations, or synthetic chunker headers), extract its first sentence.
+    Stops at the first blank line, section underline, or ALL-CAPS header inside a docstring.
     Otherwise return None.
     """
-    raw_lines = [l.strip() for l in snippet.splitlines() if l.strip()]
+    all_lines = [l.strip() for l in snippet.splitlines()]
     idx = 0
-    while idx < len(raw_lines):
-        line = raw_lines[idx]
+    while idx < len(all_lines):
+        line = all_lines[idx]
+        if not line:
+            idx += 1
+            continue
         if (
             line.startswith("#!")
             or re.match(r"^#.*coding[:=]", line)
@@ -90,10 +94,10 @@ def _extract_leading_comment_or_docstring(snippet: str) -> str | None:
             continue
         break
 
-    if idx >= len(raw_lines):
+    if idx >= len(all_lines):
         return None
 
-    first = raw_lines[idx]
+    first = all_lines[idx]
 
     # Case 1: Leading docstring or block comment (""", ''', /*, /**)
     for delim in ('"""', "'''", "/**", "/*"):
@@ -108,15 +112,24 @@ def _extract_leading_comment_or_docstring(snippet: str) -> str | None:
             else:
                 if after_open.lstrip("*").strip():
                     collected.append(after_open.lstrip("*").strip())
-                for sub_line in raw_lines[idx + 1 : idx + 15]:
+                for sub_line in all_lines[idx + 1 : idx + 20]:
                     if closing in sub_line:
                         before_close = sub_line.split(closing, 1)[0].strip().lstrip("*").strip()
-                        if before_close:
+                        if before_close and not re.fullmatch(r"[─━═=\-*_~]{3,}", before_close):
                             collected.append(before_close)
                         break
                     cleaned_sub = sub_line.lstrip("*").strip()
-                    if cleaned_sub:
-                        collected.append(cleaned_sub)
+                    if not cleaned_sub:
+                        if collected:
+                            break
+                        continue
+                    if re.fullmatch(r"[─━═=\-*_~]{3,}", cleaned_sub):
+                        if collected:
+                            break
+                        continue
+                    if cleaned_sub.isupper() and len(cleaned_sub) >= 4 and collected:
+                        break
+                    collected.append(cleaned_sub)
             joined = " ".join(collected).strip()
             if joined:
                 cand = _first_sentence(joined)
@@ -127,7 +140,11 @@ def _extract_leading_comment_or_docstring(snippet: str) -> str | None:
     # Case 2: Leading single-line comment (# or //), excluding C preprocessor directives
     if first.startswith(("//", "#")) and not re.match(r"^#\s*(?:include|define|ifdef|ifndef|if\b|endif|pragma)\b", first):
         collected_comments: list[str] = []
-        for sub_line in raw_lines[idx : idx + 10]:
+        for sub_line in all_lines[idx : idx + 12]:
+            if not sub_line:
+                if collected_comments:
+                    break
+                continue
             if re.match(r"^#\s*(?:include|define|ifdef|ifndef|if\b|endif|pragma)\b", sub_line):
                 break
             if sub_line.startswith("//"):
@@ -136,7 +153,7 @@ def _extract_leading_comment_or_docstring(snippet: str) -> str | None:
                 c_text = re.sub(r"^#+\s*", "", sub_line).strip()
             else:
                 break
-            if not c_text:
+            if not c_text or re.fullmatch(r"[─━═=\-*_~]{3,}", c_text):
                 if collected_comments:
                     break
                 continue
