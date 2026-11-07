@@ -131,3 +131,71 @@ def test_large_file_chunked_properly():
     )
     chunks = chunk_file(file_path="big.py", content=content, language="Python")
     assert len(chunks) >= 10, "Large file should produce many chunks"
+
+
+REAL_TS_SAMPLE = """import * as crypto from "crypto";
+
+export interface DecryptOptions {
+  algorithm: string;
+  keyLength: number;
+}
+
+async function generateAESKey(password: string): Promise<CryptoKey> {
+  const passwordBuffer = new TextEncoder().encode(password);
+  const hashedPassword = await crypto.subtle.digest("SHA-256", passwordBuffer);
+  return crypto.subtle.importKey(
+    "raw",
+    hashedPassword.slice(0, 32),
+    { name: "AES-CBC" },
+    false,
+    ["encrypt", "decrypt"]
+  );
+}
+
+export const decryptFile = async (
+  url: string,
+  key: CryptoKey,
+  options?: DecryptOptions
+): Promise<ArrayBuffer> => {
+  const res = await fetch(url);
+  const data = await res.arrayBuffer();
+  return data;
+};
+
+export class EncryptionService {
+  constructor(private readonly secret: string) {}
+
+  public getSecret(): string {
+    return this.secret;
+  }
+}
+"""
+
+
+def test_real_ts_file_chunk_reassembly_exact_equality():
+    """
+    Assert that chunking a real TypeScript file with chunk_file and reassembling
+    the chunks yields 100% exact equality with the original source, preserving
+    all newlines and separators without dropping newlines between functions.
+    """
+    import re
+
+    chunks = chunk_file(
+        file_path="src/components/Character/utils/decrypt.ts",
+        content=REAL_TS_SAMPLE,
+        language="TypeScript",
+    )
+    assert len(chunks) >= 3
+
+    # Clean headers as extract_file_content does
+    clean_chunks = [
+        re.sub(r"^// File: [^\n]+\n// [^\n]+\n\n", "", c.content)
+        for c in chunks
+    ]
+    reassembled = "".join(clean_chunks)
+
+    # Exact equality assertion
+    assert reassembled == REAL_TS_SAMPLE
+    # Ensure bug "}export" never occurs
+    assert "}export" not in reassembled
+    assert "}\n\nexport" in reassembled

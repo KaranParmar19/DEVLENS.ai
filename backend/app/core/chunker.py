@@ -146,12 +146,12 @@ def _chunk_python(file_path: str, content: str) -> list[Chunk]:
 def _chunk_js_ts(file_path: str, content: str, language: str) -> list[Chunk]:
     """
     Chunk JavaScript/TypeScript by function/class boundaries using regex.
-    This is a pragmatic alternative to tree-sitter (no native binary needed).
-    Handles: function declarations, arrow functions, class declarations.
+    Preserves exact whitespace and original line separators across chunks so
+    reassembly yields 100% exact equality with the original source file.
     """
-    lines = content.splitlines()
-    chunks: list[Chunk] = []
-    idx = 0
+    lines = content.splitlines(keepends=True)
+    if not lines:
+        return []
 
     # Patterns to detect function/class start lines
     func_pattern = re.compile(
@@ -167,9 +167,15 @@ def _chunk_js_ts(file_path: str, content: str, language: str) -> list[Chunk]:
     def find_block_end(start_line: int) -> int:
         """Find the closing brace for a block starting at start_line."""
         depth = 0
+        opened = False
         for i in range(start_line, len(lines)):
-            depth += lines[i].count("{") - lines[i].count("}")
-            if depth == 0 and i > start_line:
+            line = lines[i]
+            open_count = line.count("{")
+            close_count = line.count("}")
+            if open_count > 0:
+                opened = True
+            depth += open_count - close_count
+            if opened and depth <= 0 and i >= start_line:
                 return i
         return len(lines) - 1
 
@@ -190,21 +196,53 @@ def _chunk_js_ts(file_path: str, content: str, language: str) -> list[Chunk]:
     if not boundaries:
         return _chunk_generic(file_path, content, language)
 
+    # Filter nested declarations and determine top-level spans
+    spans: list[tuple[int, int, str, str]] = []
+    curr_end = -1
     for start_line, symbol, chunk_type in boundaries:
+        if start_line <= curr_end:
+            continue
         end_line = find_block_end(start_line)
-        block = "\n".join(lines[start_line:end_line + 1])
-        header = f"// File: {file_path}\n// {chunk_type.title()}: {symbol}\n\n"
-        full = header + block
+        curr_end = end_line
+        spans.append((start_line, end_line, symbol, chunk_type))
+
+    chunks: list[Chunk] = []
+    idx = 0
+
+    # If there are lines before the first top-level symbol (e.g. imports), preserve as module chunk
+    if spans and spans[0][0] > 0:
+        pre_content = "".join(lines[:spans[0][0]])
+        header = f"// File: {file_path}\n// Module: imports\n\n"
+        full = header + pre_content
         chunks.append(Chunk(
             file_path=file_path,
             language=language,
             chunk_index=idx,
             content=full,
             token_count=estimate_tokens(full),
-            chunk_type=chunk_type,
-            symbol_name=symbol,
-            start_line=start_line + 1,
-            end_line=end_line + 1,
+            chunk_type="module",
+            symbol_name="module",
+            start_line=1,
+            end_line=spans[0][0],
+        ))
+        idx += 1
+
+    # Contiguously partition all lines to preserve original separators
+    for s_idx, (s_line, e_line, sym, ctype) in enumerate(spans):
+        next_s = spans[s_idx + 1][0] if s_idx + 1 < len(spans) else len(lines)
+        chunk_body = "".join(lines[s_line:next_s])
+        header = f"// File: {file_path}\n// {ctype.title()}: {sym}\n\n"
+        full = header + chunk_body
+        chunks.append(Chunk(
+            file_path=file_path,
+            language=language,
+            chunk_index=idx,
+            content=full,
+            token_count=estimate_tokens(full),
+            chunk_type=ctype,
+            symbol_name=sym,
+            start_line=s_line + 1,
+            end_line=min(e_line + 1, len(lines)),
         ))
         idx += 1
 
