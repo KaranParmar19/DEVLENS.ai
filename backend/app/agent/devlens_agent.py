@@ -608,32 +608,47 @@ class DevLensAgent:
             for pkg in manifest["monorepo_packages"]:
                 folder = pkg["folder"]
                 quick_start_lines.append(f"  - **`{folder}/`** ({pkg['manifest_type']}):")
-                if pkg.get("install_command"):
-                    inst_prov = pkg.get("install_provenance") or "common default, not declared in repo"
-                    quick_start_lines.append(f"    - Install: `{pkg['install_command']}` ({inst_prov})")
+                inst_cmd = pkg.get("install_command")
+                inst_prov = pkg.get("install_provenance")
+                if inst_cmd and inst_cmd != "not declared in repo":
+                    prov_str = f" ({inst_prov})" if inst_prov else ""
+                    quick_start_lines.append(f"    - Install: `{inst_cmd}`{prov_str}")
+                else:
+                    quick_start_lines.append("    - Install: not declared in repo")
                 if pkg.get("run_command") and pkg["run_command"] != "no run command declared":
-                    run_prov = pkg.get("run_provenance") or "common default, not declared in repo"
-                    quick_start_lines.append(f"    - Run/Dev: `{pkg['run_command']}` ({run_prov})")
+                    run_prov = pkg.get("run_provenance")
+                    prov_str = f" ({run_prov})" if run_prov else ""
+                    quick_start_lines.append(f"    - Run/Dev: `{pkg['run_command']}`{prov_str}")
                 else:
                     quick_start_lines.append("    - Run/Dev: no run command declared")
-                if pkg.get("test_command") and pkg["test_command"] != "no tests found":
-                    test_prov = pkg.get("test_provenance") or "common default, not declared in repo"
-                    quick_start_lines.append(f"    - Test: `{pkg['test_command']}` ({test_prov})")
+                if pkg.get("test_command") and pkg["test_command"] not in ("no tests found", "not declared in repo"):
+                    test_prov = pkg.get("test_provenance")
+                    prov_str = f" ({test_prov})" if test_prov else ""
+                    quick_start_lines.append(f"    - Test: `{pkg['test_command']}`{prov_str}")
+                elif pkg.get("test_command") == "not declared in repo":
+                    quick_start_lines.append("    - Test: not declared in repo")
+                else:
+                    quick_start_lines.append("    - Test: no tests found")
         else:
-            if qs.install_command:
-                inst_prov = manifest.get("install_command_provenance") or "common default, not declared in repo"
-                quick_start_lines.append(f"- **Install**: `{qs.install_command}` ({inst_prov})")
-            if qs.run_command and qs.run_command != "no run command declared":
-                run_prov = manifest.get("run_command_provenance") or "common default, not declared in repo"
-                quick_start_lines.append(f"- **Run/Dev**: `{qs.run_command}` ({run_prov})")
+            if qs.install_command and qs.install_command != "not declared in repo":
+                inst_prov = manifest.get("install_command_provenance")
+                prov_str = f" ({inst_prov})" if inst_prov else ""
+                quick_start_lines.append(f"- **Install**: `{qs.install_command}`{prov_str}")
+            else:
+                quick_start_lines.append("- **Install**: not declared in repo")
+            if qs.run_command and qs.run_command not in ("no run command declared", "not declared in repo"):
+                run_prov = manifest.get("run_command_provenance")
+                prov_str = f" ({run_prov})" if run_prov else ""
+                quick_start_lines.append(f"- **Run/Dev**: `{qs.run_command}`{prov_str}")
             else:
                 quick_start_lines.append("- **Run/Dev**: no run command declared")
             if qs.test_command:
-                if qs.test_command == "no tests found":
-                    quick_start_lines.append("- **Test**: no tests found")
+                if qs.test_command in ("no tests found", "not declared in repo"):
+                    quick_start_lines.append(f"- **Test**: {qs.test_command}")
                 else:
-                    test_prov = manifest.get("test_command_provenance") or "common default, not declared in repo"
-                    quick_start_lines.append(f"- **Test**: `{qs.test_command}` ({test_prov})")
+                    test_prov = manifest.get("test_command_provenance")
+                    prov_str = f" ({test_prov})" if test_prov else ""
+                    quick_start_lines.append(f"- **Test**: `{qs.test_command}`{prov_str}")
             else:
                 quick_start_lines.append("- **Test**: no tests found")
 
@@ -889,13 +904,13 @@ class DevLensAgent:
         if facts.get("test_modules_count", 0) == 0:
             test_cmd = "no tests found"
         elif not test_cmd:
-            test_cmd = "no tests found"
+            test_cmd = "not declared in repo"
 
         parsed_schema.quick_start = QuickStartInfo(
-            install_command=manifest.get("install_command") or "",
+            install_command=manifest.get("install_command") or "not declared in repo",
             run_command=manifest.get("run_command") or manifest.get("dev_command") or "no run command declared",
             test_command=test_cmd,
-            test_command_type=manifest.get("test_command_type") or "declared",
+            test_command_type=manifest.get("test_command_type") or "not declared",
             env_variables=facts.get("env_variables", []),
         )
 
@@ -1066,7 +1081,11 @@ class DevLensAgent:
         # Build title, rationale, and verification steps entirely in code
         # Use the exact command strings from quick_start so Quick Start and first_task always match
         test_cmd = parsed_schema.quick_start.test_command
-        has_tests = bool(facts.get("test_modules_count", 0) > 0 and test_cmd and test_cmd != "no tests found")
+        has_tests = bool(
+            facts.get("test_modules_count", 0) > 0
+            and test_cmd
+            and test_cmd not in ("no tests found", "not declared in repo")
+        )
         raw_run_cmd = parsed_schema.quick_start.run_command
         run_cmd = raw_run_cmd if (raw_run_cmd and raw_run_cmd != "no run command declared") else "no run command declared"
         fallback_paths = [

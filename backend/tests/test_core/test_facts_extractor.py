@@ -695,6 +695,7 @@ def test_monorepo_multi_manifest_support():
             {"id": "frontend/src/App.tsx", "path": "frontend/src/App.tsx"},
             {"id": "frontend/src/App.test.tsx", "path": "frontend/src/App.test.tsx"},
             {"id": "backend/requirements.txt", "path": "backend/requirements.txt"},
+            {"id": "backend/Dockerfile", "path": "backend/Dockerfile"},
             {"id": "backend/app/main.py", "path": "backend/app/main.py"},
             {"id": "backend/tests/test_main.py", "path": "backend/tests/test_main.py"},
         ],
@@ -710,14 +711,29 @@ def test_monorepo_multi_manifest_support():
     frontend_pkg = json.dumps({
         "name": "client",
         "scripts": {"dev": "vite", "test": "vitest run"}
-    })
+    }, indent=2)
     backend_req = "fastapi>=0.100.0\nuvicorn>=0.23.0\npytest>=7.0.0\n"
+    backend_dockerfile = (
+        "FROM python:3.11-slim\n"
+        "RUN pip install -r requirements.txt\n"
+        'CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]\n'
+    )
+    readme_md = (
+        "# Monorepo\n"
+        "```bash\n"
+        "pytest backend/tests\n"
+        "```\n"
+    )
 
     def mock_fetch(p: str):
         if p == "frontend/package.json":
             return frontend_pkg
         elif p == "backend/requirements.txt":
             return backend_req
+        elif p == "backend/Dockerfile":
+            return backend_dockerfile
+        elif p == "README.md":
+            return readme_md
         return None
 
     with patch.object(extractor, "extract_file_content", AsyncMock(side_effect=mock_fetch)):
@@ -729,13 +745,20 @@ def test_monorepo_multi_manifest_support():
         assert "backend" in folders
 
         front = next(p for p in pkgs if p["folder"] == "frontend")
-        assert front["install_command"] == "cd frontend && npm install"
+        assert front["install_command"] == "not declared in repo"
+        assert front["install_provenance"] is None
         assert front["run_command"] == "cd frontend && npm run dev"
+        assert "frontend/package.json:4 (scripts.dev: vite)" in front["run_provenance"]
         assert front["test_command"] == "cd frontend && npm test"
+        assert "frontend/package.json:5 (scripts.test: vitest run)" in front["test_provenance"]
 
         back = next(p for p in pkgs if p["folder"] == "backend")
-        assert back["install_command"] == "pip install -r backend/requirements.txt"
-        assert back["test_command"] == "pytest backend"
+        assert back["install_command"] == "pip install -r requirements.txt"
+        assert back["install_provenance"] == "backend/Dockerfile:2"
+        assert back["run_command"] == "uvicorn app.main:app --host 0.0.0.0 --port 8000"
+        assert back["run_provenance"] == "backend/Dockerfile:3 (CMD)"
+        assert back["test_command"] == "pytest backend/tests"
+        assert back["test_provenance"] == "README.md:3"
 
 
 def test_grouped_env_variables_and_code_usage():
