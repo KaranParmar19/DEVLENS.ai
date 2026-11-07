@@ -1,5 +1,5 @@
 """
-DevLens AI — pgvector Store
+DevLens AI - pgvector Store
 Handles all vector database operations via PostgreSQL + pgvector.
 Provides: upsert chunks, similarity search, delete by repo.
 
@@ -14,6 +14,7 @@ from sqlalchemy import select, delete, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.code_chunk import CodeChunk
+from app.models.repository import Repository
 from app.core.chunker import Chunk
 from app.core.embedder import embed_texts, embed_single, EmbeddingUnavailableError
 from app.config import get_settings
@@ -21,7 +22,7 @@ from app.config import get_settings
 logger = structlog.get_logger(__name__)
 settings = get_settings()
 
-# Sub-batch size for DB inserts — commit every N chunks so progress
+# Sub-batch size for DB inserts - commit every N chunks so progress
 # is durable even if the Celery task is killed mid-ingestion.
 DB_INSERT_BATCH_SIZE = 500
 
@@ -225,23 +226,33 @@ class VectorStore:
                             "symbol_name": c.symbol_name,
                             "start_line": c.start_line,
                             "end_line": c.end_line,
-                            "similarity": 0.95 if is_symbol_match else 0.85,
+                            "match_type": "symbol" if is_symbol_match else "keyword",
+                            "similarity": None,
                         })
             except Exception as e:
                 logger.warning("keyword_search_failed", error=str(e))
 
-        # 2. Semantic pgvector Cosine Distance Search (only over embedded chunks)
+        # 2. Semantic pgvector Cosine Distance Search (only when repo has verified real embeddings)
         try:
-            has_vectors = (
+            repo_model = (
                 await self.db.execute(
-                    select(CodeChunk.id)
-                    .where(CodeChunk.repo_id == self.repo_id, CodeChunk.embedding.is_not(None))
-                    .limit(1)
+                    select(Repository.embedding_model).where(Repository.id == self.repo_id)
                 )
-            ).first() is not None
+            ).scalar_one_or_none()
+            has_real_model = bool(
+                repo_model and not str(repo_model).startswith("legacy-fallback")
+            )
+            has_vectors = False
+            if has_real_model:
+                has_vectors = (
+                    await self.db.execute(
+                        select(CodeChunk.id)
+                        .where(CodeChunk.repo_id == self.repo_id, CodeChunk.embedding.is_not(None))
+                        .limit(1)
+                    )
+                ).first() is not None
             if not has_vectors:
-                # Keyword-only repo: skip the (slow, failing) embedding API call
-                results.sort(key=lambda r: r.get("similarity", 0), reverse=True)
+                # Keyword-only repo: return SQL symbol/keyword matches without calling embedding API
                 return results[:top_k]
             query_embedding = await embed_single(query)
             stmt = (
@@ -270,13 +281,20 @@ class VectorStore:
                         "symbol_name": c.symbol_name,
                         "start_line": c.start_line,
                         "end_line": c.end_line,
+                        "match_type": "semantic",
                         "similarity": round(1 - row.distance, 4),
                     })
         except Exception as e:
             logger.warning("vector_similarity_search_failed", error=str(e))
 
-        # Sort by similarity descending, return top_k
-        results.sort(key=lambda r: r.get("similarity", 0), reverse=True)
+        # Sort semantic matches by similarity descending while keeping symbol/keyword matches ordered
+        results.sort(
+            key=lambda r: (
+                1 if r.get("match_type") == "symbol" else (0 if r.get("similarity") is not None else -1),
+                r.get("similarity") or 0.0,
+            ),
+            reverse=True,
+        )
         return results[:top_k]
 
     # ── Delete (for re-indexing) ───────────────────────────────────────────

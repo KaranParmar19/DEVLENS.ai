@@ -1,4 +1,4 @@
-"""DevLens AI — Search Tool: semantic & hybrid vector search over indexed code chunks."""
+"""DevLens AI - Search Tool: semantic & hybrid vector search over indexed code chunks."""
 
 from langchain_core.tools import Tool
 from app.rag.vector_store import VectorStore
@@ -18,8 +18,14 @@ def make_search_tool(vector_store: VectorStore) -> Tool:
         for r in results:
             loc = f"lines {r['start_line']}-{r['end_line']}" if r.get("start_line") else ""
             symbol = f" (symbol: `{r['symbol_name']}`)" if r.get("symbol_name") else ""
+            sim = r.get("similarity")
+            match_label = (
+                f"similarity: {sim}"
+                if sim is not None
+                else f"match: {r.get('match_type', 'keyword')}"
+            )
             parts.append(
-                f"**[[{r['file_path']}]]** {loc}{symbol} (score: {r['similarity']})\n"
+                f"**[[{r['file_path']}]]** {loc}{symbol} ({match_label})\n"
                 f"```{r['language'].lower()}\n{r['content'][:600]}\n```"
             )
         return "\n\n---\n\n".join(parts)
