@@ -682,18 +682,31 @@ class FactsExtractor:
         """
         nodes = self.graph_cache.get("nodes", [])
         all_file_paths = [n.get("path") or n.get("id", "") for n in nodes]
-        all_manifest_paths = [
-            p for p in all_file_paths
-            if PurePosixPath(p).name in ("package.json", "pyproject.toml")
-            or (PurePosixPath(p).name.startswith("requirements") and PurePosixPath(p).suffix == ".txt")
-        ]
+        IGNORED_MANIFEST_DIRS = (
+            "docs", "doc", "examples", "example", "samples", "sample",
+            "vendor", "node_modules", "test", "tests", "fixtures", "benchmarks",
+            ".github", "venv", ".venv",
+        )
+
+        all_manifest_paths = []
+        for p in all_file_paths:
+            p_parts = [part.lower() for part in PurePosixPath(p).parts[:-1]]
+            if any(ign in p_parts for ign in IGNORED_MANIFEST_DIRS):
+                continue
+            name = PurePosixPath(p).name
+            if name in ("package.json", "pyproject.toml") or (
+                name.startswith("requirements") and PurePosixPath(p).suffix == ".txt"
+            ):
+                all_manifest_paths.append(p)
 
         manifests_by_dir: dict[str, list[str]] = {}
         for mp in all_manifest_paths:
             d = PurePosixPath(mp).parent.as_posix()
             manifests_by_dir.setdefault(d, []).append(mp)
 
-        if len(manifests_by_dir) > 1 or any(d not in (".", "") for d in manifests_by_dir):
+        # Only activate monorepo multi-package mode when there are 2 or more distinct valid package directories
+        valid_dirs = set(manifests_by_dir.keys())
+        if len(valid_dirs) > 1:
             monorepo_packages = []
             for d, m_files in sorted(manifests_by_dir.items(), key=lambda x: x[0]):
                 folder = "root" if d in (".", "") else d
@@ -715,11 +728,14 @@ class FactsExtractor:
                         try:
                             pdata = json.loads(content)
                             pscripts = pdata.get("scripts", {})
-                            test_cmd = (
-                                "no tests found"
-                                if (not folder_tests or test_modules_count == 0)
-                                else (f"{cd_prefix}npm test" if "test" in pscripts else "no tests found")
-                            )
+                            if folder == "root" and manifest_facts.get("test_command"):
+                                test_cmd = manifest_facts["test_command"]
+                            else:
+                                test_cmd = (
+                                    "no tests found"
+                                    if (not folder_tests or test_modules_count == 0)
+                                    else (f"{cd_prefix}npm test" if "test" in pscripts else "no tests found")
+                                )
                             run_cmd = (
                                 f"{cd_prefix}npm run dev"
                                 if "dev" in pscripts
@@ -735,11 +751,14 @@ class FactsExtractor:
                         except Exception:
                             pass
                 elif py_proj:
-                    test_cmd = (
-                        "no tests found"
-                        if (not folder_tests or test_modules_count == 0)
-                        else f"{cd_prefix}pytest"
-                    )
+                    if folder == "root" and manifest_facts.get("test_command"):
+                        test_cmd = manifest_facts["test_command"]
+                    else:
+                        test_cmd = (
+                            "no tests found"
+                            if (not folder_tests or test_modules_count == 0)
+                            else f"{cd_prefix}pytest"
+                        )
                     monorepo_packages.append({
                         "folder": folder,
                         "manifest_type": "pyproject.toml",
@@ -748,11 +767,14 @@ class FactsExtractor:
                         "test_command": test_cmd,
                     })
                 elif req_txt:
-                    test_cmd = (
-                        "no tests found"
-                        if (not folder_tests or test_modules_count == 0)
-                        else (f"pytest {folder}" if folder != "root" else "pytest")
-                    )
+                    if folder == "root" and manifest_facts.get("test_command"):
+                        test_cmd = manifest_facts["test_command"]
+                    else:
+                        test_cmd = (
+                            "no tests found"
+                            if (not folder_tests or test_modules_count == 0)
+                            else (f"pytest {folder}" if folder != "root" else "pytest")
+                        )
                     monorepo_packages.append({
                         "folder": folder,
                         "manifest_type": "requirements.txt",
@@ -762,6 +784,8 @@ class FactsExtractor:
                     })
 
             manifest_facts["monorepo_packages"] = monorepo_packages
+        else:
+            manifest_facts["monorepo_packages"] = []
 
         # 0 test modules guard across the repository:
         # Never recommend a test command when facts show 0 test modules. Say "no tests found".
