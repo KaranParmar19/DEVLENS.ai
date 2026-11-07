@@ -1139,8 +1139,10 @@ class FactsExtractor:
                 from app.models.code_chunk import CodeChunk
                 from sqlalchemy import select
 
-                stmt = select(CodeChunk.file_path, CodeChunk.content).where(
-                    CodeChunk.repo_id == self.repo_id
+                stmt = (
+                    select(CodeChunk.file_path, CodeChunk.content)
+                    .where(CodeChunk.repo_id == self.repo_id)
+                    .order_by(CodeChunk.file_path.asc(), CodeChunk.chunk_index.asc())
                 )
                 res = await self.db.execute(stmt)
                 for path, content in res.all():

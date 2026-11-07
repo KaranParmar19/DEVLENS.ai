@@ -1014,5 +1014,30 @@ def test_group_tech_stack_and_monorepo_merging():
     assert "pgvector" in grouped
 
 
+def test_assemble_verified_facts_determinism():
+    import json
+
+    mock_graph = {
+        "nodes": [
+            {"id": "src/main.ts", "path": "src/main.ts", "is_entry": True, "line_count": 100},
+            {"id": "src/utils/helper.ts", "path": "src/utils/helper.ts", "line_count": 25},
+            {"id": "package.json", "path": "package.json", "line_count": 30},
+        ],
+        "edges": [["src/main.ts", "src/utils/helper.ts"]],
+        "meta": {"cycles": []},
+    }
+    extractor = FactsExtractor(
+        db=None,  # type: ignore
+        repo_id=None,  # type: ignore
+        repo_full_name="acme/deterministic-repo",
+        graph_cache=mock_graph,
+    )
+    with patch.object(extractor, "extract_file_content", AsyncMock(return_value='{"name": "det", "scripts": {"dev": "vite"}}')):
+        run1 = asyncio.run(extractor.assemble_verified_facts())
+        run2 = asyncio.run(extractor.assemble_verified_facts())
+        assert json.dumps(run1, sort_keys=True) == json.dumps(run2, sort_keys=True)
+
+
+
 
 
