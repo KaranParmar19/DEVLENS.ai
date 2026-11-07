@@ -736,3 +736,56 @@ def test_monorepo_multi_manifest_support():
         back = next(p for p in pkgs if p["folder"] == "backend")
         assert back["install_command"] == "pip install -r backend/requirements.txt"
         assert back["test_command"] == "pytest backend"
+
+
+def test_grouped_env_variables_and_code_usage():
+    from app.core.facts_extractor import categorize_env_key
+
+    assert categorize_env_key("DATABASE_URL") == "Database & Cache"
+    assert categorize_env_key("AUTH_JWT_SECRET") == "Authentication & Security"
+    assert categorize_env_key("STRIPE_API_KEY") == "Authentication & Security"
+    assert categorize_env_key("NEXT_PUBLIC_APP_URL") == "API & External Services"
+    assert categorize_env_key("APP_ENV") == "Application & Runtime"
+
+    mock_graph = {
+        "nodes": [
+            {"id": "src/config.ts", "path": "src/config.ts"},
+            {"id": ".env.example", "path": ".env.example"},
+        ],
+        "edges": [],
+    }
+    extractor = FactsExtractor(
+        db=None,  # type: ignore
+        repo_id=None,  # type: ignore
+        repo_full_name="test-org/env-test",
+        graph_cache=mock_graph,
+    )
+
+    env_content = "DATABASE_URL=postgres://localhost/db\nAUTH_SECRET=secret123\nMISC_SETTING=foo\n"
+    code_content = "const db = process.env.DATABASE_URL;\nconst secret = process.env['AUTH_SECRET'];\n"
+
+    def mock_fetch(p: str):
+        if p == ".env.example":
+            return env_content
+        elif p == "src/config.ts":
+            return code_content
+        return None
+
+    with patch.object(extractor, "extract_file_content", AsyncMock(side_effect=mock_fetch)):
+        facts = asyncio.run(extractor.assemble_verified_facts())
+        grouped = facts.get("grouped_env_variables", {})
+        assert "Database & Cache" in grouped
+        assert "Authentication & Security" in grouped
+
+        db_item = next(i for i in grouped["Database & Cache"] if i["key"] == "DATABASE_URL")
+        assert db_item["read_in_code"] is True
+        assert db_item["accessor"] == "process.env"
+
+        unused_item = next(i for i in grouped.get("Configuration", []) if i["key"] == "MISC_SETTING")
+        assert unused_item["read_in_code"] is False
+
+        fallback_doc = build_deterministic_fallback_doc(facts)
+        assert "- **Database & Cache**:" in fallback_doc
+        assert "`DATABASE_URL` (read in code via process.env)" in fallback_doc
+        assert "`MISC_SETTING` (declared in .env.example)" in fallback_doc
+        assert "DATABASE_URL, AUTH_SECRET, MISC_SETTING" not in fallback_doc

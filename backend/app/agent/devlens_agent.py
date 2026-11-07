@@ -401,7 +401,14 @@ class DevLensAgent:
                     lines.append(f"- **Test**: `{qs.test_command}`{cmd_type}")
             else:
                 lines.append("- **Test**: no tests found")
-        if qs.env_variables:
+        if facts.get("grouped_env_variables"):
+            lines.append("- **Environment Variables**:")
+            for cat, items in facts["grouped_env_variables"].items():
+                lines.append(f"  - **{cat}**:")
+                for item in items:
+                    usage = f" (read in code via {item['accessor']})" if item.get("read_in_code") else " (declared in .env.example)"
+                    lines.append(f"    - `{item['key']}`{usage}")
+        elif qs.env_variables:
             lines.append(f"- **Environment Variables**: {', '.join(qs.env_variables)}")
         else:
             lines.append("- **Environment Variables**: No .env.example declared in repository.")

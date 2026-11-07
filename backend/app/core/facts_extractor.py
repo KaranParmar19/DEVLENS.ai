@@ -202,6 +202,20 @@ def classify_risk_level(
     return "Low"
 
 
+def categorize_env_key(key: str) -> str:
+    """Group environment variables by domain prefix or keyword."""
+    k_upper = key.upper()
+    if any(w in k_upper for w in ("AUTH", "SECRET", "TOKEN", "JWT", "KEY", "PASSWORD", "PASS", "CERT", "SALT", "HASH", "PRIVATE", "SIGNING")):
+        return "Authentication & Security"
+    if any(w in k_upper for w in ("DB", "DATABASE", "POSTGRES", "PG", "MYSQL", "MONGO", "REDIS", "MEMCACHE", "SQL", "SUPABASE")):
+        return "Database & Cache"
+    if any(w in k_upper for w in ("API", "URL", "CLIENT", "ENDPOINT", "SERVICE", "GATEWAY", "HOST", "PORT", "DOMAIN", "BUCKET", "S3", "AWS", "STRIPE", "OPENAI", "GEMINI")):
+        return "API & External Services"
+    if any(w in k_upper for w in ("ENV", "MODE", "DEBUG", "LOG", "APP", "SITE", "BASE", "VERSION", "PUBLIC", "NEXT_PUBLIC", "VITE_")):
+        return "Application & Runtime"
+    return "Configuration"
+
+
 class FactsExtractor:
     """
     Extracts and compiles deterministic facts from graph topology and Postgres chunks.
@@ -778,6 +792,72 @@ class FactsExtractor:
                     return keys
         return []
 
+    async def detect_env_usage_in_code(self, declared_keys: list[str]) -> dict[str, str]:
+        """
+        Scan code chunks for references to declared env keys via process.env, import.meta.env, os.environ, os.getenv.
+        Returns a mapping from key -> accessor (e.g. 'process.env', 'os.environ', 'import.meta.env').
+        """
+        if not declared_keys:
+            return {}
+
+        key_set = set(declared_keys)
+        read_keys: dict[str, str] = {}
+
+        # 1. Search database chunks if DB is available
+        if self.db is not None:
+            try:
+                from app.models.code_chunk import CodeChunk
+                from sqlalchemy import select, or_
+
+                stmt = select(CodeChunk.content).where(
+                    CodeChunk.repo_id == self.repo_id,
+                    or_(
+                        CodeChunk.content.ilike("%process.env%"),
+                        CodeChunk.content.ilike("%import.meta.env%"),
+                        CodeChunk.content.ilike("%environ%"),
+                        CodeChunk.content.ilike("%getenv%"),
+                    ),
+                )
+                res = await self.db.execute(stmt)
+                for (content,) in res.all():
+                    for k in key_set:
+                        if k in read_keys:
+                            continue
+                        if f"process.env.{k}" in content or f'process.env["{k}"]' in content or f"process.env['{k}']" in content:
+                            read_keys[k] = "process.env"
+                        elif f"import.meta.env.{k}" in content or f'import.meta.env["{k}"]' in content or f"import.meta.env['{k}']" in content:
+                            read_keys[k] = "import.meta.env"
+                        elif f'os.environ["{k}"]' in content or f"os.environ['{k}']" in content or f'os.environ.get("{k}"' in content or f"os.environ.get('{k}'" in content:
+                            read_keys[k] = "os.environ"
+                        elif f'os.getenv("{k}"' in content or f"os.getenv('{k}'" in content or f'getenv("{k}"' in content or f"getenv('{k}'" in content:
+                            read_keys[k] = "os.getenv"
+            except Exception as e:
+                logger.warning("env_usage_db_scan_failed", error=str(e))
+
+        # 2. Check nodes in graph_cache if DB scan didn't find all or DB was not available
+        if len(read_keys) < len(declared_keys):
+            nodes = self.graph_cache.get("nodes", [])
+            for n in nodes[:50]:
+                path = n.get("path") or n.get("id", "")
+                if is_test_file(path) or is_generated_file(path) or path.endswith((".md", ".rst", ".txt")):
+                    continue
+                content = await self.extract_file_content(path)
+                if not content:
+                    continue
+                for k in key_set:
+                    if k in read_keys:
+                        continue
+                    if f"process.env.{k}" in content or f'process.env["{k}"]' in content or f"process.env['{k}']" in content:
+                        read_keys[k] = "process.env"
+                    elif f"import.meta.env.{k}" in content or f'import.meta.env["{k}"]' in content or f"import.meta.env['{k}']" in content:
+                        read_keys[k] = "import.meta.env"
+                    elif f'os.environ["{k}"]' in content or f"os.environ['{k}']" in content or f'os.environ.get("{k}"' in content or f"os.environ.get('{k}'" in content:
+                        read_keys[k] = "os.environ"
+                    elif f'os.getenv("{k}"' in content or f"os.getenv('{k}'" in content or f'getenv("{k}"' in content or f"getenv('{k}'" in content:
+                        read_keys[k] = "os.getenv"
+
+        return read_keys
+
     async def extract_readme_summary(self) -> str | None:
         """
         Extract the first 1-2 introductory paragraphs from README.
@@ -900,6 +980,18 @@ class FactsExtractor:
         test_modules_count = metrics.get("test_modules_count", 0)
         manifest = await self.extract_manifest_facts(test_modules_count=test_modules_count)
         env_vars = await self.extract_env_variables()
+        env_usage = await self.detect_env_usage_in_code(env_vars)
+
+        grouped_env_vars: dict[str, list[dict[str, Any]]] = {}
+        for k in env_vars:
+            cat = categorize_env_key(k)
+            accessor = env_usage.get(k)
+            grouped_env_vars.setdefault(cat, []).append({
+                "key": k,
+                "read_in_code": bool(accessor),
+                "accessor": accessor,
+            })
+
         readme_summary = await self.extract_readme_summary()
         folder_breakdown = self.compute_folder_breakdown()
 
@@ -944,6 +1036,7 @@ class FactsExtractor:
             "starter_empty_reason": metrics.get("starter_empty_reason"),
             "manifest": manifest,
             "env_variables": env_vars,
+            "grouped_env_variables": grouped_env_vars,
             "readme_summary": readme_summary,
             "folder_breakdown": folder_breakdown,
             "file_metrics": metrics["file_metrics"],
@@ -999,7 +1092,14 @@ class FactsExtractor:
             if manifest.get("dev_dependencies"):
                 lines.append(f"- Dev Dependencies: {', '.join(manifest['dev_dependencies'][:8])}")
 
-        if facts["env_variables"]:
+        if facts.get("grouped_env_variables"):
+            lines.append("\n[Verified Environment Variables (.env.example - Grouped & Code Usage Marked)]:")
+            for cat, items in facts["grouped_env_variables"].items():
+                lines.append(f"- **{cat}**:")
+                for item in items:
+                    usage = f" (read in code via {item['accessor']})" if item.get("read_in_code") else " (declared in .env.example)"
+                    lines.append(f"  - `{item['key']}`{usage}")
+        elif facts.get("env_variables"):
             lines.append(f"\n[Verified Environment Variables (.env.example)]:\n- Keys: {', '.join(facts['env_variables'])}")
         else:
             lines.append("\n[Verified Environment Variables]: No .env.example file declared in repository.")
@@ -1125,6 +1225,16 @@ def build_deterministic_fallback_doc(facts: dict[str, Any]) -> str:
             quick_start_lines.append("- **Test**: no tests found")
         if manifest.get("build_command"):
             quick_start_lines.append(f"- **Build**: `{manifest['build_command']}`")
+
+    if facts.get("grouped_env_variables"):
+        quick_start_lines.append("- **Environment Variables**:")
+        for cat, items in facts["grouped_env_variables"].items():
+            quick_start_lines.append(f"  - **{cat}**:")
+            for item in items:
+                usage = f" (read in code via {item['accessor']})" if item.get("read_in_code") else " (declared in .env.example)"
+                quick_start_lines.append(f"    - `{item['key']}`{usage}")
+    elif facts.get("env_variables"):
+        quick_start_lines.append(f"- **Environment Variables**: {', '.join(facts['env_variables'])}")
 
     cmd_lines = []
     if manifest.get("runtime_dependencies"):
