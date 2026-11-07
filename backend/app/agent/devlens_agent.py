@@ -1,5 +1,5 @@
 """
-DevLens AI — LangChain ReAct Agent
+DevLens AI - LangChain ReAct Agent
 The AI brain of DevLens. Uses OpenAI-compatible LLMs (GPT-4o, Claude, Groq, Ollama, DeepSeek)
 with custom tools grounded in PostgreSQL pgvector code chunks and NetworkX dependency graphs.
 """
@@ -7,6 +7,7 @@ with custom tools grounded in PostgreSQL pgvector code chunks and NetworkX depen
 import re
 import uuid
 import asyncio
+from typing import Any
 import structlog
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage, SystemMessage
@@ -27,7 +28,7 @@ settings = get_settings()
 class DevLensAgent:
     """
     Wraps a tool-calling agent grounded in the repository's AST index.
-    Scoped to a single repository session — tools are bound to the repo's vector store
+    Scoped to a single repository session: tools are bound to the repo's vector store
     and NetworkX dependency graph cache.
     """
 
@@ -211,7 +212,7 @@ class DevLensAgent:
             if nodes:
                 lines.append("**Sample Key Modules:**")
                 for n in nodes[:5]:
-                    lines.append(f"- `[[{n['id']}]]` — {n.get('desc', 'N/A')}")
+                    lines.append(f"- `[[{n['id']}]]` ({n.get('desc', 'N/A')})")
 
         lines.append(
             "\n---\n"
@@ -365,14 +366,101 @@ class DevLensAgent:
 
     # ── Onboarding Document Generator ─────────────────────────────────────────
 
+    def _render_schema_to_markdown(self, doc: Any, facts: dict[str, Any]) -> str:
+        """Render a validated OnboardingDocSchema into clean, structured Markdown."""
+        lines = [
+            f"# {doc.repo_name}: Onboarding Guide\n",
+            "## 1. Project Overview & Architecture",
+            doc.summary,
+            "",
+            "## 2. Quick Start",
+        ]
+
+        qs = doc.quick_start
+        if qs.install_command:
+            lines.append(f"- **Install**: `{qs.install_command}`")
+        if qs.run_command:
+            lines.append(f"- **Run/Dev**: `{qs.run_command}`")
+        if qs.test_command:
+            cmd_type = f" ({qs.test_command_type})" if qs.test_command_type else ""
+            lines.append(f"- **Test**: `{qs.test_command}`{cmd_type}")
+        if qs.env_variables:
+            lines.append(f"- **Environment Variables**: {', '.join(qs.env_variables)}")
+        else:
+            lines.append("- **Environment Variables**: No .env.example declared in repository.")
+
+        if doc.tech_stack:
+            lines.append(f"- **Tech Stack**: {', '.join(doc.tech_stack)}")
+
+        lines.append("\n## 3. Folder Map")
+        if doc.folder_map:
+            for fm in doc.folder_map:
+                samples = f" (e.g. {fm.sample_files})" if fm.sample_files else ""
+                lines.append(f"- **`{fm.path}/`** ({fm.file_count} files){samples}: {fm.role}")
+        else:
+            for fb in facts.get("folder_breakdown", []):
+                lines.append(f"- **`{fb['path']}/`** ({fb['file_count']} files, e.g. {fb['sample_files']})")
+
+        lines.append("\n## 4. How It Works")
+        lines.append(doc.how_it_works)
+
+        lines.append("\n## 5. Files to Handle Carefully (High Blast Radius)")
+        if doc.careful_files:
+            for cf in doc.careful_files:
+                deps_info = f"Total Dependents: {cf.dependents_count} (Source: {cf.source_dependents_count}, Tests: {cf.test_dependents_count})"
+                lines.append(
+                    f"- **[[{cf.path}]]** (Risk: {cf.risk_level}, {deps_info}, Coupling: {cf.coupling:.2f}):\n"
+                    f"  {cf.reason}"
+                )
+        else:
+            lines.append("- No single-point high-risk modules identified.")
+
+        if doc.gotchas:
+            lines.append("\n## 6. Repository Invariants & Gotchas")
+            for g in doc.gotchas:
+                lines.append(f"- **{g.title}** (Evidence: [[{g.evidence_path}]]):\n  {g.description}")
+
+        lines.append("\n## 7. Recommended First Task")
+        ft = doc.first_task
+        lines.append(f"### {ft.title}")
+        if ft.rationale:
+            lines.append(ft.rationale)
+        if ft.suggested_files:
+            lines.append("\nSuggested starter files:")
+            for sf in ft.suggested_files:
+                test_str = f" | Test: [[{sf.nearby_test}]]" if sf.nearby_test else " | No dedicated test file detected"
+                lines.append(
+                    f"- **[[{sf.path}]]** ({sf.line_count} lines, {sf.source_dependents_count} source dependents{test_str}):\n"
+                    f"  Verified purpose: {sf.verified_purpose}"
+                )
+        if ft.verification_steps:
+            lines.append(f"\nVerification steps:\n{ft.verification_steps}")
+
+        if doc.glossary:
+            lines.append("\n## 8. Glossary")
+            for gl in doc.glossary:
+                lines.append(f"- **{gl.term}** (defined in [[{gl.defined_in}]]): {gl.definition}")
+
+        return "\n".join(lines)
+
     async def generate_onboarding_doc(self) -> str:
         """
         Generate an authoritative, production-grade architectural onboarding dossier.
         All metrics, entry points, risk levels, and starter tasks are computed in code
         via FactsExtractor and passed as an immutable FACTS block to the model.
+        Outputs a machine-validated JSON schema and transforms it into verified markdown.
         """
-        from app.core.facts_extractor import FactsExtractor
-        from app.agent.prompts import ONBOARDING_DOC_PROMPT
+        import json
+        from app.core.facts_extractor import FactsExtractor, build_deterministic_fallback_doc
+        from app.agent.prompts import ONBOARDING_DOC_JSON_PROMPT
+        from app.schemas.onboarding import (
+            OnboardingDocSchema,
+            CarefulFileItem,
+            GotchaItem,
+            StarterTaskItem,
+            FolderMapItem,
+            QuickStartInfo,
+        )
 
         extractor = FactsExtractor(
             db=self.db,
@@ -383,11 +471,12 @@ class DevLensAgent:
         facts = await extractor.assemble_verified_facts()
         facts_block = extractor.format_facts_text(facts)
 
-        # Pull real code chunks for key entry points and starter candidates
+        # Pull real code chunks for key entry points, starter candidates, and high-risk junctions
         context_parts = []
         key_files = (
-            [ep["path"] for ep in facts["entry_points"][:3]]
-            + [cs["path"] for cs in facts["candidate_starters"][:2]]
+            [ep["path"] for ep in facts["entry_points"][:2]]
+            + [cs["path"] for cs in facts["candidate_starters"][:3]]
+            + [hr["path"] for hr in facts["high_risk_files"][:2]]
         )
         for path in key_files:
             try:
@@ -402,77 +491,133 @@ class DevLensAgent:
                 logger.warning("onboarding_context_fetch_failed", path=path, error=str(e))
 
         context = "\n\n".join(context_parts[:6]) or "Topological graph and manifest indexed."
-        prompt = ONBOARDING_DOC_PROMPT.format(
+        prompt = ONBOARDING_DOC_JSON_PROMPT.format(
             repo_full_name=self.repo_full_name,
             facts_block=facts_block,
             context=context,
         )
 
-        try:
-            res = await self.llm.ainvoke([HumanMessage(content=prompt)])
-            return res.content
-        except Exception as exc:
-            logger.warning("onboarding_llm_failed_using_facts_doc", error=str(exc))
+        parsed_schema: OnboardingDocSchema | None = None
+        file_metrics = facts.get("file_metrics", {})
+        all_known_paths = set(file_metrics.keys())
+        raw_output = ""
 
-            # Deterministic, facts-only fallback markdown (zero fabricated prose or invariants)
-            entry_lines = "\n".join(
-                f"- `[[{ep['path']}]]`: Entry point ({ep['dependents_count']} downstream dependents, {ep['dependencies_count']} dependencies)"
-                for ep in facts["entry_points"]
-            ) or "- No explicit entry point declared."
+        # Attempt LLM call with 1 retry on invalid JSON
+        for attempt in range(2):
+            try:
+                if attempt == 0:
+                    messages = [HumanMessage(content=prompt)]
+                else:
+                    messages = [
+                        HumanMessage(content=prompt),
+                        AIMessage(content=raw_output or ""),
+                        HumanMessage(content="Your previous response was not valid JSON matching the requested schema. Return ONLY a valid JSON object matching the schema with no extra commentary."),
+                    ]
 
-            high_risk_lines = "\n".join(
-                f"- `[[{hr['path']}]]` (Risk: High, {hr['dependents_count']} direct dependents, coupling: {hr['coupling']:.2f})\n"
-                f"  Modifying public signatures affects {hr['dependents_count']} dependent modules. Verify all dependents before merging changes."
-                for hr in facts["high_risk_files"]
-            ) or "- No single-point high-risk modules identified."
+                res = await self.llm.ainvoke(messages)
+                raw_output = res.content or ""
 
-            starter_lines = "\n".join(
-                f"- `[[{cs['path']}]]` ({cs['line_count']} lines, {cs['dependents_count']} downstream dependents)\n"
-                f"  Safe candidate module with low coupling."
-                + (f" Verified test: `[[{cs['nearby_test']}]]`." if cs.get("nearby_test") else " No dedicated test file detected.")
-                for cs in facts["candidate_starters"]
-            ) or "- Consult explorer rail for candidate starter files."
+                clean_json = raw_output.strip()
+                if clean_json.startswith("```"):
+                    lines = clean_json.splitlines()
+                    if lines[0].startswith("```"):
+                        lines = lines[1:]
+                    if lines and lines[-1].startswith("```"):
+                        lines = lines[:-1]
+                    clean_json = "\n".join(lines).strip()
 
-            manifest = facts["manifest"]
-            cmd_lines = []
-            if manifest["test_command"]:
-                cmd_lines.append(f"- **Test Command**: `{manifest['test_command']}`")
-            if manifest["dev_command"]:
-                cmd_lines.append(f"- **Dev Server**: `{manifest['dev_command']}`")
-            if manifest["build_command"]:
-                cmd_lines.append(f"- **Build Command**: `{manifest['build_command']}`")
-            command_section = "\n".join(cmd_lines) if cmd_lines else "- No build or test scripts identified in project manifest."
+                data = json.loads(clean_json)
+                parsed_schema = OnboardingDocSchema.model_validate(data)
+                break
+            except Exception as parse_err:
+                logger.warning("onboarding_json_attempt_failed", attempt=attempt, error=str(parse_err))
 
-            overview = (
-                facts["readme_summary"]
-                or f"Repository containing {facts['total_modules']} indexed modules across {facts['total_edges']} dependency edges."
-            )
+        if not parsed_schema:
+            logger.warning("onboarding_json_failed_using_facts_fallback")
+            return build_deterministic_fallback_doc(facts)
 
-            cycle_notice = (
-                f"> [!CAUTION]\n> **Circular Import Cycles Detected ({facts['cycles_count']})**:\n> Cycle clusters exist in the dependency tree. Avoid introducing cross-cycle imports."
-                if facts["cycles_count"] > 0
-                else "> [!NOTE]\n> **Strict Acyclic DAG Verified**: 0 circular dependency cycles detected. Architectural layers follow clean unidirectional hierarchy."
-            )
+        # ── Post-processing Validation & Grounding Enforcement ──────────────────
+        manifest = facts.get("manifest", {})
 
-            return f"""# {self.repo_full_name} — Onboarding Guide
+        # 1. Overwrite quick start with ground truth from manifest
+        parsed_schema.quick_start = QuickStartInfo(
+            install_command=manifest.get("install_command") or "",
+            run_command=manifest.get("run_command") or manifest.get("dev_command"),
+            test_command=manifest.get("test_command"),
+            test_command_type=manifest.get("test_command_type") or "declared",
+            env_variables=facts.get("env_variables", []),
+        )
 
-## 1. Project Overview & Architecture
-{overview}
+        # 2. Filter & overwrite careful_files with ground truth file_metrics
+        valid_careful_files: list[CarefulFileItem] = []
+        for cf in parsed_schema.careful_files:
+            clean_path = cf.path.replace("[[", "").replace("]]", "").strip()
+            if clean_path in file_metrics:
+                m = file_metrics[clean_path]
+                cf.path = clean_path
+                cf.risk_level = m["risk_level"]
+                cf.dependents_count = m["dependents_count"]
+                cf.source_dependents_count = m["source_dependents_count"]
+                cf.test_dependents_count = m["test_dependents_count"]
+                cf.coupling = m["coupling"]
+                valid_careful_files.append(cf)
 
-- **Total Indexed Modules**: {facts['total_modules']}
-- **Directed Graph Edges**: {facts['total_edges']}
-- **Architectural Health**:
-{cycle_notice}
+        if not valid_careful_files and facts.get("high_risk_files"):
+            for hr in facts["high_risk_files"][:4]:
+                valid_careful_files.append(CarefulFileItem(
+                    path=hr["path"],
+                    risk_level=hr["risk_level"],
+                    dependents_count=hr["dependents_count"],
+                    source_dependents_count=hr.get("source_dependents_count", 0),
+                    test_dependents_count=hr.get("test_dependents_count", 0),
+                    coupling=hr["coupling"],
+                    reason=f"Central junction module with {hr['dependents_count']} dependent modules. Modifying this file affects downstream consumers.",
+                ))
+        parsed_schema.careful_files = valid_careful_files
 
-## 2. Verified Technical Stack & Commands
-{command_section}
+        # 3. Drop gotchas without valid evidence path in repository
+        valid_gotchas: list[GotchaItem] = []
+        for g in parsed_schema.gotchas:
+            clean_evidence = g.evidence_path.replace("[[", "").replace("]]", "").strip()
+            if clean_evidence in all_known_paths:
+                g.evidence_path = clean_evidence
+                valid_gotchas.append(g)
+        parsed_schema.gotchas = valid_gotchas
 
-## 3. Files to Handle Carefully (High Blast Radius)
-{high_risk_lines}
+        # 4. Filter starter tasks: must exist in repo and respect verified_purpose
+        valid_starters: list[StarterTaskItem] = []
+        fact_starters_by_path = {cs["path"]: cs for cs in facts.get("candidate_starters", [])}
+        for st in parsed_schema.first_task.suggested_files:
+            clean_path = st.path.replace("[[", "").replace("]]", "").strip()
+            if clean_path in fact_starters_by_path:
+                cs = fact_starters_by_path[clean_path]
+                st.path = clean_path
+                st.line_count = cs["line_count"]
+                st.source_dependents_count = cs["source_dependents_count"]
+                st.nearby_test = cs.get("nearby_test")
+                if not cs.get("first_30_lines"):
+                    st.verified_purpose = "purpose not verified"
+                valid_starters.append(st)
 
-## 4. Key Ingress Entry Points
-{entry_lines}
+        if not valid_starters and facts.get("candidate_starters"):
+            for cs in facts["candidate_starters"][:3]:
+                valid_starters.append(StarterTaskItem(
+                    path=cs["path"],
+                    line_count=cs["line_count"],
+                    source_dependents_count=cs["source_dependents_count"],
+                    nearby_test=cs.get("nearby_test"),
+                    verified_purpose="purpose not verified" if not cs.get("first_30_lines") else "Low risk module verified from graph.",
+                ))
+        parsed_schema.first_task.suggested_files = valid_starters
 
-## 5. Candidate Starter Tasks
-{starter_lines}
-"""
+        # 5. Filter glossary: defined_in must exist in repo
+        valid_glossary = []
+        for item in parsed_schema.glossary:
+            clean_p = item.defined_in.replace("[[", "").replace("]]", "").strip()
+            if clean_p in all_known_paths:
+                item.defined_in = clean_p
+                valid_glossary.append(item)
+        parsed_schema.glossary = valid_glossary
+
+        self.last_structured_doc = parsed_schema.model_dump()
+        return self._render_schema_to_markdown(parsed_schema, facts)

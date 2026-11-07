@@ -165,7 +165,8 @@ async def get_onboarding_doc(
         graph_cache=repo.graph_cache,
     )
     doc = await agent.generate_onboarding_doc()
-    return {"markdown": doc, "repo": repo.full_name}
+    structured = getattr(agent, "last_structured_doc", None)
+    return {"markdown": doc, "structured": structured, "repo": repo.full_name}
 
 
 # ── File Detail & AST Symbol Inspection ───────────────────────────────────

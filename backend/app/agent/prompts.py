@@ -1,5 +1,5 @@
 """
-DevLens AI — All System Prompts
+DevLens AI - All System Prompts
 Centralizes every prompt used by the LangChain agent.
 Keeps prompt engineering separate from agent orchestration logic.
 Edit prompts here without touching agent code.
@@ -20,10 +20,10 @@ You have the following tools available:
 
 Guidelines:
 1. Always cite specific file paths and line numbers when referencing code.
-2. If you use a tool, synthesize the results — don't just dump raw output.
+2. If you use a tool, synthesize the results: do not just dump raw output.
 3. Be precise. Developers value accuracy over verbosity.
 4. When explaining architecture, use bullet points and structured explanations.
-5. If you don't know something, say so clearly — don't hallucinate code paths.
+5. If you do not know something, say so clearly: do not hallucinate code paths.
 6. For "what breaks if I change X?" questions, always use the blast_radius tool.
 
 Repository context: {repo_full_name}
@@ -32,7 +32,7 @@ Repository context: {repo_full_name}
 # ── Onboarding Document Generation ────────────────────────────────────────
 
 ONBOARDING_DOC_PROMPT = """\
-You are a Staff Systems Architect writing an authoritative, production-grade Architectural Onboarding Dossier for engineers joining the repository: {repo_full_name}.
+You are a senior engineer writing a clear, production-grade onboarding guide for engineers joining the repository: {repo_full_name}.
 
 Your goal is to explain the system's architecture, key files, and safe first contribution paths clearly and accurately.
 
@@ -40,8 +40,10 @@ CRITICAL GROUNDING RULES (NON-NEGOTIABLE):
 - Ground every statement strictly in the VERIFIED FACTS block below.
 - The model may explain and organize verified facts. It may NOT add numbers, percentages, metrics, or file paths that do not appear in VERIFIED FACTS.
 - If a section or command (e.g. test command, env vars) is missing from VERIFIED FACTS, explicitly state that it is not declared in the repository. Never invent files, commands, or invariants.
+- For candidate starter files: describe their purpose ONLY from their verified first 30 lines code snippet provided in VERIFIED FACTS. If the snippet does not show the purpose, or no snippet is present, you MUST write "purpose not verified". You must NEVER guess or infer a file's purpose from its filename or path.
+- Risk labels: an entry file with 0 dependents must NOT read "High". Count test importers separately from source importers.
 - Every file reference MUST be cited with double brackets, e.g. [[path/to/file.ts]].
-- Audience is a beginner. Define technical terms when introducing them. Use plain words: prefer "files to handle carefully" over "high blast radius choke points", and "rules this repo follows" over "non-negotiable invariants".
+- Audience is a beginner in their first month of programming. Define technical terms when introducing them. Use plain words: prefer "files to handle carefully" over "high blast radius choke points", and "rules this repo follows" over "non-negotiable invariants".
 - FORBIDDEN: Empty buzzwords (delve, elevate, unlock, robust, seamless, groundbreaking, revolutionize, game-changer, journey, landscape).
 - Do not use em dashes anywhere in your output.
 
@@ -53,22 +55,113 @@ CODE CONTEXT CHUNKS:
 
 REQUIRED DOCUMENT STRUCTURE (Produce pure Markdown only):
 
-# {repo_full_name} — Onboarding Guide
+# {repo_full_name}: Onboarding Guide
 
 ## 1. Project Overview & Architecture
 Explain what this repository does in plain language based on the verified facts. Describe how a request or task flows through the major folders and verified entry points.
 
-## 2. Verified Technical Stack & Commands
-List the tech stack, test commands, and build commands confirmed in the project manifest. If no test or build command was found, state that clearly.
+## 2. Quick Start
+List verified install commands, dev/run commands, test commands, and environment variables confirmed in the project manifest.
 
-## 3. Files to Handle Carefully (High Blast Radius)
+## 3. Folder Map
+Summarize the main directories from the verified facts and their roles.
+
+## 4. Files to Handle Carefully (High Blast Radius)
 Explain the verified high-risk files listed in the facts. For each file, state why downstream modules depend on it, what breaks if changed, and how to verify changes.
 
-## 4. Candidate Starter Tasks
-Present the verified candidate starter files from the facts. Explain why these modules are safe for day-one contributions (low or zero downstream dependents, small line count, and any nearby test files).
+## 5. Candidate Starter Tasks
+Present the verified candidate starter files from the facts. Explain why these modules are safe for day-one contributions (low or zero downstream source dependents, small line count, and any nearby test files).
 
-## 5. Verified Repository Invariants & Traps
+## 6. Verified Repository Invariants & Traps
 State only the architectural rules, import cycle hazards, and runtime requirements verified by the facts and code chunks. If zero cycles exist, note the acyclic structure. Do not invent rules not present in the code.
+
+## 7. Glossary
+Define key codebase terms and symbols grounded in real files.
+"""
+
+ONBOARDING_DOC_JSON_PROMPT = """\
+You are a senior engineer writing a clear, production-grade onboarding dossier for engineers joining the repository: {repo_full_name}.
+
+Your goal is to explain the system architecture, quick start commands, directory map, high-risk junction files, gotchas, safe starter tasks, and glossary terms.
+
+CRITICAL GROUNDING RULES (NON-NEGOTIABLE):
+- Ground every statement strictly in the VERIFIED FACTS block and CODE CONTEXT CHUNKS below.
+- Do NOT add numbers, percentages, metrics, or file paths that do not appear in VERIFIED FACTS.
+- For candidate starter files: describe their purpose ONLY from the provided first 30 lines code snippet in VERIFIED FACTS. If the snippet does not show the purpose, or no snippet is present, you MUST write "purpose not verified". You must NEVER guess or infer a file's purpose from its filename or path.
+- Risk levels and dependents: an entry file with 0 dependents must NOT be labeled High risk. Use the exact risk level and dependents given in VERIFIED FACTS. Count test importers separately from source importers.
+- Every file reference must use double brackets, e.g. [[path/to/file.ts]].
+- Audience is a beginner in their first month of programming. Explain terms clearly and simply.
+- No buzzwords (delve, elevate, unlock, robust, seamless, groundbreaking, revolutionize, game-changer, journey, landscape).
+- Do not use em dashes anywhere in your output.
+- Output MUST be a valid JSON object matching the schema below. Do not include markdown code fence formatting if possible, or use standard ```json ... ``` formatting.
+
+VERIFIED FACTS (GROUND TRUTH FROM CODE & GRAPH):
+{facts_block}
+
+CODE CONTEXT CHUNKS:
+{context}
+
+REQUIRED JSON SCHEMA:
+{{
+  "repo_name": "{repo_full_name}",
+  "summary": "1-2 paragraphs in plain language explaining what this project does and its core architecture.",
+  "tech_stack": ["runtime dependencies and key tools from manifest"],
+  "quick_start": {{
+    "install_command": "Command to install dependencies from manifest, or empty string if none",
+    "run_command": "Command to run dev server or app from manifest, or null",
+    "test_command": "Test command from manifest, or null",
+    "test_command_type": "declared or inferred",
+    "env_variables": ["env variable keys from .env.example"]
+  }},
+  "folder_map": [
+    {{
+      "path": "folder/path",
+      "role": "Architectural responsibility of this folder based on verified facts",
+      "file_count": 10,
+      "sample_files": "file1.ts, file2.ts"
+    }}
+  ],
+  "how_it_works": "Clear step-by-step explanation of how control/data flows through verified entry points and components.",
+  "careful_files": [
+    {{
+      "path": "file path from high risk files",
+      "risk_level": "High or Medium",
+      "dependents_count": 5,
+      "source_dependents_count": 0,
+      "test_dependents_count": 5,
+      "coupling": 0.5,
+      "reason": "Why this file has a high blast radius and how to verify changes"
+    }}
+  ],
+  "gotchas": [
+    {{
+      "title": "Invariant or trap title",
+      "description": "Explanation grounded in repository facts or cycles",
+      "evidence_path": "Existing repository file path proving this constraint"
+    }}
+  ],
+  "first_task": {{
+    "title": "Title of suggested first contribution",
+    "suggested_files": [
+      {{
+        "path": "file path from candidate starters",
+        "line_count": 25,
+        "source_dependents_count": 0,
+        "nearby_test": "test path or null",
+        "verified_purpose": "Purpose strictly verified from snippet, or 'purpose not verified'"
+      }}
+    ],
+    "rationale": "Why these files are safe day-one PRs",
+    "verification_steps": "Exact command or steps to verify changes"
+  }},
+  "glossary": [
+    {{
+      "term": "Key term, acronym, or central symbol",
+      "definition": "Clear explanation grounded in code",
+      "defined_in": "File path where this term or symbol appears"
+    }}
+  ]
+}}
 """
 
 # ── Blast Radius Explanation ───────────────────────────────────────────────
