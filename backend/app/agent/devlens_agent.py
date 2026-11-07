@@ -444,22 +444,27 @@ class DevLensAgent:
                 folder = pkg["folder"]
                 quick_start_lines.append(f"  - **`{folder}/`** ({pkg['manifest_type']}):")
                 if pkg.get("install_command"):
-                    quick_start_lines.append(f"    - Install: `{pkg['install_command']}`")
+                    inst_prov = pkg.get("install_provenance") or "common default, not declared in repo"
+                    quick_start_lines.append(f"    - Install: `{pkg['install_command']}` ({inst_prov})")
                 if pkg.get("run_command"):
-                    quick_start_lines.append(f"    - Run/Dev: `{pkg['run_command']}`")
+                    run_prov = pkg.get("run_provenance") or "common default, not declared in repo"
+                    quick_start_lines.append(f"    - Run/Dev: `{pkg['run_command']}` ({run_prov})")
                 if pkg.get("test_command") and pkg["test_command"] != "no tests found":
-                    quick_start_lines.append(f"    - Test: `{pkg['test_command']}`")
+                    test_prov = pkg.get("test_provenance") or "common default, not declared in repo"
+                    quick_start_lines.append(f"    - Test: `{pkg['test_command']}` ({test_prov})")
         else:
             if qs.install_command:
-                quick_start_lines.append(f"- **Install**: `{qs.install_command}`")
+                inst_prov = manifest.get("install_command_provenance") or "common default, not declared in repo"
+                quick_start_lines.append(f"- **Install**: `{qs.install_command}` ({inst_prov})")
             if qs.run_command:
-                quick_start_lines.append(f"- **Run/Dev**: `{qs.run_command}`")
+                run_prov = manifest.get("run_command_provenance") or "common default, not declared in repo"
+                quick_start_lines.append(f"- **Run/Dev**: `{qs.run_command}` ({run_prov})")
             if qs.test_command:
                 if qs.test_command == "no tests found":
                     quick_start_lines.append("- **Test**: no tests found")
                 else:
-                    cmd_type = f" ({qs.test_command_type})" if qs.test_command_type else ""
-                    quick_start_lines.append(f"- **Test**: `{qs.test_command}`{cmd_type}")
+                    test_prov = manifest.get("test_command_provenance") or "common default, not declared in repo"
+                    quick_start_lines.append(f"- **Test**: `{qs.test_command}` ({test_prov})")
             else:
                 quick_start_lines.append("- **Test**: no tests found")
 

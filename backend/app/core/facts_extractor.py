@@ -142,6 +142,27 @@ def join_chunks_without_overlap(chunks: list[str]) -> str:
     return reconstructed
 
 
+def find_line_matching(content: str | None, pattern: str) -> int | None:
+    """Find 1-based line number matching regex pattern in file content."""
+    if not content:
+        return None
+    for idx, line in enumerate(content.splitlines(), start=1):
+        if re.search(pattern, line):
+            return idx
+    return None
+
+
+def find_makefile_target_line(content: str | None, target: str) -> int | None:
+    """Find 1-based line number where a Makefile target is declared."""
+    if not content:
+        return None
+    for idx, line in enumerate(content.splitlines(), start=1):
+        stripped = line.strip()
+        if stripped.startswith(f"{target}:") or stripped.startswith(f"{target} "):
+            return idx
+    return None
+
+
 ENTRY_FILENAMES = frozenset({
     "server.ts",
     "server.js",
@@ -526,25 +547,41 @@ class FactsExtractor:
                 manifest_facts["tech_stack"] = runtime_deps
 
                 if "test" in scripts:
+                    test_line = find_line_matching(pkg_content, r'"test"\s*:')
                     manifest_facts["test_command"] = f"npm test (runs: {scripts['test']})"
                     manifest_facts["test_command_type"] = "declared (package.json scripts.test)"
+                    manifest_facts["test_command_provenance"] = f"package.json:{test_line} (scripts.test)" if test_line else "package.json (scripts.test)"
                 elif "test" in makefile_targets:
+                    mk_line = find_makefile_target_line(makefile_content, "test")
                     manifest_facts["test_command"] = "make test"
                     manifest_facts["test_command_type"] = "declared (Makefile target)"
+                    manifest_facts["test_command_provenance"] = f"Makefile:{mk_line} (target test)" if mk_line else "Makefile (target test)"
                 elif "vitest" in dev_deps:
                     manifest_facts["test_command"] = "vitest run"
                     manifest_facts["test_command_type"] = "inferred (from devDependencies: vitest, not explicitly declared)"
+                    manifest_facts["test_command_provenance"] = "common default, not declared in repo"
                 elif "jest" in dev_deps:
                     manifest_facts["test_command"] = "jest"
                     manifest_facts["test_command_type"] = "inferred (from devDependencies: jest, not explicitly declared)"
+                    manifest_facts["test_command_provenance"] = "common default, not declared in repo"
+
+                manifest_facts["install_command_provenance"] = "common default, not declared in repo"
 
                 if "dev" in scripts:
+                    dev_line = find_line_matching(pkg_content, r'"dev"\s*:')
                     manifest_facts["dev_command"] = f"npm run dev (runs: {scripts['dev']})"
                     manifest_facts["run_command"] = f"npm run dev (runs: {scripts['dev']})"
+                    manifest_facts["run_command_provenance"] = f"package.json:{dev_line} (scripts.dev)" if dev_line else "package.json (scripts.dev)"
                 elif "start" in scripts:
+                    start_line = find_line_matching(pkg_content, r'"start"\s*:')
                     manifest_facts["run_command"] = f"npm start (runs: {scripts['start']})"
+                    manifest_facts["run_command_provenance"] = f"package.json:{start_line} (scripts.start)" if start_line else "package.json (scripts.start)"
                 elif "build" in scripts:
+                    build_line = find_line_matching(pkg_content, r'"build"\s*:')
                     manifest_facts["run_command"] = f"npm run build (runs: {scripts['build']})"
+                    manifest_facts["run_command_provenance"] = f"package.json:{build_line} (scripts.build)" if build_line else "package.json (scripts.build)"
+                else:
+                    manifest_facts["run_command_provenance"] = "common default, not declared in repo"
 
                 if "build" in scripts:
                     manifest_facts["build_command"] = f"npm run build (runs: {scripts['build']})"
@@ -606,27 +643,41 @@ class FactsExtractor:
                     manifest_facts["install_command"] = "poetry install"
                 else:
                     manifest_facts["install_command"] = "pip install -e ."
+                manifest_facts["install_command_provenance"] = "common default, not declared in repo"
 
                 # Check declared test runner - Makefile target takes precedence if present
                 if "test" in makefile_targets:
+                    mk_line = find_makefile_target_line(makefile_content, "test")
                     manifest_facts["test_command"] = "make test"
                     manifest_facts["test_command_type"] = "declared (Makefile target)"
+                    manifest_facts["test_command_provenance"] = f"Makefile:{mk_line} (target test)" if mk_line else "Makefile (target test)"
                 elif "pytest" in py_data.get("tool", {}):
                     testpaths = py_data["tool"]["pytest"].get("ini_options", {}).get("testpaths", [])
                     testpaths_info = f" (testpaths: {', '.join(testpaths)})" if testpaths else ""
+                    pyt_line = find_line_matching(pyproject_content, r"\[tool\.pytest")
                     manifest_facts["test_command"] = f"pytest{testpaths_info}"
                     manifest_facts["test_command_type"] = "declared (pyproject.toml [tool.pytest])"
+                    manifest_facts["test_command_provenance"] = f"pyproject.toml:{pyt_line} ([tool.pytest])" if pyt_line else "pyproject.toml ([tool.pytest])"
                 elif "pytest" in dev_deps:
                     manifest_facts["test_command"] = "pytest"
                     manifest_facts["test_command_type"] = "inferred (from dev dependencies: pytest, not explicitly declared)"
+                    manifest_facts["test_command_provenance"] = "common default, not declared in repo"
 
                 if "run" in makefile_targets:
+                    mk_line = find_makefile_target_line(makefile_content, "run")
                     manifest_facts["run_command"] = "make run"
+                    manifest_facts["run_command_provenance"] = f"Makefile:{mk_line} (target run)" if mk_line else "Makefile (target run)"
                 elif "serve" in makefile_targets:
+                    mk_line = find_makefile_target_line(makefile_content, "serve")
                     manifest_facts["run_command"] = "make serve"
+                    manifest_facts["run_command_provenance"] = f"Makefile:{mk_line} (target serve)" if mk_line else "Makefile (target serve)"
+                else:
+                    manifest_facts["run_command_provenance"] = "common default, not declared in repo"
 
                 if "build" in makefile_targets:
+                    mk_line = find_makefile_target_line(makefile_content, "build")
                     manifest_facts["build_command"] = "make build"
+                    manifest_facts["build_command_provenance"] = f"Makefile:{mk_line} (target build)" if mk_line else "Makefile (target build)"
 
                 return await self._finalize_manifest(manifest_facts, test_modules_count)
             except Exception as e:
@@ -640,6 +691,7 @@ class FactsExtractor:
         if req_content:
             manifest_facts["manifest_type"] = "requirements.txt"
             manifest_facts["install_command"] = "pip install -r requirements.txt"
+            manifest_facts["install_command_provenance"] = "common default, not declared in repo"
             deps = []
             for line in req_content.splitlines():
                 clean = line.strip()
@@ -650,32 +702,63 @@ class FactsExtractor:
             manifest_facts["runtime_dependencies"] = deps
             manifest_facts["tech_stack"] = deps
             if "test" in makefile_targets:
+                mk_line = find_makefile_target_line(makefile_content, "test")
                 manifest_facts["test_command"] = "make test"
                 manifest_facts["test_command_type"] = "declared (Makefile target)"
+                manifest_facts["test_command_provenance"] = f"Makefile:{mk_line} (target test)" if mk_line else "Makefile (target test)"
             elif "pytest" in deps:
                 manifest_facts["test_command"] = "pytest"
                 manifest_facts["test_command_type"] = "inferred (from requirements.txt: pytest, not explicitly declared)"
+                manifest_facts["test_command_provenance"] = "common default, not declared in repo"
+
             if "run" in makefile_targets:
+                mk_line = find_makefile_target_line(makefile_content, "run")
                 manifest_facts["run_command"] = "make run"
+                manifest_facts["run_command_provenance"] = f"Makefile:{mk_line} (target run)" if mk_line else "Makefile (target run)"
             elif "serve" in makefile_targets:
+                mk_line = find_makefile_target_line(makefile_content, "serve")
                 manifest_facts["run_command"] = "make serve"
+                manifest_facts["run_command_provenance"] = f"Makefile:{mk_line} (target serve)" if mk_line else "Makefile (target serve)"
+            else:
+                manifest_facts["run_command_provenance"] = "common default, not declared in repo"
+
             if "build" in makefile_targets:
+                mk_line = find_makefile_target_line(makefile_content, "build")
                 manifest_facts["build_command"] = "make build"
+                manifest_facts["build_command_provenance"] = f"Makefile:{mk_line} (target build)" if mk_line else "Makefile (target build)"
             return await self._finalize_manifest(manifest_facts, test_modules_count)
 
         # 4. Standalone Makefile
         if makefile_content and ("test" in makefile_targets or "build" in makefile_targets):
             manifest_facts["manifest_type"] = "Makefile"
-            manifest_facts["install_command"] = "make install" if "install" in makefile_targets else None
+            if "install" in makefile_targets:
+                mk_line = find_makefile_target_line(makefile_content, "install")
+                manifest_facts["install_command"] = "make install"
+                manifest_facts["install_command_provenance"] = f"Makefile:{mk_line} (target install)" if mk_line else "Makefile (target install)"
+            else:
+                manifest_facts["install_command_provenance"] = "common default, not declared in repo"
+
             if "test" in makefile_targets:
+                mk_line = find_makefile_target_line(makefile_content, "test")
                 manifest_facts["test_command"] = "make test"
                 manifest_facts["test_command_type"] = "declared (Makefile target)"
+                manifest_facts["test_command_provenance"] = f"Makefile:{mk_line} (target test)" if mk_line else "Makefile (target test)"
+
             if "build" in makefile_targets:
+                mk_line = find_makefile_target_line(makefile_content, "build")
                 manifest_facts["build_command"] = "make build"
+                manifest_facts["build_command_provenance"] = f"Makefile:{mk_line} (target build)" if mk_line else "Makefile (target build)"
+
             if "run" in makefile_targets:
+                mk_line = find_makefile_target_line(makefile_content, "run")
                 manifest_facts["run_command"] = "make run"
+                manifest_facts["run_command_provenance"] = f"Makefile:{mk_line} (target run)" if mk_line else "Makefile (target run)"
             elif "serve" in makefile_targets:
+                mk_line = find_makefile_target_line(makefile_content, "serve")
                 manifest_facts["run_command"] = "make serve"
+                manifest_facts["run_command_provenance"] = f"Makefile:{mk_line} (target serve)" if mk_line else "Makefile (target serve)"
+            else:
+                manifest_facts["run_command_provenance"] = "common default, not declared in repo"
             return await self._finalize_manifest(manifest_facts, test_modules_count)
 
         # 5. go.mod
@@ -760,34 +843,50 @@ class FactsExtractor:
                             if folder_tests > 0:
                                 if folder == "root" and manifest_facts.get("test_command"):
                                     test_cmd = manifest_facts["test_command"]
+                                    test_prov = manifest_facts.get("test_command_provenance", "common default, not declared in repo")
                                 else:
+                                    test_line = find_line_matching(content, r'"test"\s*:')
                                     test_cmd = f"{cd_prefix}npm test" if "test" in pscripts else None
+                                    test_prov = f"{p_json}:{test_line}" if test_line else "common default, not declared in repo"
                             else:
                                 test_cmd = None
+                                test_prov = None
 
                             run_cmd = (
                                 f"{cd_prefix}npm run dev"
                                 if "dev" in pscripts
                                 else (f"{cd_prefix}npm start" if "start" in pscripts else None)
                             )
+                            run_key = "dev" if "dev" in pscripts else ("start" if "start" in pscripts else None)
+                            run_line = find_line_matching(content, rf'"{run_key}"\s*:') if run_key else None
+                            run_prov = f"{p_json}:{run_line}" if run_line else ("common default, not declared in repo" if run_cmd else None)
+
                             monorepo_packages.append({
                                 "folder": folder,
                                 "manifest_type": "package.json",
                                 "install_command": f"{cd_prefix}npm install",
+                                "install_provenance": "common default, not declared in repo",
                                 "run_command": run_cmd,
+                                "run_provenance": run_prov,
                                 "test_command": test_cmd,
+                                "test_provenance": test_prov,
                                 "test_count": folder_tests,
                             })
                         except Exception:
                             pass
                 elif py_proj:
+                    content = await self.extract_file_content(py_proj)
                     if folder_tests > 0:
                         if folder == "root" and manifest_facts.get("test_command"):
                             test_cmd = manifest_facts["test_command"]
+                            test_prov = manifest_facts.get("test_command_provenance", "common default, not declared in repo")
                         else:
                             test_cmd = f"{cd_prefix}pytest"
+                            pyt_line = find_line_matching(content, r"\[tool\.pytest")
+                            test_prov = f"{py_proj}:{pyt_line}" if pyt_line else "common default, not declared in repo"
                     else:
                         test_cmd = None
+                        test_prov = None
 
                     # Detect run command
                     run_cmd = None
@@ -798,18 +897,24 @@ class FactsExtractor:
                         "folder": folder,
                         "manifest_type": "pyproject.toml",
                         "install_command": f"{cd_prefix}pip install -e .",
+                        "install_provenance": "common default, not declared in repo",
                         "run_command": run_cmd,
+                        "run_provenance": "common default, not declared in repo" if run_cmd else None,
                         "test_command": test_cmd,
+                        "test_provenance": test_prov,
                         "test_count": folder_tests,
                     })
                 elif req_txt:
                     if folder_tests > 0:
                         if folder == "root" and manifest_facts.get("test_command"):
                             test_cmd = manifest_facts["test_command"]
+                            test_prov = manifest_facts.get("test_command_provenance", "common default, not declared in repo")
                         else:
                             test_cmd = f"pytest {folder}" if folder != "root" else "pytest"
+                            test_prov = "common default, not declared in repo"
                     else:
                         test_cmd = None
+                        test_prov = None
 
                     # Detect run command from Dockerfile or app entry point
                     run_cmd = None
@@ -822,8 +927,11 @@ class FactsExtractor:
                         "folder": folder,
                         "manifest_type": "requirements.txt",
                         "install_command": f"pip install -r {req_txt}",
+                        "install_provenance": "common default, not declared in repo",
                         "run_command": run_cmd,
+                        "run_provenance": "common default, not declared in repo" if run_cmd else None,
                         "test_command": test_cmd,
+                        "test_provenance": test_prov,
                         "test_count": folder_tests,
                     })
 
@@ -1210,21 +1318,26 @@ class FactsExtractor:
             lines.append("\n[Verified Monorepo Packages / Multi-folder Setup]:")
             for pkg in manifest["monorepo_packages"]:
                 lines.append(f"- Folder: `{pkg['folder']}/` ({pkg['manifest_type']})")
-                lines.append(f"  Install: `{pkg['install_command']}`")
+                lines.append(f"  Install: `{pkg['install_command']}` ({pkg.get('install_provenance') or 'common default, not declared in repo'})")
                 if pkg.get("run_command"):
-                    lines.append(f"  Run/Dev: `{pkg['run_command']}`")
-                lines.append(f"  Test: `{pkg['test_command']}`")
+                    lines.append(f"  Run/Dev: `{pkg['run_command']}` ({pkg.get('run_provenance') or 'common default, not declared in repo'})")
+                if pkg.get("test_command") and pkg["test_command"] != "no tests found":
+                    lines.append(f"  Test: `{pkg['test_command']}` ({pkg.get('test_provenance') or 'common default, not declared in repo'})")
+                else:
+                    lines.append(f"  Test: no tests found")
         elif manifest["manifest_type"]:
             lines.append(f"\n[Verified Build & Package Setup ({manifest['manifest_type']})]:")
             if manifest["project_name"]:
                 lines.append(f"- Project Name: {manifest['project_name']}")
             if manifest.get("install_command"):
-                lines.append(f"- Install Command: {manifest['install_command']}")
+                lines.append(f"- Install Command: {manifest['install_command']} ({manifest.get('install_command_provenance') or 'common default, not declared in repo'})")
             if manifest.get("run_command"):
-                lines.append(f"- Run Command: {manifest['run_command']}")
+                lines.append(f"- Run Command: {manifest['run_command']} ({manifest.get('run_command_provenance') or 'common default, not declared in repo'})")
             if manifest["test_command"]:
-                cmd_type = f" [{manifest.get('test_command_type')}]" if manifest.get("test_command_type") else ""
-                lines.append(f"- Test Command: {manifest['test_command']}{cmd_type}")
+                if manifest["test_command"] == "no tests found":
+                    lines.append("- Test Command: no tests found")
+                else:
+                    lines.append(f"- Test Command: {manifest['test_command']} ({manifest.get('test_command_provenance') or 'common default, not declared in repo'})")
             else:
                 lines.append("- Test Command: None declared in repository.")
             if manifest["dev_command"]:
@@ -1352,21 +1465,27 @@ def build_deterministic_fallback_doc(facts: dict[str, Any]) -> str:
             folder = pkg["folder"]
             quick_start_lines.append(f"  - **`{folder}/`** ({pkg['manifest_type']}):")
             if pkg.get("install_command"):
-                quick_start_lines.append(f"    - Install: `{pkg['install_command']}`")
+                inst_prov = pkg.get("install_provenance") or "common default, not declared in repo"
+                quick_start_lines.append(f"    - Install: `{pkg['install_command']}` ({inst_prov})")
             if pkg.get("run_command"):
-                quick_start_lines.append(f"    - Run/Dev: `{pkg['run_command']}`")
-            quick_start_lines.append(f"    - Test: `{pkg['test_command']}`")
+                run_prov = pkg.get("run_provenance") or "common default, not declared in repo"
+                quick_start_lines.append(f"    - Run/Dev: `{pkg['run_command']}` ({run_prov})")
+            if pkg.get("test_command") and pkg["test_command"] != "no tests found":
+                test_prov = pkg.get("test_provenance") or "common default, not declared in repo"
+                quick_start_lines.append(f"    - Test: `{pkg['test_command']}` ({test_prov})")
     else:
         if manifest.get("install_command"):
-            quick_start_lines.append(f"- **Install**: `{manifest['install_command']}`")
+            inst_prov = manifest.get("install_command_provenance") or "common default, not declared in repo"
+            quick_start_lines.append(f"- **Install**: `{manifest['install_command']}` ({inst_prov})")
         if manifest.get("run_command"):
-            quick_start_lines.append(f"- **Run/Dev**: `{manifest['run_command']}`")
+            run_prov = manifest.get("run_command_provenance") or "common default, not declared in repo"
+            quick_start_lines.append(f"- **Run/Dev**: `{manifest['run_command']}` ({run_prov})")
         if manifest.get("test_command"):
             if manifest["test_command"] == "no tests found":
                 quick_start_lines.append("- **Test**: no tests found")
             else:
-                cmd_type = f" ({manifest.get('test_command_type')})" if manifest.get("test_command_type") else ""
-                quick_start_lines.append(f"- **Test**: `{manifest['test_command']}`{cmd_type}")
+                test_prov = manifest.get("test_command_provenance") or "common default, not declared in repo"
+                quick_start_lines.append(f"- **Test**: `{manifest['test_command']}` ({test_prov})")
         else:
             quick_start_lines.append("- **Test**: no tests found")
         if manifest.get("build_command"):
