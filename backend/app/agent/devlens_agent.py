@@ -901,9 +901,10 @@ class DevLensAgent:
         parsed_schema.first_task.rationale = task_rationale
         parsed_schema.first_task.verification_steps = verification_steps
 
-        # 5. Filter glossary: allow README and manifests as sources, but require that evidence chunk contains the claimed term
+        # 5. Filter glossary: search all chunks of the cited file and support README.rst
+        terms_returned_count = len(parsed_schema.glossary) if parsed_schema else 0
         valid_glossary: list[GlossaryItem] = []
-        for item in parsed_schema.glossary:
+        for item in (parsed_schema.glossary if parsed_schema else []):
             clean_p = item.defined_in.replace("[[", "").replace("]]", "").strip()
             if not _is_valid_source_file(clean_p, all_known_paths):
                 msg = f"dropped term '{item.term}' (defined_in '{item.defined_in}' is not a recognized repository file)"
@@ -913,20 +914,31 @@ class DevLensAgent:
 
             content = await extractor.extract_file_content(clean_p)
             if not content:
+                all_chunks = await self.vector_store.get_chunks_by_file(clean_p)
+                if all_chunks:
+                    content = "\n".join(c["content"] for c in all_chunks)
+
+            if not content:
                 msg = f"dropped term '{item.term}' (defined_in '{clean_p}' has no indexed content)"
                 drops.append(f"glossary: {msg}")
                 drops_by_section["glossary"].append(msg)
                 continue
 
-            # Require that the evidence file's chunk contains the claimed term
+            # Require that the evidence file contains the claimed term
             if item.term.lower().strip() in content.lower():
                 item.defined_in = clean_p
                 valid_glossary.append(item)
             else:
-                msg = f"dropped term '{item.term}' (term not found in chunk of '{clean_p}')"
+                msg = f"dropped term '{item.term}' (term not found in any chunk of '{clean_p}')"
                 drops.append(f"glossary: {msg}")
                 drops_by_section["glossary"].append(msg)
+
         parsed_schema.glossary = valid_glossary
+        terms_kept_count = len(valid_glossary)
+        self.last_glossary_stats = {
+            "returned": terms_returned_count,
+            "kept": terms_kept_count,
+        }
 
         self.last_facts_block = facts_block
         self.last_raw_json = raw_output

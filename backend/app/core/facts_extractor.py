@@ -259,14 +259,18 @@ class FactsExtractor:
 
         # Identify the single best target file path to avoid concatenating multiple distinct files
         best_path: str | None = None
-        for path, _, _ in chunks:
-            p_lower = path.lower().replace("\\", "/")
-            if p_lower == clean_target:
-                best_path = path
-                break
-            if p_lower.endswith("/" + clean_target):
-                if best_path is None or len(path) < len(best_path):
+        readme_targets = ("readme.rst", "readme.md", "readme.txt", "readme") if clean_target in ("readme", "readme.md", "readme.rst", "readme.txt") else (clean_target,)
+        for target in readme_targets:
+            for path, _, _ in chunks:
+                p_lower = path.lower().replace("\\", "/")
+                if p_lower == target:
                     best_path = path
+                    break
+                if p_lower.endswith("/" + target):
+                    if best_path is None or len(path) < len(best_path):
+                        best_path = path
+            if best_path:
+                break
 
         if not best_path:
             return None

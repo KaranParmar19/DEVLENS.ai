@@ -163,6 +163,7 @@ async def evaluate_repo(db, repo_full_name: str) -> dict[str, Any]:
         "doc_md": doc_md,
         "drops": getattr(agent, "last_drops", []),
         "drops_by_section": drops_by_section,
+        "glossary_stats": getattr(agent, "last_glossary_stats", {"returned": 0, "kept": 0}),
         "checks": {
             "no_em_dash": check_em_dash,
             "no_banned_words": check_banned_words,
@@ -217,6 +218,13 @@ async def main():
             f"{path_str:<14} | {cmd_str:<14} | {num_str:<10} | {narr_str:<16} | {verd_str:<8} |"
         )
         print(row)
+
+    print("\n" + "=" * 80)
+    print("GLOSSARY TERMS RETURNED VS KEPT")
+    print("=" * 80)
+    for r in results:
+        g = r.get("glossary_stats", {})
+        print(f"- {r['repo']}: returned {g.get('returned', 0)}, kept {g.get('kept', 0)}")
 
     print("\n" + "=" * 80)
     print("DROPS LOGGED PER SECTION")
