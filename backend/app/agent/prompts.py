@@ -105,7 +105,7 @@ REQUIRED JSON SCHEMA:
 {{
   "repo_name": "{repo_full_name}",
   "summary": "1-2 paragraphs in plain language explaining what this project does and its core architecture.",
-  "tech_stack": ["runtime dependencies and key tools from manifest"],
+  "tech_stack": ["runtime dependencies only from manifest without (dev) entries"],
   "quick_start": {{
     "install_command": "Command to install dependencies from manifest, or empty string if none",
     "run_command": "Command to run dev server or app from manifest, or null",

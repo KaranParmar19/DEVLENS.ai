@@ -509,7 +509,7 @@ class FactsExtractor:
                 dev_deps = list(pkg_data.get("devDependencies", {}).keys())
                 manifest_facts["runtime_dependencies"] = runtime_deps
                 manifest_facts["dev_dependencies"] = dev_deps
-                manifest_facts["tech_stack"] = runtime_deps[:10] + [f"{d} (dev)" for d in dev_deps[:6]]
+                manifest_facts["tech_stack"] = runtime_deps
 
                 if "test" in scripts:
                     manifest_facts["test_command"] = f"npm test (runs: {scripts['test']})"
@@ -582,7 +582,7 @@ class FactsExtractor:
 
                 manifest_facts["runtime_dependencies"] = runtime_deps
                 manifest_facts["dev_dependencies"] = dev_deps
-                manifest_facts["tech_stack"] = runtime_deps if runtime_deps else dev_deps[:10]
+                manifest_facts["tech_stack"] = runtime_deps
 
                 # Check declared install command
                 if "tool.poetry" in py_data.get("tool", {}):
@@ -627,8 +627,8 @@ class FactsExtractor:
                     name = re.split(r"[><=~^;\[\s]", clean)[0].strip()
                     if name and name not in deps:
                         deps.append(name)
-            manifest_facts["runtime_dependencies"] = deps[:15]
-            manifest_facts["tech_stack"] = deps[:15]
+            manifest_facts["runtime_dependencies"] = deps
+            manifest_facts["tech_stack"] = deps
             if "test" in makefile_targets:
                 manifest_facts["test_command"] = "make test"
                 manifest_facts["test_command_type"] = "declared (Makefile target)"
@@ -669,8 +669,8 @@ class FactsExtractor:
                 for line in go_content.splitlines()
                 if line.strip() and not line.startswith("module") and not line.startswith("go")
             ]
-            manifest_facts["runtime_dependencies"] = deps[:10]
-            manifest_facts["tech_stack"] = deps[:10]
+            manifest_facts["runtime_dependencies"] = deps
+            manifest_facts["tech_stack"] = deps
             return await self._finalize_manifest(manifest_facts, test_modules_count)
 
         return await self._finalize_manifest(manifest_facts, test_modules_count)

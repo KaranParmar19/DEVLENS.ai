@@ -438,8 +438,10 @@ class DevLensAgent:
         else:
             quick_start_lines.append("- **Environment Variables**: No .env.example declared in repository.")
 
-        if doc.tech_stack:
-            quick_start_lines.append(f"- **Tech Stack**: {', '.join(doc.tech_stack)}")
+        tech_stack = manifest.get("tech_stack") or manifest.get("runtime_dependencies") or doc.tech_stack or []
+        tech_stack = [str(t) for t in tech_stack if not str(t).endswith("(dev)")]
+        if tech_stack:
+            quick_start_lines.append(f"- **Tech Stack**: {', '.join(tech_stack)}")
 
         if quick_start_lines:
             lines.append(f"\n## {sec_idx}. Quick Start")
