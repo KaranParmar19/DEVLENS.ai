@@ -1,0 +1,11 @@
+{
+  "repo_full_name": "KaranParmar19/DEVLENS.ai",
+  "manifest_type": "package.json",
+  "is_monorepo": true,
+  "install_command": "npm install",
+  "run_command": "npm run dev",
+  "test_command": "npm test",
+  "has_tests": true,
+  "required_tech_stack_subset": ["fastapi", "celery", "pgvector"],
+  "core_or_high_risk_file": "src/components/studio/studio-types.ts"
+}

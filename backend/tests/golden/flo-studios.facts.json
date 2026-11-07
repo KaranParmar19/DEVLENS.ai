@@ -2473,8 +2473,8 @@
     "XML": 1
   },
   "manifest": {
-    "build_command": "npm run build (runs: vite build)",
-    "dev_command": "npm run dev (runs: vite)",
+    "build_command": "npm run build",
+    "dev_command": "npm run dev",
     "dev_dependencies": [
       "@eslint/js",
       "@types/react",
@@ -2486,13 +2486,24 @@
       "globals",
       "vite"
     ],
+    "grouped_tech_stack": [
+      "@react-three/* (2 packages)",
+      "react",
+      "@supabase/supabase-js",
+      "framer-motion",
+      "gsap",
+      "lenis",
+      "react-dom",
+      "react-router-dom",
+      "three"
+    ],
     "install_command": "npm install",
     "install_command_provenance": "common default, not declared in repo",
     "manifest_type": "package.json",
     "monorepo_packages": [],
     "project_name": "new-site",
-    "run_command": "npm run dev (runs: vite)",
-    "run_command_provenance": "package.json:7 (scripts.dev)",
+    "run_command": "npm run dev",
+    "run_command_provenance": "package.json:7 (scripts.dev: vite)",
     "runtime_dependencies": [
       "@react-three/drei",
       "@react-three/fiber",
@@ -2524,12 +2535,14 @@
       "react-router-dom",
       "three"
     ],
-    "test_command": "npm test (runs: node --test tests/*.test.js)",
-    "test_command_provenance": "package.json:11 (scripts.test)",
+    "test_command": "npm test",
+    "test_command_provenance": "package.json:11 (scripts.test: node --test tests/*.test.js)",
     "test_command_type": "declared (package.json scripts.test)"
   },
   "readme_summary": null,
   "repo_full_name": "patelhashilkumar/flo-studios",
+  "snapshot_age_days": 0,
+  "snapshot_is_stale": false,
   "source_modules_count": 84,
   "starter_empty_reason": null,
   "test_modules_count": 11,

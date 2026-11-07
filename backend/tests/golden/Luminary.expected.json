@@ -1,0 +1,10 @@
+{
+  "repo_full_name": "KaranParmar19/Luminary",
+  "manifest_type": "requirements.txt",
+  "install_command": "pip install -r requirements.txt",
+  "run_command": "no run command declared",
+  "test_command": "no tests found",
+  "has_tests": false,
+  "required_tech_stack_subset": ["fastapi", "langchain"],
+  "entry_point": "backend/main.py"
+}

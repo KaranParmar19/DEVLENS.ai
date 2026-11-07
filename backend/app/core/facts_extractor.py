@@ -97,8 +97,16 @@ def is_test_file(path: str) -> bool:
 def is_config_file(path: str) -> bool:
     """Check if a file path is configuration or tool setup."""
     p = path.lower().replace("\\", "/")
+    if p.startswith(".devcontainer/") or "/.devcontainer/" in p:
+        return True
     name = PurePosixPath(p).name
-    if name in ("package.json", "package-lock.json", "pyproject.toml", "cargo.toml", "go.mod", "go.sum"):
+    if name in (
+        "package.json", "package-lock.json", "pyproject.toml", "cargo.toml", "go.mod", "go.sum",
+        "manifest.in", "py.typed", "uv.lock", "poetry.lock", "yarn.lock", "pnpm-lock.yaml",
+        ".editorconfig", "bench.py",
+    ):
+        return True
+    if name.endswith(".pyi"):
         return True
     return any(pat in p for pat in CONFIG_PATTERNS)
 
@@ -389,8 +397,12 @@ class FactsExtractor:
                     continue
                 seen_indices.add(idx)
                 # Strip generic chunk header if present
-                clean_content = re.sub(r"^# File: [^\n]+\n\n", "", content)
-                clean_content = re.sub(r"^// File: [^\n]+\n// [^\n]+\n\n", "", clean_content)
+                clean_content = re.sub(
+                    r"^# File: [^\n]+\n(?:# (?:Module-level code|Function: [^\n]+|Class: [^\n]+|Method: [^\n]+)\n)?\n",
+                    "",
+                    content,
+                )
+                clean_content = re.sub(r"^// File: [^\n]+\n(?:// [^\n]+\n)?\n", "", clean_content)
                 matching_chunks.append(clean_content)
 
         if not matching_chunks:
@@ -514,9 +526,14 @@ class FactsExtractor:
                 continue
             if m["risk_level"] != "Low":
                 continue
-            # Prefer modules with 1 source dependent; allow 0-dependent low-risk source modules as fallback
-            if m["source_dependents_count"] not in (0, 1):
-                continue
+            # When the graph has edges, require exactly 1 source dependent so unreferenced files are excluded.
+            # When the graph has 0 edges across the repository, allow 0-dependent low-risk source modules.
+            if len(edges) > 0:
+                if m["dependents_count"] == 0 or m["source_dependents_count"] != 1:
+                    continue
+            else:
+                if m["source_dependents_count"] not in (0, 1):
+                    continue
 
             # Check if there is a nearby test file
             base_name = PurePosixPath(path).stem

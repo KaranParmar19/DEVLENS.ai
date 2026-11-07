@@ -1,0 +1,10 @@
+{
+  "repo_full_name": "KaranParmar19/Portfolio",
+  "manifest_type": "package.json",
+  "install_command": "npm install",
+  "run_command": "npm run dev",
+  "test_command": "no tests found",
+  "has_tests": false,
+  "required_tech_stack_subset": ["react", "three", "gsap"],
+  "entry_point": "src/main.tsx"
+}

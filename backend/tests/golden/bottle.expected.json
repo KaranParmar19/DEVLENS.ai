@@ -1,0 +1,10 @@
+{
+  "repo_full_name": "bottlepy/bottle",
+  "manifest_type": "pyproject.toml",
+  "install_command": "pip install -e .",
+  "run_command": "no run command declared",
+  "test_command": "make test",
+  "has_tests": true,
+  "core_or_high_risk_file": "bottle.py",
+  "source_modules_count": 3
+}

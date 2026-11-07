@@ -1,8 +1,59 @@
 {
   "candidate_starters": [
     {
-      "complexity": 0,
-      "coupling": 0.286,
+      "complexity": 5,
+      "coupling": 0.2,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [
+        "src/components/studio/export-utils.test.ts",
+        "src/components/studio/studio-workspace.tsx"
+      ],
+      "dependents_count": 2,
+      "first_30_lines": "/**\n * DevLens AI \u2014 Studio Diagram & Graph Export Helpers\n */\n\nexport function generateMermaidDiagram(edges: [string, string][], cap = 80): string {\n  const lines = [\"graph TD\"];\n  const slice = edges.slice(0, cap);\n  for (const [u, v] of slice) {\n    const uClean = u.replace(/[^a-zA-Z0-9]/g, \"_\");\n    const vClean = v.replace(/[^a-zA-Z0-9]/g, \"_\");\n    lines.push(`  ${uClean} --> ${vClean}`);\n  }\n  return lines.join(\"\\n\");\n}\n\nexport function generatePlantUmlDiagram(edges: [string, string][], repoLabel = \"Repository\", cap = 80): string {\n  const lines = [\"@startuml\", `title ${repoLabel} Architecture`];\n  const slice = edges.slice(0, cap);\n  for (const [u, v] of slice) {\n    const uClean = u.split(\"/\").pop() || u;\n    const vClean = v.split(\"/\").pop() || v;\n    lines.push(`  [${uClean}] --> [${vClean}]`);\n  }\n  lines.push(\"@enduml\");\n  return lines.join(\"\\n\");\n}\n\nexport function generateJsonExport(graphData: unknown): string {\n  return JSON.stringify(graphData ?? {}, null, 2);\n}",
+      "id": "src/components/studio/export-utils.ts",
+      "is_entry": false,
+      "label": "export-utils",
+      "line_count": 31,
+      "nearby_test": "src/components/studio/export-utils.test.ts",
+      "path": "src/components/studio/export-utils.ts",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/components/studio/studio-workspace.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [
+        "src/components/studio/export-utils.test.ts"
+      ],
+      "test_dependents_count": 1
+    },
+    {
+      "complexity": 1,
+      "coupling": 0.1,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [
+        "src/routeTree.gen.ts"
+      ],
+      "dependents_count": 1,
+      "first_30_lines": "import { createFileRoute } from \"@tanstack/react-router\";\nimport { HowItWorksPage } from \"@/components/mf/how-it-works-page\";\n\nexport const Route = createFileRoute(\"/how-it-works\")({\n  component: HowItWorksPage,\n  head: () => ({\n    meta: [\n      { title: \"How it works | DevLens\" },\n      {\n        name: \"description\",\n        content: \"See how DevLens clones, parses, and maps a GitHub repository in seconds.\",\n      },\n    ],\n  }),\n});",
+      "id": "src/routes/how-it-works.tsx",
+      "is_entry": false,
+      "label": "how-it-works",
+      "line_count": 16,
+      "nearby_test": null,
+      "path": "src/routes/how-it-works.tsx",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/routeTree.gen.ts"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    {
+      "complexity": 1,
+      "coupling": 0.2,
       "dependencies": [
         "src/routeTree.gen.ts"
       ],
@@ -11,7 +62,7 @@
         "src/routeTree.gen.ts"
       ],
       "dependents_count": 1,
-      "first_30_lines": "export const getRouter = () => {\n  const queryClient = new QueryClient();\n\n  const router = createRouter({\n    routeTree,\n    context: { queryClient },\n    scrollRestoration: true,\n    defaultPreloadStaleTime: 0,\n  });\n\n  return router;\n};",
+      "first_30_lines": "import { QueryClient } from \"@tanstack/react-query\";\nimport { createRouter } from \"@tanstack/react-router\";\nimport { routeTree } from \"./routeTree.gen\";\n\nexport const getRouter = () => {\n  const queryClient = new QueryClient();\n\n  const router = createRouter({\n    routeTree,\n    context: { queryClient },\n    scrollRestoration: true,\n    defaultPreloadStaleTime: 0,\n  });\n\n  return router;\n};",
       "id": "src/router.tsx",
       "is_entry": false,
       "label": "router",
@@ -27,23 +78,21 @@
       "test_dependents_count": 0
     },
     {
-      "complexity": 0,
-      "coupling": 0.286,
-      "dependencies": [
-        "src/lib/error-page.ts"
-      ],
-      "dependencies_count": 1,
+      "complexity": 1,
+      "coupling": 0.1,
+      "dependencies": [],
+      "dependencies_count": 0,
       "dependents": [
         "src/routeTree.gen.ts"
       ],
       "dependents_count": 1,
-      "first_30_lines": "import { createStart, createMiddleware } from \"@tanstack/react-start\";\n\nimport { renderErrorPage } from \"./lib/error-page\";\n\nconst errorMiddleware = createMiddleware().server(async ({ next }) => {\n  try {\n    return await next();\n  } catch (error) {\n    if (error != null && typeof error === \"object\" && \"statusCode\" in error) {\n      throw error;\n    }\n    console.error(error);\n    return new Response(renderErrorPage(), {\n      status: 500,\n      headers: { \"content-type\": \"text/html; charset=utf-8\" },\n    });\n  }\n});\n\nexport const startInstance = createStart(() => ({\n  requestMiddleware: [errorMiddleware],\n}));",
-      "id": "src/start.ts",
+      "first_30_lines": "import { createFileRoute } from \"@tanstack/react-router\";\nimport { FeaturesPage } from \"@/components/mf/pages\";\n\nexport const Route = createFileRoute(\"/features\")({\n  component: FeaturesPage,\n  head: () => ({\n    meta: [\n      { title: \"Features | DevLens\" },\n      {\n        name: \"description\",\n        content:\n          \"Dependency graphs, request flow tracing, commit impact checks, and codebase search with line citations.\",\n      },\n    ],\n  }),\n});",
+      "id": "src/routes/features.tsx",
       "is_entry": false,
-      "label": "start",
-      "line_count": 23,
+      "label": "features",
+      "line_count": 17,
       "nearby_test": null,
-      "path": "src/start.ts",
+      "path": "src/routes/features.tsx",
       "risk_level": "Low",
       "source_dependents": [
         "src/routeTree.gen.ts"
@@ -53,69 +102,21 @@
       "test_dependents_count": 0
     },
     {
-      "complexity": 0,
-      "coupling": 0.143,
-      "dependencies": [],
-      "dependencies_count": 0,
-      "dependents": [
-        "src/server.ts"
-      ],
-      "dependents_count": 1,
-      "first_30_lines": "function record(error: unknown) {\n  lastCapturedError = { error, at: Date.now() };\n}export function consumeLastCapturedError(): unknown {\n  if (!lastCapturedError) return undefined;\n  if (Date.now() - lastCapturedError.at > TTL_MS) {\n    lastCapturedError = undefined;\n    return undefined;\n  }\n  const { error } = lastCapturedError;\n  lastCapturedError = undefined;\n  return error;\n}",
-      "id": "src/lib/error-capture.ts",
-      "is_entry": false,
-      "label": "error-capture",
-      "line_count": 28,
-      "nearby_test": null,
-      "path": "src/lib/error-capture.ts",
-      "risk_level": "Low",
-      "source_dependents": [
-        "src/server.ts"
-      ],
-      "source_dependents_count": 1,
-      "test_dependents": [],
-      "test_dependents_count": 0
-    },
-    {
-      "complexity": 0,
-      "coupling": 0.143,
+      "complexity": 1,
+      "coupling": 0.1,
       "dependencies": [],
       "dependencies_count": 0,
       "dependents": [
         "src/routeTree.gen.ts"
       ],
       "dependents_count": 1,
-      "first_30_lines": "function NotFoundComponent() {\n  return (\n    <div className=\"flex min-h-screen items-center justify-center bg-background px-4\">\n      <div className=\"max-w-md text-center\">\n        <h1 className=\"text-7xl font-bold text-foreground\">404</h1>\n        <h2 className=\"mt-4 text-xl font-semibold text-foreground\">Page not found</h2>\n        <p className=\"mt-2 text-sm text-muted-foreground\">\n          The page you're looking for doesn't exist or has been moved.\n        </p>\n        <div className=\"mt-6\">\n          <Link\n            to=\"/\"\n            className=\"inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90\"\n          >\n            Go home\n          </Link>\n        </div>\n      </div>\n    </div>\n  );\n}function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {\n  console.error(error);\n  const router = useRouter();\n\n  return (\n    <div className=\"flex min-h-screen items-center justify-center bg-background px-4\">\n      <div className=\"max-w-md text-center\">\n        <h1 className=\"text-xl font-semibold tracking-tight text-foreground\">\n          This page didn't load\n        </h1>",
-      "id": "src/routes/__root.tsx",
+      "first_30_lines": "import { createFileRoute } from \"@tanstack/react-router\";\nimport { HomePage } from \"@/components/mf/home\";\n\nexport const Route = createFileRoute(\"/\")({\n  component: HomePage,\n  head: () => ({\n    meta: [\n      { title: \"DevLens | See the shape of any codebase\" },\n      {\n        name: \"description\",\n        content:\n          \"Paste a GitHub repository to inspect its dependency graph, trace request paths, and ask questions with exact line citations.\",\n      },\n    ],\n  }),\n});",
+      "id": "src/routes/index.tsx",
       "is_entry": false,
-      "label": "__root",
-      "line_count": 121,
+      "label": "index",
+      "line_count": 17,
       "nearby_test": null,
-      "path": "src/routes/__root.tsx",
-      "risk_level": "Low",
-      "source_dependents": [
-        "src/routeTree.gen.ts"
-      ],
-      "source_dependents_count": 1,
-      "test_dependents": [],
-      "test_dependents_count": 0
-    },
-    {
-      "complexity": 0,
-      "coupling": 0.143,
-      "dependencies": [],
-      "dependencies_count": 0,
-      "dependents": [
-        "src/routeTree.gen.ts"
-      ],
-      "dependents_count": 1,
-      "first_30_lines": "function DashboardPage() {\n  const { repo, jobId, sessionId } = Route.useSearch();\n  const navigate = useNavigate({ from: Route.fullPath });\n  const [inputRepo, setInputRepo] = useState(\"\");\n  const [isFocused, setIsFocused] = useState(false);\n  const palette = useCommandPalette();\n\n  const historyRepos = repoHistory.getAll();\n\n  const handleSubmit = (e: React.FormEvent) => {\n    e.preventDefault();\n    const raw = inputRepo.trim();\n    if (!raw) return;\n    const url = raw.startsWith(\"http\") ? raw : `https://github.com/${raw}`;\n    navigate({ search: { repo: url } });\n  };\n\n  const paletteActions = [\n    { id: \"home\", label: \"Go to Home\", icon: \"\ud83c\udfe0\", group: \"Navigation\", shortcut: \"G H\", onSelect: () => navigate({ to: \"/\" }) },\n    { id: \"pricing\", label: \"View Pricing\", icon: \"\ud83d\udcb3\", group: \"Navigation\", onSelect: () => navigate({ to: \"/pricing\" }) },\n    ...historyRepos.map((r) => ({\n      id: `recent:${r.id}`, label: r.repoLabel,\n      description: `Last analyzed: ${new Date(r.analyzedAt).toLocaleDateString()}`,\n      icon: \"\ud83d\uddc2\", group: \"Recent Repos\",\n      onSelect: () => navigate({ search: { repo: r.repoUrl } }),\n    })),\n  ];\n\n  if (repo) {\n    return (",
-      "id": "src/routes/dashboard.tsx",
-      "is_entry": false,
-      "label": "dashboard",
-      "line_count": 225,
-      "nearby_test": null,
-      "path": "src/routes/dashboard.tsx",
+      "path": "src/routes/index.tsx",
       "risk_level": "Low",
       "source_dependents": [
         "src/routeTree.gen.ts"
@@ -125,14 +126,19 @@
       "test_dependents_count": 0
     }
   ],
-  "commit_sha": "208c9e9258577ddb14def95c12198b1638078a19",
-  "config_modules_count": 12,
-  "cycles": [],
-  "cycles_count": 0,
-  "docs_and_assets_count": 3,
+  "commit_sha": "5eff1599928f4b638e1b075672d753df1f5ff522",
+  "config_modules_count": 14,
+  "cycles": [
+    [
+      "src/routeTree.gen.ts",
+      "src/router.tsx"
+    ]
+  ],
+  "cycles_count": 1,
+  "docs_and_assets_count": 6,
   "entry_points": [
     {
-      "complexity": 0,
+      "complexity": 4,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -141,7 +147,7 @@
       "id": "backend/app/main.py",
       "is_entry": true,
       "label": "main",
-      "line_count": 151,
+      "line_count": 135,
       "path": "backend/app/main.py",
       "risk_level": "Low",
       "source_dependents": [],
@@ -150,20 +156,88 @@
       "test_dependents_count": 0
     },
     {
-      "complexity": 0,
-      "coupling": 0.286,
+      "complexity": 93,
+      "coupling": 0.1,
       "dependencies": [
-        "src/lib/error-page.ts",
-        "src/lib/error-capture.ts"
+        "src/components/mf/site-layout.tsx"
       ],
-      "dependencies_count": 2,
+      "dependencies_count": 1,
       "dependents": [],
       "dependents_count": 0,
-      "id": "src/server.ts",
+      "id": "src/components/mf/home.tsx",
       "is_entry": true,
-      "label": "server",
-      "line_count": 81,
-      "path": "src/server.ts",
+      "label": "home",
+      "line_count": 1528,
+      "path": "src/components/mf/home.tsx",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    {
+      "complexity": 8,
+      "coupling": 0.1,
+      "dependencies": [
+        "src/components/mf/site-layout.tsx"
+      ],
+      "dependencies_count": 1,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/mf/how-it-works-page.tsx",
+      "is_entry": true,
+      "label": "how-it-works-page",
+      "line_count": 457,
+      "path": "src/components/mf/how-it-works-page.tsx",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    {
+      "complexity": 26,
+      "coupling": 0.1,
+      "dependencies": [
+        "src/components/mf/site-layout.tsx"
+      ],
+      "dependencies_count": 1,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/mf/pages.tsx",
+      "is_entry": true,
+      "label": "pages",
+      "line_count": 1139,
+      "path": "src/components/mf/pages.tsx",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    {
+      "complexity": 45,
+      "coupling": 1.0,
+      "dependencies": [
+        "src/components/studio/export-utils.ts",
+        "src/components/studio/copilot-rail.tsx",
+        "src/components/studio/telemetry-modal.tsx",
+        "src/components/studio/studio-topbar.tsx",
+        "src/components/studio/code-flow-stepper.tsx",
+        "src/components/studio/studio-types.ts",
+        "src/components/studio/drift-timeline-view.tsx",
+        "src/components/studio/architecture-canvas.tsx",
+        "src/components/studio/explorer-rail.tsx",
+        "src/components/studio/onboarding-doc-view.tsx"
+      ],
+      "dependencies_count": 10,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/studio/studio-workspace.tsx",
+      "is_entry": true,
+      "label": "studio-workspace",
+      "line_count": 478,
+      "path": "src/components/studio/studio-workspace.tsx",
       "risk_level": "Low",
       "source_dependents": [],
       "source_dependents_count": 0,
@@ -224,7 +298,7 @@
   ],
   "file_metrics": {
     ".gitignore": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -233,7 +307,7 @@
       "id": ".gitignore",
       "is_entry": false,
       "label": ".gitignore",
-      "line_count": 52,
+      "line_count": 78,
       "path": ".gitignore",
       "risk_level": "Low",
       "source_dependents": [],
@@ -242,7 +316,7 @@
       "test_dependents_count": 0
     },
     ".lovable/project.json": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -260,7 +334,7 @@
       "test_dependents_count": 0
     },
     ".prettierignore": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -278,7 +352,7 @@
       "test_dependents_count": 0
     },
     ".prettierrc": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -296,7 +370,7 @@
       "test_dependents_count": 0
     },
     "DOCUMENTATION.md": {
-      "complexity": 0,
+      "complexity": 22,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -314,7 +388,7 @@
       "test_dependents_count": 0
     },
     "README.md": {
-      "complexity": 0,
+      "complexity": 28,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -323,7 +397,7 @@
       "id": "README.md",
       "is_entry": false,
       "label": "README",
-      "line_count": 94,
+      "line_count": 397,
       "path": "README.md",
       "risk_level": "Low",
       "source_dependents": [],
@@ -332,7 +406,7 @@
       "test_dependents_count": 0
     },
     "backend/.env.example": {
-      "complexity": 0,
+      "complexity": 7,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -350,7 +424,7 @@
       "test_dependents_count": 0
     },
     "backend/Dockerfile": {
-      "complexity": 0,
+      "complexity": 12,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -368,7 +442,7 @@
       "test_dependents_count": 0
     },
     "backend/alembic.ini": {
-      "complexity": 0,
+      "complexity": 2,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -386,7 +460,7 @@
       "test_dependents_count": 0
     },
     "backend/alembic/env.py": {
-      "complexity": 0,
+      "complexity": 8,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -404,7 +478,7 @@
       "test_dependents_count": 0
     },
     "backend/alembic/versions/0001_initial.py": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -422,7 +496,7 @@
       "test_dependents_count": 0
     },
     "backend/alembic/versions/0002_unique_full_name.py": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -440,7 +514,7 @@
       "test_dependents_count": 0
     },
     "backend/app/__init__.py": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -458,7 +532,7 @@
       "test_dependents_count": 0
     },
     "backend/app/agent/__init__.py": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -476,7 +550,7 @@
       "test_dependents_count": 0
     },
     "backend/app/agent/devlens_agent.py": {
-      "complexity": 0,
+      "complexity": 83,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -485,7 +559,7 @@
       "id": "backend/app/agent/devlens_agent.py",
       "is_entry": false,
       "label": "devlens_agent",
-      "line_count": 230,
+      "line_count": 431,
       "path": "backend/app/agent/devlens_agent.py",
       "risk_level": "Low",
       "source_dependents": [],
@@ -494,7 +568,7 @@
       "test_dependents_count": 0
     },
     "backend/app/agent/prompts.py": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -512,7 +586,7 @@
       "test_dependents_count": 0
     },
     "backend/app/agent/tools/__init__.py": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -530,7 +604,7 @@
       "test_dependents_count": 0
     },
     "backend/app/agent/tools/blast_tool.py": {
-      "complexity": 0,
+      "complexity": 16,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -548,7 +622,7 @@
       "test_dependents_count": 0
     },
     "backend/app/agent/tools/file_tool.py": {
-      "complexity": 0,
+      "complexity": 7,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -566,7 +640,7 @@
       "test_dependents_count": 0
     },
     "backend/app/agent/tools/graph_tool.py": {
-      "complexity": 0,
+      "complexity": 17,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -584,7 +658,7 @@
       "test_dependents_count": 0
     },
     "backend/app/agent/tools/search_tool.py": {
-      "complexity": 0,
+      "complexity": 3,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -593,7 +667,7 @@
       "id": "backend/app/agent/tools/search_tool.py",
       "is_entry": false,
       "label": "search_tool",
-      "line_count": 116,
+      "line_count": 34,
       "path": "backend/app/agent/tools/search_tool.py",
       "risk_level": "Low",
       "source_dependents": [],
@@ -602,7 +676,7 @@
       "test_dependents_count": 0
     },
     "backend/app/api/__init__.py": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -620,7 +694,7 @@
       "test_dependents_count": 0
     },
     "backend/app/api/deps.py": {
-      "complexity": 0,
+      "complexity": 7,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -638,7 +712,7 @@
       "test_dependents_count": 0
     },
     "backend/app/api/routes/__init__.py": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -656,7 +730,7 @@
       "test_dependents_count": 0
     },
     "backend/app/api/routes/analysis.py": {
-      "complexity": 0,
+      "complexity": 11,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -674,7 +748,7 @@
       "test_dependents_count": 0
     },
     "backend/app/api/routes/auth.py": {
-      "complexity": 0,
+      "complexity": 12,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -683,7 +757,7 @@
       "id": "backend/app/api/routes/auth.py",
       "is_entry": false,
       "label": "auth",
-      "line_count": 148,
+      "line_count": 214,
       "path": "backend/app/api/routes/auth.py",
       "risk_level": "Low",
       "source_dependents": [],
@@ -692,7 +766,7 @@
       "test_dependents_count": 0
     },
     "backend/app/api/routes/chat.py": {
-      "complexity": 0,
+      "complexity": 15,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -701,7 +775,7 @@
       "id": "backend/app/api/routes/chat.py",
       "is_entry": false,
       "label": "chat",
-      "line_count": 201,
+      "line_count": 203,
       "path": "backend/app/api/routes/chat.py",
       "risk_level": "Low",
       "source_dependents": [],
@@ -710,7 +784,7 @@
       "test_dependents_count": 0
     },
     "backend/app/api/routes/health.py": {
-      "complexity": 0,
+      "complexity": 4,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -728,7 +802,7 @@
       "test_dependents_count": 0
     },
     "backend/app/api/routes/repos.py": {
-      "complexity": 0,
+      "complexity": 15,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -746,7 +820,7 @@
       "test_dependents_count": 0
     },
     "backend/app/api/routes/sessions.py": {
-      "complexity": 0,
+      "complexity": 58,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -755,7 +829,7 @@
       "id": "backend/app/api/routes/sessions.py",
       "is_entry": false,
       "label": "sessions",
-      "line_count": 202,
+      "line_count": 358,
       "path": "backend/app/api/routes/sessions.py",
       "risk_level": "Low",
       "source_dependents": [],
@@ -764,7 +838,7 @@
       "test_dependents_count": 0
     },
     "backend/app/config.py": {
-      "complexity": 0,
+      "complexity": 13,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -773,7 +847,7 @@
       "id": "backend/app/config.py",
       "is_entry": false,
       "label": "config",
-      "line_count": 99,
+      "line_count": 121,
       "path": "backend/app/config.py",
       "risk_level": "Low",
       "source_dependents": [],
@@ -782,7 +856,7 @@
       "test_dependents_count": 0
     },
     "backend/app/core/__init__.py": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -800,7 +874,7 @@
       "test_dependents_count": 0
     },
     "backend/app/core/chunker.py": {
-      "complexity": 0,
+      "complexity": 21,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -809,7 +883,7 @@
       "id": "backend/app/core/chunker.py",
       "is_entry": false,
       "label": "chunker",
-      "line_count": 244,
+      "line_count": 235,
       "path": "backend/app/core/chunker.py",
       "risk_level": "Low",
       "source_dependents": [],
@@ -818,7 +892,7 @@
       "test_dependents_count": 0
     },
     "backend/app/core/embedder.py": {
-      "complexity": 0,
+      "complexity": 20,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -827,7 +901,7 @@
       "id": "backend/app/core/embedder.py",
       "is_entry": false,
       "label": "embedder",
-      "line_count": 190,
+      "line_count": 196,
       "path": "backend/app/core/embedder.py",
       "risk_level": "Low",
       "source_dependents": [],
@@ -836,7 +910,7 @@
       "test_dependents_count": 0
     },
     "backend/app/core/file_utils.py": {
-      "complexity": 0,
+      "complexity": 25,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -845,7 +919,7 @@
       "id": "backend/app/core/file_utils.py",
       "is_entry": false,
       "label": "file_utils",
-      "line_count": 147,
+      "line_count": 195,
       "path": "backend/app/core/file_utils.py",
       "risk_level": "Low",
       "source_dependents": [],
@@ -854,7 +928,7 @@
       "test_dependents_count": 0
     },
     "backend/app/core/github_client.py": {
-      "complexity": 0,
+      "complexity": 40,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -863,7 +937,7 @@
       "id": "backend/app/core/github_client.py",
       "is_entry": false,
       "label": "github_client",
-      "line_count": 279,
+      "line_count": 375,
       "path": "backend/app/core/github_client.py",
       "risk_level": "Low",
       "source_dependents": [],
@@ -872,7 +946,7 @@
       "test_dependents_count": 0
     },
     "backend/app/core/graph_builder.py": {
-      "complexity": 0,
+      "complexity": 53,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -881,7 +955,7 @@
       "id": "backend/app/core/graph_builder.py",
       "is_entry": false,
       "label": "graph_builder",
-      "line_count": 269,
+      "line_count": 315,
       "path": "backend/app/core/graph_builder.py",
       "risk_level": "Low",
       "source_dependents": [],
@@ -890,7 +964,7 @@
       "test_dependents_count": 0
     },
     "backend/app/core/language_detector.py": {
-      "complexity": 0,
+      "complexity": 11,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -908,7 +982,7 @@
       "test_dependents_count": 0
     },
     "backend/app/core/repo_ingester.py": {
-      "complexity": 0,
+      "complexity": 18,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -926,7 +1000,7 @@
       "test_dependents_count": 0
     },
     "backend/app/database.py": {
-      "complexity": 0,
+      "complexity": 4,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -944,7 +1018,7 @@
       "test_dependents_count": 0
     },
     "backend/app/main.py": {
-      "complexity": 0,
+      "complexity": 4,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -953,7 +1027,7 @@
       "id": "backend/app/main.py",
       "is_entry": true,
       "label": "main",
-      "line_count": 151,
+      "line_count": 135,
       "path": "backend/app/main.py",
       "risk_level": "Low",
       "source_dependents": [],
@@ -962,7 +1036,7 @@
       "test_dependents_count": 0
     },
     "backend/app/middleware/__init__.py": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -980,7 +1054,7 @@
       "test_dependents_count": 0
     },
     "backend/app/middleware/auth.py": {
-      "complexity": 0,
+      "complexity": 10,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -998,7 +1072,7 @@
       "test_dependents_count": 0
     },
     "backend/app/middleware/logging.py": {
-      "complexity": 0,
+      "complexity": 3,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1016,7 +1090,7 @@
       "test_dependents_count": 0
     },
     "backend/app/middleware/rate_limit.py": {
-      "complexity": 0,
+      "complexity": 7,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1025,7 +1099,7 @@
       "id": "backend/app/middleware/rate_limit.py",
       "is_entry": false,
       "label": "rate_limit",
-      "line_count": 123,
+      "line_count": 127,
       "path": "backend/app/middleware/rate_limit.py",
       "risk_level": "Low",
       "source_dependents": [],
@@ -1034,7 +1108,7 @@
       "test_dependents_count": 0
     },
     "backend/app/models/__init__.py": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1052,7 +1126,7 @@
       "test_dependents_count": 0
     },
     "backend/app/models/analysis_job.py": {
-      "complexity": 0,
+      "complexity": 2,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1061,7 +1135,7 @@
       "id": "backend/app/models/analysis_job.py",
       "is_entry": false,
       "label": "analysis_job",
-      "line_count": 68,
+      "line_count": 76,
       "path": "backend/app/models/analysis_job.py",
       "risk_level": "Low",
       "source_dependents": [],
@@ -1070,7 +1144,7 @@
       "test_dependents_count": 0
     },
     "backend/app/models/code_chunk.py": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1088,7 +1162,7 @@
       "test_dependents_count": 0
     },
     "backend/app/models/repository.py": {
-      "complexity": 0,
+      "complexity": 2,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1097,7 +1171,7 @@
       "id": "backend/app/models/repository.py",
       "is_entry": false,
       "label": "repository",
-      "line_count": 84,
+      "line_count": 91,
       "path": "backend/app/models/repository.py",
       "risk_level": "Low",
       "source_dependents": [],
@@ -1106,7 +1180,7 @@
       "test_dependents_count": 0
     },
     "backend/app/models/session.py": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1124,7 +1198,7 @@
       "test_dependents_count": 0
     },
     "backend/app/models/user.py": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1142,7 +1216,7 @@
       "test_dependents_count": 0
     },
     "backend/app/rag/__init__.py": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1160,7 +1234,7 @@
       "test_dependents_count": 0
     },
     "backend/app/rag/retriever.py": {
-      "complexity": 0,
+      "complexity": 2,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1178,7 +1252,7 @@
       "test_dependents_count": 0
     },
     "backend/app/rag/vector_store.py": {
-      "complexity": 0,
+      "complexity": 26,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1187,7 +1261,7 @@
       "id": "backend/app/rag/vector_store.py",
       "is_entry": false,
       "label": "vector_store",
-      "line_count": 175,
+      "line_count": 291,
       "path": "backend/app/rag/vector_store.py",
       "risk_level": "Low",
       "source_dependents": [],
@@ -1196,7 +1270,7 @@
       "test_dependents_count": 0
     },
     "backend/app/schemas/__init__.py": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1214,7 +1288,7 @@
       "test_dependents_count": 0
     },
     "backend/app/schemas/analysis.py": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1232,7 +1306,7 @@
       "test_dependents_count": 0
     },
     "backend/app/schemas/chat.py": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1250,7 +1324,7 @@
       "test_dependents_count": 0
     },
     "backend/app/schemas/repository.py": {
-      "complexity": 0,
+      "complexity": 3,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1259,7 +1333,7 @@
       "id": "backend/app/schemas/repository.py",
       "is_entry": false,
       "label": "repository",
-      "line_count": 126,
+      "line_count": 151,
       "path": "backend/app/schemas/repository.py",
       "risk_level": "Low",
       "source_dependents": [],
@@ -1268,7 +1342,7 @@
       "test_dependents_count": 0
     },
     "backend/app/schemas/session.py": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1286,7 +1360,7 @@
       "test_dependents_count": 0
     },
     "backend/app/tasks/__init__.py": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1304,7 +1378,7 @@
       "test_dependents_count": 0
     },
     "backend/app/tasks/celery_app.py": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1322,7 +1396,7 @@
       "test_dependents_count": 0
     },
     "backend/app/tasks/repo_tasks.py": {
-      "complexity": 0,
+      "complexity": 21,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1331,7 +1405,7 @@
       "id": "backend/app/tasks/repo_tasks.py",
       "is_entry": false,
       "label": "repo_tasks",
-      "line_count": 454,
+      "line_count": 472,
       "path": "backend/app/tasks/repo_tasks.py",
       "risk_level": "Low",
       "source_dependents": [],
@@ -1340,7 +1414,7 @@
       "test_dependents_count": 0
     },
     "backend/app/utils/__init__.py": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1358,7 +1432,7 @@
       "test_dependents_count": 0
     },
     "backend/app/utils/graph_layout.py": {
-      "complexity": 0,
+      "complexity": 13,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1376,7 +1450,7 @@
       "test_dependents_count": 0
     },
     "backend/app/utils/token_counter.py": {
-      "complexity": 0,
+      "complexity": 5,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1394,7 +1468,7 @@
       "test_dependents_count": 0
     },
     "backend/pytest.ini": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1412,7 +1486,7 @@
       "test_dependents_count": 0
     },
     "backend/requirements.txt": {
-      "complexity": 0,
+      "complexity": 5,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1430,7 +1504,7 @@
       "test_dependents_count": 0
     },
     "backend/tests/__init__.py": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1448,7 +1522,7 @@
       "test_dependents_count": 0
     },
     "backend/tests/conftest.py": {
-      "complexity": 0,
+      "complexity": 6,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1466,7 +1540,7 @@
       "test_dependents_count": 0
     },
     "backend/tests/test_api/__init__.py": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1484,7 +1558,7 @@
       "test_dependents_count": 0
     },
     "backend/tests/test_api/test_repos.py": {
-      "complexity": 0,
+      "complexity": 5,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1502,7 +1576,7 @@
       "test_dependents_count": 0
     },
     "backend/tests/test_core/__init__.py": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1519,8 +1593,26 @@
       "test_dependents": [],
       "test_dependents_count": 0
     },
+    "backend/tests/test_core/test_agent_tools.py": {
+      "complexity": 1,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "backend/tests/test_core/test_agent_tools.py",
+      "is_entry": false,
+      "label": "test_agent_tools",
+      "line_count": 108,
+      "path": "backend/tests/test_core/test_agent_tools.py",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
     "backend/tests/test_core/test_chunker.py": {
-      "complexity": 0,
+      "complexity": 12,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1537,8 +1629,44 @@
       "test_dependents": [],
       "test_dependents_count": 0
     },
+    "backend/tests/test_core/test_embedder.py": {
+      "complexity": 4,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "backend/tests/test_core/test_embedder.py",
+      "is_entry": false,
+      "label": "test_embedder",
+      "line_count": 38,
+      "path": "backend/tests/test_core/test_embedder.py",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "backend/tests/test_core/test_github_url.py": {
+      "complexity": 2,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "backend/tests/test_core/test_github_url.py",
+      "is_entry": false,
+      "label": "test_github_url",
+      "line_count": 27,
+      "path": "backend/tests/test_core/test_github_url.py",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
     "backend/tests/test_core/test_graph_builder.py": {
-      "complexity": 0,
+      "complexity": 10,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1547,7 +1675,7 @@
       "id": "backend/tests/test_core/test_graph_builder.py",
       "is_entry": false,
       "label": "test_graph_builder",
-      "line_count": 131,
+      "line_count": 163,
       "path": "backend/tests/test_core/test_graph_builder.py",
       "risk_level": "Low",
       "source_dependents": [],
@@ -1555,18 +1683,18 @@
       "test_dependents": [],
       "test_dependents_count": 0
     },
-    "bunfig.toml": {
-      "complexity": 0,
+    "backend/tests/test_core/test_tarball.py": {
+      "complexity": 3,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
       "dependents": [],
       "dependents_count": 0,
-      "id": "bunfig.toml",
+      "id": "backend/tests/test_core/test_tarball.py",
       "is_entry": false,
-      "label": "bunfig",
-      "line_count": 7,
-      "path": "bunfig.toml",
+      "label": "test_tarball",
+      "line_count": 49,
+      "path": "backend/tests/test_core/test_tarball.py",
       "risk_level": "Low",
       "source_dependents": [],
       "source_dependents_count": 0,
@@ -1574,7 +1702,7 @@
       "test_dependents_count": 0
     },
     "components.json": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1592,7 +1720,7 @@
       "test_dependents_count": 0
     },
     "docker-compose.yml": {
-      "complexity": 0,
+      "complexity": 2,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1609,8 +1737,26 @@
       "test_dependents": [],
       "test_dependents_count": 0
     },
+    "docs/ENGINEERING_REVIEW.md": {
+      "complexity": 20,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "docs/ENGINEERING_REVIEW.md",
+      "is_entry": false,
+      "label": "ENGINEERING_REVIEW",
+      "line_count": 117,
+      "path": "docs/ENGINEERING_REVIEW.md",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
     "eslint.config.js": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1627,8 +1773,152 @@
       "test_dependents": [],
       "test_dependents_count": 0
     },
+    "launch-video/AGENTS.md": {
+      "complexity": 13,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "launch-video/AGENTS.md",
+      "is_entry": false,
+      "label": "AGENTS",
+      "line_count": 112,
+      "path": "launch-video/AGENTS.md",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "launch-video/CLAUDE.md": {
+      "complexity": 13,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "launch-video/CLAUDE.md",
+      "is_entry": false,
+      "label": "CLAUDE",
+      "line_count": 112,
+      "path": "launch-video/CLAUDE.md",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "launch-video/generate_soundtrack.py": {
+      "complexity": 20,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "launch-video/generate_soundtrack.py",
+      "is_entry": false,
+      "label": "generate_soundtrack",
+      "line_count": 197,
+      "path": "launch-video/generate_soundtrack.py",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "launch-video/hyperframes.json": {
+      "complexity": 1,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "launch-video/hyperframes.json",
+      "is_entry": false,
+      "label": "hyperframes",
+      "line_count": 13,
+      "path": "launch-video/hyperframes.json",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "launch-video/index.html": {
+      "complexity": 7,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "launch-video/index.html",
+      "is_entry": false,
+      "label": "index",
+      "line_count": 1056,
+      "path": "launch-video/index.html",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "launch-video/meta.json": {
+      "complexity": 1,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "launch-video/meta.json",
+      "is_entry": false,
+      "label": "meta",
+      "line_count": 5,
+      "path": "launch-video/meta.json",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "launch-video/package.json": {
+      "complexity": 1,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "launch-video/package.json",
+      "is_entry": false,
+      "label": "package",
+      "line_count": 12,
+      "path": "launch-video/package.json",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "multi_commit.ps1": {
+      "complexity": 4,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "multi_commit.ps1",
+      "is_entry": false,
+      "label": "multi_commit",
+      "line_count": 68,
+      "path": "multi_commit.ps1",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
     "package.json": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1637,7 +1927,7 @@
       "id": "package.json",
       "is_entry": false,
       "label": "package",
-      "line_count": 89,
+      "line_count": 111,
       "path": "package.json",
       "risk_level": "Low",
       "source_dependents": [],
@@ -1646,7 +1936,7 @@
       "test_dependents_count": 0
     },
     "scratch/commit_history.ps1": {
-      "complexity": 0,
+      "complexity": 4,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1664,7 +1954,7 @@
       "test_dependents_count": 0
     },
     "scratch/test_api.py": {
-      "complexity": 0,
+      "complexity": 4,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1682,7 +1972,7 @@
       "test_dependents_count": 0
     },
     "src/components/command-palette.tsx": {
-      "complexity": 0,
+      "complexity": 28,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1699,170 +1989,418 @@
       "test_dependents": [],
       "test_dependents_count": 0
     },
-    "src/components/hero-extras.tsx": {
-      "complexity": 0,
-      "coupling": 0.0,
-      "dependencies": [],
-      "dependencies_count": 0,
+    "src/components/mf/home.tsx": {
+      "complexity": 93,
+      "coupling": 0.1,
+      "dependencies": [
+        "src/components/mf/site-layout.tsx"
+      ],
+      "dependencies_count": 1,
       "dependents": [],
       "dependents_count": 0,
-      "id": "src/components/hero-extras.tsx",
-      "is_entry": false,
-      "label": "hero-extras",
-      "line_count": 186,
-      "path": "src/components/hero-extras.tsx",
+      "id": "src/components/mf/home.tsx",
+      "is_entry": true,
+      "label": "home",
+      "line_count": 1528,
+      "path": "src/components/mf/home.tsx",
       "risk_level": "Low",
       "source_dependents": [],
       "source_dependents_count": 0,
       "test_dependents": [],
       "test_dependents_count": 0
     },
-    "src/components/landing-sections.tsx": {
-      "complexity": 0,
-      "coupling": 0.0,
-      "dependencies": [],
-      "dependencies_count": 0,
+    "src/components/mf/how-it-works-page.tsx": {
+      "complexity": 8,
+      "coupling": 0.1,
+      "dependencies": [
+        "src/components/mf/site-layout.tsx"
+      ],
+      "dependencies_count": 1,
       "dependents": [],
       "dependents_count": 0,
-      "id": "src/components/landing-sections.tsx",
-      "is_entry": false,
-      "label": "landing-sections",
-      "line_count": 323,
-      "path": "src/components/landing-sections.tsx",
+      "id": "src/components/mf/how-it-works-page.tsx",
+      "is_entry": true,
+      "label": "how-it-works-page",
+      "line_count": 457,
+      "path": "src/components/mf/how-it-works-page.tsx",
       "risk_level": "Low",
       "source_dependents": [],
       "source_dependents_count": 0,
       "test_dependents": [],
       "test_dependents_count": 0
     },
-    "src/components/loading-showcase.tsx": {
-      "complexity": 0,
-      "coupling": 0.0,
-      "dependencies": [],
-      "dependencies_count": 0,
+    "src/components/mf/pages.tsx": {
+      "complexity": 26,
+      "coupling": 0.1,
+      "dependencies": [
+        "src/components/mf/site-layout.tsx"
+      ],
+      "dependencies_count": 1,
       "dependents": [],
       "dependents_count": 0,
-      "id": "src/components/loading-showcase.tsx",
-      "is_entry": false,
-      "label": "loading-showcase",
-      "line_count": 515,
-      "path": "src/components/loading-showcase.tsx",
+      "id": "src/components/mf/pages.tsx",
+      "is_entry": true,
+      "label": "pages",
+      "line_count": 1139,
+      "path": "src/components/mf/pages.tsx",
       "risk_level": "Low",
       "source_dependents": [],
       "source_dependents_count": 0,
       "test_dependents": [],
       "test_dependents_count": 0
     },
-    "src/components/nav.tsx": {
-      "complexity": 0,
-      "coupling": 0.0,
+    "src/components/mf/site-layout.tsx": {
+      "complexity": 23,
+      "coupling": 0.3,
       "dependencies": [],
       "dependencies_count": 0,
-      "dependents": [],
-      "dependents_count": 0,
-      "id": "src/components/nav.tsx",
+      "dependents": [
+        "src/components/mf/home.tsx",
+        "src/components/mf/how-it-works-page.tsx",
+        "src/components/mf/pages.tsx"
+      ],
+      "dependents_count": 3,
+      "id": "src/components/mf/site-layout.tsx",
       "is_entry": false,
-      "label": "nav",
-      "line_count": 117,
-      "path": "src/components/nav.tsx",
-      "risk_level": "Low",
-      "source_dependents": [],
-      "source_dependents_count": 0,
+      "label": "site-layout",
+      "line_count": 154,
+      "path": "src/components/mf/site-layout.tsx",
+      "risk_level": "Medium",
+      "source_dependents": [
+        "src/components/mf/home.tsx",
+        "src/components/mf/how-it-works-page.tsx",
+        "src/components/mf/pages.tsx"
+      ],
+      "source_dependents_count": 3,
       "test_dependents": [],
       "test_dependents_count": 0
     },
-    "src/components/neural-mesh.tsx": {
-      "complexity": 0,
-      "coupling": 0.0,
-      "dependencies": [],
-      "dependencies_count": 0,
-      "dependents": [],
-      "dependents_count": 0,
-      "id": "src/components/neural-mesh.tsx",
+    "src/components/studio/architecture-canvas.tsx": {
+      "complexity": 76,
+      "coupling": 0.3,
+      "dependencies": [
+        "src/components/studio/studio-types.ts",
+        "src/components/studio/code-viewer-drawer.tsx"
+      ],
+      "dependencies_count": 2,
+      "dependents": [
+        "src/components/studio/studio-workspace.tsx"
+      ],
+      "dependents_count": 1,
+      "id": "src/components/studio/architecture-canvas.tsx",
       "is_entry": false,
-      "label": "neural-mesh",
-      "line_count": 109,
-      "path": "src/components/neural-mesh.tsx",
-      "risk_level": "Low",
-      "source_dependents": [],
-      "source_dependents_count": 0,
+      "label": "architecture-canvas",
+      "line_count": 865,
+      "path": "src/components/studio/architecture-canvas.tsx",
+      "risk_level": "Medium",
+      "source_dependents": [
+        "src/components/studio/studio-workspace.tsx"
+      ],
+      "source_dependents_count": 1,
       "test_dependents": [],
       "test_dependents_count": 0
     },
-    "src/components/paper-crumple.tsx": {
-      "complexity": 0,
-      "coupling": 0.0,
-      "dependencies": [],
-      "dependencies_count": 0,
-      "dependents": [],
-      "dependents_count": 0,
-      "id": "src/components/paper-crumple.tsx",
+    "src/components/studio/code-flow-stepper.tsx": {
+      "complexity": 28,
+      "coupling": 0.2,
+      "dependencies": [
+        "src/components/studio/studio-types.ts"
+      ],
+      "dependencies_count": 1,
+      "dependents": [
+        "src/components/studio/studio-workspace.tsx"
+      ],
+      "dependents_count": 1,
+      "id": "src/components/studio/code-flow-stepper.tsx",
       "is_entry": false,
-      "label": "paper-crumple",
-      "line_count": 292,
-      "path": "src/components/paper-crumple.tsx",
+      "label": "code-flow-stepper",
+      "line_count": 473,
+      "path": "src/components/studio/code-flow-stepper.tsx",
       "risk_level": "Low",
-      "source_dependents": [],
-      "source_dependents_count": 0,
+      "source_dependents": [
+        "src/components/studio/studio-workspace.tsx"
+      ],
+      "source_dependents_count": 1,
       "test_dependents": [],
       "test_dependents_count": 0
     },
-    "src/components/portal-transform.tsx": {
+    "src/components/studio/code-viewer-drawer.tsx": {
+      "complexity": 64,
+      "coupling": 0.2,
+      "dependencies": [
+        "src/components/studio/studio-types.ts"
+      ],
+      "dependencies_count": 1,
+      "dependents": [
+        "src/components/studio/architecture-canvas.tsx"
+      ],
+      "dependents_count": 1,
+      "id": "src/components/studio/code-viewer-drawer.tsx",
+      "is_entry": false,
+      "label": "code-viewer-drawer",
+      "line_count": 629,
+      "path": "src/components/studio/code-viewer-drawer.tsx",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/components/studio/architecture-canvas.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/studio/copilot-rail.tsx": {
+      "complexity": 100,
+      "coupling": 0.2,
+      "dependencies": [
+        "src/components/studio/studio-types.ts"
+      ],
+      "dependencies_count": 1,
+      "dependents": [
+        "src/components/studio/studio-workspace.tsx"
+      ],
+      "dependents_count": 1,
+      "id": "src/components/studio/copilot-rail.tsx",
+      "is_entry": false,
+      "label": "copilot-rail",
+      "line_count": 1111,
+      "path": "src/components/studio/copilot-rail.tsx",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/components/studio/studio-workspace.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/studio/drift-timeline-view.tsx": {
+      "complexity": 49,
+      "coupling": 0.2,
+      "dependencies": [
+        "src/components/studio/studio-types.ts"
+      ],
+      "dependencies_count": 1,
+      "dependents": [
+        "src/components/studio/studio-workspace.tsx"
+      ],
+      "dependents_count": 1,
+      "id": "src/components/studio/drift-timeline-view.tsx",
+      "is_entry": false,
+      "label": "drift-timeline-view",
+      "line_count": 662,
+      "path": "src/components/studio/drift-timeline-view.tsx",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/components/studio/studio-workspace.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/studio/explorer-rail.tsx": {
+      "complexity": 28,
+      "coupling": 0.2,
+      "dependencies": [
+        "src/components/studio/studio-types.ts"
+      ],
+      "dependencies_count": 1,
+      "dependents": [
+        "src/components/studio/studio-workspace.tsx"
+      ],
+      "dependents_count": 1,
+      "id": "src/components/studio/explorer-rail.tsx",
+      "is_entry": false,
+      "label": "explorer-rail",
+      "line_count": 355,
+      "path": "src/components/studio/explorer-rail.tsx",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/components/studio/studio-workspace.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/studio/export-utils.test.ts": {
       "complexity": 1,
-      "coupling": 0.0,
-      "dependencies": [],
-      "dependencies_count": 0,
+      "coupling": 0.1,
+      "dependencies": [
+        "src/components/studio/export-utils.ts"
+      ],
+      "dependencies_count": 1,
       "dependents": [],
       "dependents_count": 0,
-      "id": "src/components/portal-transform.tsx",
+      "id": "src/components/studio/export-utils.test.ts",
       "is_entry": false,
-      "label": "portal-transform",
-      "line_count": 1154,
-      "path": "src/components/portal-transform.tsx",
+      "label": "export-utils.test",
+      "line_count": 44,
+      "path": "src/components/studio/export-utils.test.ts",
       "risk_level": "Low",
       "source_dependents": [],
       "source_dependents_count": 0,
       "test_dependents": [],
       "test_dependents_count": 0
     },
-    "src/components/repo-hub.tsx": {
-      "complexity": 0,
-      "coupling": 0.0,
+    "src/components/studio/export-utils.ts": {
+      "complexity": 5,
+      "coupling": 0.2,
       "dependencies": [],
       "dependencies_count": 0,
+      "dependents": [
+        "src/components/studio/export-utils.test.ts",
+        "src/components/studio/studio-workspace.tsx"
+      ],
+      "dependents_count": 2,
+      "id": "src/components/studio/export-utils.ts",
+      "is_entry": false,
+      "label": "export-utils",
+      "line_count": 31,
+      "path": "src/components/studio/export-utils.ts",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/components/studio/studio-workspace.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [
+        "src/components/studio/export-utils.test.ts"
+      ],
+      "test_dependents_count": 1
+    },
+    "src/components/studio/onboarding-doc-view.tsx": {
+      "complexity": 9,
+      "coupling": 0.1,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [
+        "src/components/studio/studio-workspace.tsx"
+      ],
+      "dependents_count": 1,
+      "id": "src/components/studio/onboarding-doc-view.tsx",
+      "is_entry": false,
+      "label": "onboarding-doc-view",
+      "line_count": 160,
+      "path": "src/components/studio/onboarding-doc-view.tsx",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/components/studio/studio-workspace.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/studio/studio-topbar.tsx": {
+      "complexity": 19,
+      "coupling": 0.2,
+      "dependencies": [
+        "src/components/studio/studio-types.ts"
+      ],
+      "dependencies_count": 1,
+      "dependents": [
+        "src/components/studio/studio-workspace.tsx"
+      ],
+      "dependents_count": 1,
+      "id": "src/components/studio/studio-topbar.tsx",
+      "is_entry": false,
+      "label": "studio-topbar",
+      "line_count": 413,
+      "path": "src/components/studio/studio-topbar.tsx",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/components/studio/studio-workspace.tsx"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/studio/studio-types.ts": {
+      "complexity": 1,
+      "coupling": 0.8,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [
+        "src/components/studio/architecture-canvas.tsx",
+        "src/components/studio/code-flow-stepper.tsx",
+        "src/components/studio/code-viewer-drawer.tsx",
+        "src/components/studio/copilot-rail.tsx",
+        "src/components/studio/drift-timeline-view.tsx",
+        "src/components/studio/explorer-rail.tsx",
+        "src/components/studio/studio-topbar.tsx",
+        "src/components/studio/studio-workspace.tsx"
+      ],
+      "dependents_count": 8,
+      "first_30_lines": "export type StudioTab = \"architecture\" | \"flow\" | \"drift\" | \"doc\";\nexport type ExplorerTab = \"files\" | \"modules\" | \"entrypoints\";\n\nexport interface GitCommitItem {\n  sha: string;\n  short_sha: string;\n  message: string;\n  full_message: string;\n  author: string;\n  author_avatar?: string | null;\n  date: string;\n  files_changed?: number;\n  insertions?: number;\n  deletions?: number;\n  risk_level?: \"low\" | \"moderate\" | \"high\";\n  drift_summary?: string;\n  impacted_files?: string[];\n  new_dependencies?: string[];\n}\n\nexport interface GraphNode {\n  id: string;\n  label: string;\n  path: string;\n  language?: string;\n  line_count?: number;\n  complexity?: number;\n  coupling?: number;\n  is_entry?: boolean;\n  x?: number;",
+      "id": "src/components/studio/studio-types.ts",
+      "is_entry": false,
+      "label": "studio-types",
+      "line_count": 64,
+      "path": "src/components/studio/studio-types.ts",
+      "risk_level": "High",
+      "source_dependents": [
+        "src/components/studio/architecture-canvas.tsx",
+        "src/components/studio/code-flow-stepper.tsx",
+        "src/components/studio/code-viewer-drawer.tsx",
+        "src/components/studio/copilot-rail.tsx",
+        "src/components/studio/drift-timeline-view.tsx",
+        "src/components/studio/explorer-rail.tsx",
+        "src/components/studio/studio-topbar.tsx",
+        "src/components/studio/studio-workspace.tsx"
+      ],
+      "source_dependents_count": 8,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/studio/studio-workspace.tsx": {
+      "complexity": 45,
+      "coupling": 1.0,
+      "dependencies": [
+        "src/components/studio/export-utils.ts",
+        "src/components/studio/copilot-rail.tsx",
+        "src/components/studio/telemetry-modal.tsx",
+        "src/components/studio/studio-topbar.tsx",
+        "src/components/studio/code-flow-stepper.tsx",
+        "src/components/studio/studio-types.ts",
+        "src/components/studio/drift-timeline-view.tsx",
+        "src/components/studio/architecture-canvas.tsx",
+        "src/components/studio/explorer-rail.tsx",
+        "src/components/studio/onboarding-doc-view.tsx"
+      ],
+      "dependencies_count": 10,
       "dependents": [],
       "dependents_count": 0,
-      "id": "src/components/repo-hub.tsx",
-      "is_entry": false,
-      "label": "repo-hub",
-      "line_count": 398,
-      "path": "src/components/repo-hub.tsx",
+      "id": "src/components/studio/studio-workspace.tsx",
+      "is_entry": true,
+      "label": "studio-workspace",
+      "line_count": 478,
+      "path": "src/components/studio/studio-workspace.tsx",
       "risk_level": "Low",
       "source_dependents": [],
       "source_dependents_count": 0,
       "test_dependents": [],
       "test_dependents_count": 0
     },
-    "src/components/scroll-narrative.tsx": {
-      "complexity": 0,
-      "coupling": 0.0,
+    "src/components/studio/telemetry-modal.tsx": {
+      "complexity": 59,
+      "coupling": 0.1,
       "dependencies": [],
       "dependencies_count": 0,
-      "dependents": [],
-      "dependents_count": 0,
-      "id": "src/components/scroll-narrative.tsx",
+      "dependents": [
+        "src/components/studio/studio-workspace.tsx"
+      ],
+      "dependents_count": 1,
+      "id": "src/components/studio/telemetry-modal.tsx",
       "is_entry": false,
-      "label": "scroll-narrative",
-      "line_count": 390,
-      "path": "src/components/scroll-narrative.tsx",
+      "label": "telemetry-modal",
+      "line_count": 1186,
+      "path": "src/components/studio/telemetry-modal.tsx",
       "risk_level": "Low",
-      "source_dependents": [],
-      "source_dependents_count": 0,
+      "source_dependents": [
+        "src/components/studio/studio-workspace.tsx"
+      ],
+      "source_dependents_count": 1,
       "test_dependents": [],
       "test_dependents_count": 0
     },
     "src/components/ui/accordion.tsx": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1879,8 +2417,26 @@
       "test_dependents": [],
       "test_dependents_count": 0
     },
+    "src/components/ui/activity-badge.tsx": {
+      "complexity": 37,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/ui/activity-badge.tsx",
+      "is_entry": false,
+      "label": "activity-badge",
+      "line_count": 225,
+      "path": "src/components/ui/activity-badge.tsx",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
     "src/components/ui/alert-dialog.tsx": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1898,7 +2454,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/alert.tsx": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1915,8 +2471,26 @@
       "test_dependents": [],
       "test_dependents_count": 0
     },
+    "src/components/ui/animated-path.tsx": {
+      "complexity": 12,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/ui/animated-path.tsx",
+      "is_entry": false,
+      "label": "animated-path",
+      "line_count": 279,
+      "path": "src/components/ui/animated-path.tsx",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
     "src/components/ui/aspect-ratio.tsx": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1934,7 +2508,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/avatar.tsx": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1952,7 +2526,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/badge.tsx": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1970,7 +2544,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/breadcrumb.tsx": {
-      "complexity": 0,
+      "complexity": 3,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -1987,8 +2561,26 @@
       "test_dependents": [],
       "test_dependents_count": 0
     },
+    "src/components/ui/button-group.tsx": {
+      "complexity": 2,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/ui/button-group.tsx",
+      "is_entry": false,
+      "label": "button-group",
+      "line_count": 84,
+      "path": "src/components/ui/button-group.tsx",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
     "src/components/ui/button.tsx": {
-      "complexity": 0,
+      "complexity": 2,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2006,7 +2598,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/calendar.tsx": {
-      "complexity": 0,
+      "complexity": 9,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2023,8 +2615,26 @@
       "test_dependents": [],
       "test_dependents_count": 0
     },
+    "src/components/ui/card-shuffle-showcase.tsx": {
+      "complexity": 32,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/ui/card-shuffle-showcase.tsx",
+      "is_entry": false,
+      "label": "card-shuffle-showcase",
+      "line_count": 333,
+      "path": "src/components/ui/card-shuffle-showcase.tsx",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
     "src/components/ui/card.tsx": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2042,7 +2652,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/carousel.tsx": {
-      "complexity": 0,
+      "complexity": 18,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2060,7 +2670,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/chart.tsx": {
-      "complexity": 0,
+      "complexity": 57,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2078,7 +2688,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/checkbox.tsx": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2096,7 +2706,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/collapsible.tsx": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2114,7 +2724,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/command.tsx": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2132,7 +2742,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/context-menu.tsx": {
-      "complexity": 0,
+      "complexity": 4,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2149,8 +2759,26 @@
       "test_dependents": [],
       "test_dependents_count": 0
     },
+    "src/components/ui/curvy-showcase.tsx": {
+      "complexity": 28,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/ui/curvy-showcase.tsx",
+      "is_entry": false,
+      "label": "curvy-showcase",
+      "line_count": 289,
+      "path": "src/components/ui/curvy-showcase.tsx",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
     "src/components/ui/dialog.tsx": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2168,7 +2796,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/drawer.tsx": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2186,7 +2814,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/dropdown-menu.tsx": {
-      "complexity": 0,
+      "complexity": 4,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2203,8 +2831,62 @@
       "test_dependents": [],
       "test_dependents_count": 0
     },
+    "src/components/ui/faq-section.tsx": {
+      "complexity": 10,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/ui/faq-section.tsx",
+      "is_entry": false,
+      "label": "faq-section",
+      "line_count": 147,
+      "path": "src/components/ui/faq-section.tsx",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/ui/floating-dock.tsx": {
+      "complexity": 35,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/ui/floating-dock.tsx",
+      "is_entry": false,
+      "label": "floating-dock",
+      "line_count": 365,
+      "path": "src/components/ui/floating-dock.tsx",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/ui/footer-field.tsx": {
+      "complexity": 65,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/ui/footer-field.tsx",
+      "is_entry": false,
+      "label": "footer-field",
+      "line_count": 455,
+      "path": "src/components/ui/footer-field.tsx",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
     "src/components/ui/form.tsx": {
-      "complexity": 0,
+      "complexity": 7,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2221,8 +2903,26 @@
       "test_dependents": [],
       "test_dependents_count": 0
     },
+    "src/components/ui/hoopshots-404.tsx": {
+      "complexity": 100,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/ui/hoopshots-404.tsx",
+      "is_entry": false,
+      "label": "hoopshots-404",
+      "line_count": 1771,
+      "path": "src/components/ui/hoopshots-404.tsx",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
     "src/components/ui/hover-card.tsx": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2239,8 +2939,26 @@
       "test_dependents": [],
       "test_dependents_count": 0
     },
+    "src/components/ui/input-group.tsx": {
+      "complexity": 3,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/ui/input-group.tsx",
+      "is_entry": false,
+      "label": "input-group",
+      "line_count": 171,
+      "path": "src/components/ui/input-group.tsx",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
     "src/components/ui/input-otp.tsx": {
-      "complexity": 0,
+      "complexity": 3,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2258,7 +2976,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/input.tsx": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2276,7 +2994,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/label.tsx": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2294,7 +3012,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/menubar.tsx": {
-      "complexity": 0,
+      "complexity": 4,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2311,8 +3029,44 @@
       "test_dependents": [],
       "test_dependents_count": 0
     },
+    "src/components/ui/morph-text.tsx": {
+      "complexity": 20,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/ui/morph-text.tsx",
+      "is_entry": false,
+      "label": "morph-text",
+      "line_count": 199,
+      "path": "src/components/ui/morph-text.tsx",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/ui/motion-overlay-menu.tsx": {
+      "complexity": 100,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/ui/motion-overlay-menu.tsx",
+      "is_entry": false,
+      "label": "motion-overlay-menu",
+      "line_count": 1179,
+      "path": "src/components/ui/motion-overlay-menu.tsx",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
     "src/components/ui/navigation-menu.tsx": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2330,7 +3084,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/pagination.tsx": {
-      "complexity": 0,
+      "complexity": 3,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2347,8 +3101,44 @@
       "test_dependents": [],
       "test_dependents_count": 0
     },
+    "src/components/ui/plumbline.tsx": {
+      "complexity": 17,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/ui/plumbline.tsx",
+      "is_entry": false,
+      "label": "plumbline",
+      "line_count": 398,
+      "path": "src/components/ui/plumbline.tsx",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/ui/polaroid-carousel.tsx": {
+      "complexity": 68,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/ui/polaroid-carousel.tsx",
+      "is_entry": false,
+      "label": "polaroid-carousel",
+      "line_count": 575,
+      "path": "src/components/ui/polaroid-carousel.tsx",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
     "src/components/ui/popover.tsx": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2366,7 +3156,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/progress.tsx": {
-      "complexity": 0,
+      "complexity": 2,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2384,7 +3174,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/radio-group.tsx": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2402,7 +3192,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/resizable.tsx": {
-      "complexity": 0,
+      "complexity": 2,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2420,7 +3210,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/scroll-area.tsx": {
-      "complexity": 0,
+      "complexity": 3,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2438,7 +3228,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/select.tsx": {
-      "complexity": 0,
+      "complexity": 3,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2456,7 +3246,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/separator.tsx": {
-      "complexity": 0,
+      "complexity": 2,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2474,7 +3264,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/sheet.tsx": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2492,7 +3282,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/sidebar.tsx": {
-      "complexity": 0,
+      "complexity": 33,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2510,7 +3300,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/skeleton.tsx": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2528,7 +3318,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/slider.tsx": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2545,8 +3335,26 @@
       "test_dependents": [],
       "test_dependents_count": 0
     },
+    "src/components/ui/smooth-scroll.tsx": {
+      "complexity": 78,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/ui/smooth-scroll.tsx",
+      "is_entry": false,
+      "label": "smooth-scroll",
+      "line_count": 449,
+      "path": "src/components/ui/smooth-scroll.tsx",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
     "src/components/ui/sonner.tsx": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2563,8 +3371,44 @@
       "test_dependents": [],
       "test_dependents_count": 0
     },
+    "src/components/ui/spinner.tsx": {
+      "complexity": 1,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/ui/spinner.tsx",
+      "is_entry": false,
+      "label": "spinner",
+      "line_count": 17,
+      "path": "src/components/ui/spinner.tsx",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/components/ui/stats-section.tsx": {
+      "complexity": 24,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/ui/stats-section.tsx",
+      "is_entry": false,
+      "label": "stats-section",
+      "line_count": 316,
+      "path": "src/components/ui/stats-section.tsx",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
     "src/components/ui/switch.tsx": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2582,7 +3426,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/table.tsx": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2600,7 +3444,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/tabs.tsx": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2618,7 +3462,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/textarea.tsx": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2636,7 +3480,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/toggle-group.tsx": {
-      "complexity": 0,
+      "complexity": 3,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2654,7 +3498,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/toggle.tsx": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2672,7 +3516,7 @@
       "test_dependents_count": 0
     },
     "src/components/ui/tooltip.tsx": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2689,8 +3533,44 @@
       "test_dependents": [],
       "test_dependents_count": 0
     },
+    "src/components/ui/venom-button.tsx": {
+      "complexity": 100,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/components/ui/venom-button.tsx",
+      "is_entry": false,
+      "label": "venom-button",
+      "line_count": 1413,
+      "path": "src/components/ui/venom-button.tsx",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/hooks/use-graph-viewport.ts": {
+      "complexity": 11,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/hooks/use-graph-viewport.ts",
+      "is_entry": false,
+      "label": "use-graph-viewport",
+      "line_count": 120,
+      "path": "src/hooks/use-graph-viewport.ts",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
     "src/hooks/use-mobile.tsx": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2708,7 +3588,7 @@
       "test_dependents_count": 0
     },
     "src/hooks/useAnalysis.ts": {
-      "complexity": 0,
+      "complexity": 25,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2725,8 +3605,26 @@
       "test_dependents": [],
       "test_dependents_count": 0
     },
+    "src/hooks/useAuth.ts": {
+      "complexity": 17,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/hooks/useAuth.ts",
+      "is_entry": false,
+      "label": "useAuth",
+      "line_count": 110,
+      "path": "src/hooks/useAuth.ts",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
     "src/hooks/useChat.ts": {
-      "complexity": 0,
+      "complexity": 42,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2735,7 +3633,7 @@
       "id": "src/hooks/useChat.ts",
       "is_entry": false,
       "label": "useChat",
-      "line_count": 144,
+      "line_count": 234,
       "path": "src/hooks/useChat.ts",
       "risk_level": "Low",
       "source_dependents": [],
@@ -2743,27 +3641,51 @@
       "test_dependents": [],
       "test_dependents_count": 0
     },
-    "src/lib/api.ts": {
-      "complexity": 0,
-      "coupling": 0.0,
-      "dependencies": [],
-      "dependencies_count": 0,
+    "src/lib/api.test.ts": {
+      "complexity": 1,
+      "coupling": 0.1,
+      "dependencies": [
+        "src/lib/api.ts"
+      ],
+      "dependencies_count": 1,
       "dependents": [],
       "dependents_count": 0,
-      "id": "src/lib/api.ts",
+      "id": "src/lib/api.test.ts",
       "is_entry": false,
-      "label": "api",
-      "line_count": 182,
-      "path": "src/lib/api.ts",
+      "label": "api.test",
+      "line_count": 31,
+      "path": "src/lib/api.test.ts",
       "risk_level": "Low",
       "source_dependents": [],
       "source_dependents_count": 0,
       "test_dependents": [],
       "test_dependents_count": 0
     },
+    "src/lib/api.ts": {
+      "complexity": 14,
+      "coupling": 0.1,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [
+        "src/lib/api.test.ts"
+      ],
+      "dependents_count": 1,
+      "id": "src/lib/api.ts",
+      "is_entry": false,
+      "label": "api",
+      "line_count": 248,
+      "path": "src/lib/api.ts",
+      "risk_level": "Core file, imported by tests only",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [
+        "src/lib/api.test.ts"
+      ],
+      "test_dependents_count": 1
+    },
     "src/lib/error-capture.ts": {
-      "complexity": 0,
-      "coupling": 0.143,
+      "complexity": 5,
+      "coupling": 0.1,
       "dependencies": [],
       "dependencies_count": 0,
       "dependents": [
@@ -2784,8 +3706,8 @@
       "test_dependents_count": 0
     },
     "src/lib/error-page.ts": {
-      "complexity": 0,
-      "coupling": 0.286,
+      "complexity": 1,
+      "coupling": 0.2,
       "dependencies": [],
       "dependencies_count": 0,
       "dependents": [
@@ -2808,7 +3730,7 @@
       "test_dependents_count": 0
     },
     "src/lib/repo-history.ts": {
-      "complexity": 0,
+      "complexity": 49,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -2817,7 +3739,7 @@
       "id": "src/lib/repo-history.ts",
       "is_entry": false,
       "label": "repo-history",
-      "line_count": 142,
+      "line_count": 208,
       "path": "src/lib/repo-history.ts",
       "risk_level": "Low",
       "source_dependents": [],
@@ -2825,18 +3747,60 @@
       "test_dependents": [],
       "test_dependents_count": 0
     },
+    "src/lib/utils.test.ts": {
+      "complexity": 2,
+      "coupling": 0.1,
+      "dependencies": [
+        "src/lib/utils.ts"
+      ],
+      "dependencies_count": 1,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "src/lib/utils.test.ts",
+      "is_entry": false,
+      "label": "utils.test",
+      "line_count": 41,
+      "path": "src/lib/utils.test.ts",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
     "src/lib/utils.ts": {
-      "complexity": 0,
+      "complexity": 13,
+      "coupling": 0.1,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [
+        "src/lib/utils.test.ts"
+      ],
+      "dependents_count": 1,
+      "id": "src/lib/utils.ts",
+      "is_entry": false,
+      "label": "utils",
+      "line_count": 61,
+      "path": "src/lib/utils.ts",
+      "risk_level": "Core file, imported by tests only",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [
+        "src/lib/utils.test.ts"
+      ],
+      "test_dependents_count": 1
+    },
+    "src/monoform.css": {
+      "complexity": 4,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
       "dependents": [],
       "dependents_count": 0,
-      "id": "src/lib/utils.ts",
+      "id": "src/monoform.css",
       "is_entry": false,
-      "label": "utils",
-      "line_count": 7,
-      "path": "src/lib/utils.ts",
+      "label": "monoform",
+      "line_count": 1998,
+      "path": "src/monoform.css",
       "risk_level": "Low",
       "source_dependents": [],
       "source_dependents_count": 0,
@@ -2844,17 +3808,18 @@
       "test_dependents_count": 0
     },
     "src/routeTree.gen.ts": {
-      "complexity": 0,
-      "coupling": 1.0,
+      "complexity": 1,
+      "coupling": 0.8,
       "dependencies": [
-        "src/routes/__root.tsx",
         "src/start.ts",
+        "src/routes/features.tsx",
+        "src/routes/how-it-works.tsx",
         "src/router.tsx",
-        "src/routes/dashboard.tsx",
-        "src/routes/pricing.tsx",
-        "src/routes/index.tsx"
+        "src/routes/index.tsx",
+        "src/routes/__root.tsx",
+        "src/routes/dashboard.tsx"
       ],
-      "dependencies_count": 6,
+      "dependencies_count": 7,
       "dependents": [
         "src/router.tsx"
       ],
@@ -2862,7 +3827,7 @@
       "id": "src/routeTree.gen.ts",
       "is_entry": false,
       "label": "routeTree.gen",
-      "line_count": 106,
+      "line_count": 124,
       "path": "src/routeTree.gen.ts",
       "risk_level": "Medium",
       "source_dependents": [
@@ -2873,8 +3838,8 @@
       "test_dependents_count": 0
     },
     "src/router.tsx": {
-      "complexity": 0,
-      "coupling": 0.286,
+      "complexity": 1,
+      "coupling": 0.2,
       "dependencies": [
         "src/routeTree.gen.ts"
       ],
@@ -2897,8 +3862,8 @@
       "test_dependents_count": 0
     },
     "src/routes/__root.tsx": {
-      "complexity": 0,
-      "coupling": 0.143,
+      "complexity": 7,
+      "coupling": 0.1,
       "dependencies": [],
       "dependencies_count": 0,
       "dependents": [
@@ -2908,7 +3873,7 @@
       "id": "src/routes/__root.tsx",
       "is_entry": false,
       "label": "__root",
-      "line_count": 121,
+      "line_count": 133,
       "path": "src/routes/__root.tsx",
       "risk_level": "Low",
       "source_dependents": [
@@ -2919,8 +3884,8 @@
       "test_dependents_count": 0
     },
     "src/routes/dashboard.tsx": {
-      "complexity": 0,
-      "coupling": 0.143,
+      "complexity": 71,
+      "coupling": 0.1,
       "dependencies": [],
       "dependencies_count": 0,
       "dependents": [
@@ -2930,7 +3895,7 @@
       "id": "src/routes/dashboard.tsx",
       "is_entry": false,
       "label": "dashboard",
-      "line_count": 225,
+      "line_count": 1075,
       "path": "src/routes/dashboard.tsx",
       "risk_level": "Low",
       "source_dependents": [
@@ -2940,9 +3905,53 @@
       "test_dependents": [],
       "test_dependents_count": 0
     },
+    "src/routes/features.tsx": {
+      "complexity": 1,
+      "coupling": 0.1,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [
+        "src/routeTree.gen.ts"
+      ],
+      "dependents_count": 1,
+      "id": "src/routes/features.tsx",
+      "is_entry": false,
+      "label": "features",
+      "line_count": 17,
+      "path": "src/routes/features.tsx",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/routeTree.gen.ts"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
+    "src/routes/how-it-works.tsx": {
+      "complexity": 1,
+      "coupling": 0.1,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [
+        "src/routeTree.gen.ts"
+      ],
+      "dependents_count": 1,
+      "id": "src/routes/how-it-works.tsx",
+      "is_entry": false,
+      "label": "how-it-works",
+      "line_count": 16,
+      "path": "src/routes/how-it-works.tsx",
+      "risk_level": "Low",
+      "source_dependents": [
+        "src/routeTree.gen.ts"
+      ],
+      "source_dependents_count": 1,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
     "src/routes/index.tsx": {
-      "complexity": 0,
-      "coupling": 0.143,
+      "complexity": 1,
+      "coupling": 0.1,
       "dependencies": [],
       "dependencies_count": 0,
       "dependents": [
@@ -2952,7 +3961,7 @@
       "id": "src/routes/index.tsx",
       "is_entry": false,
       "label": "index",
-      "line_count": 560,
+      "line_count": 17,
       "path": "src/routes/index.tsx",
       "risk_level": "Low",
       "source_dependents": [
@@ -2962,34 +3971,12 @@
       "test_dependents": [],
       "test_dependents_count": 0
     },
-    "src/routes/pricing.tsx": {
-      "complexity": 0,
-      "coupling": 0.143,
-      "dependencies": [],
-      "dependencies_count": 0,
-      "dependents": [
-        "src/routeTree.gen.ts"
-      ],
-      "dependents_count": 1,
-      "id": "src/routes/pricing.tsx",
-      "is_entry": false,
-      "label": "pricing",
-      "line_count": 294,
-      "path": "src/routes/pricing.tsx",
-      "risk_level": "Low",
-      "source_dependents": [
-        "src/routeTree.gen.ts"
-      ],
-      "source_dependents_count": 1,
-      "test_dependents": [],
-      "test_dependents_count": 0
-    },
     "src/server.ts": {
-      "complexity": 0,
-      "coupling": 0.286,
+      "complexity": 18,
+      "coupling": 0.2,
       "dependencies": [
-        "src/lib/error-page.ts",
-        "src/lib/error-capture.ts"
+        "src/lib/error-capture.ts",
+        "src/lib/error-page.ts"
       ],
       "dependencies_count": 2,
       "dependents": [],
@@ -3006,8 +3993,8 @@
       "test_dependents_count": 0
     },
     "src/start.ts": {
-      "complexity": 0,
-      "coupling": 0.286,
+      "complexity": 5,
+      "coupling": 0.2,
       "dependencies": [
         "src/lib/error-page.ts"
       ],
@@ -3030,7 +4017,7 @@
       "test_dependents_count": 0
     },
     "src/styles.css": {
-      "complexity": 0,
+      "complexity": 5,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -3039,7 +4026,7 @@
       "id": "src/styles.css",
       "is_entry": false,
       "label": "styles",
-      "line_count": 842,
+      "line_count": 970,
       "path": "src/styles.css",
       "risk_level": "Low",
       "source_dependents": [],
@@ -3048,7 +4035,7 @@
       "test_dependents_count": 0
     },
     "tsconfig.json": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -3066,7 +4053,7 @@
       "test_dependents_count": 0
     },
     "vite.config.ts": {
-      "complexity": 0,
+      "complexity": 2,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -3083,8 +4070,26 @@
       "test_dependents": [],
       "test_dependents_count": 0
     },
+    "vitest.config.ts": {
+      "complexity": 1,
+      "coupling": 0.0,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [],
+      "dependents_count": 0,
+      "id": "vitest.config.ts",
+      "is_entry": false,
+      "label": "vitest.config",
+      "line_count": 12,
+      "path": "vitest.config.ts",
+      "risk_level": "Low",
+      "source_dependents": [],
+      "source_dependents_count": 0,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    },
     "wrangler.jsonc": {
-      "complexity": 0,
+      "complexity": 1,
       "coupling": 0.0,
       "dependencies": [],
       "dependencies_count": 0,
@@ -3104,44 +4109,44 @@
   },
   "folder_breakdown": [
     {
-      "file_count": "68",
-      "path": "backend",
-      "sample_files": "__init__.py, chunker.py, celery_app.py"
-    },
-    {
-      "file_count": "56",
+      "file_count": "82",
       "path": "src/components",
-      "sample_files": "input.tsx, nav.tsx, loading-showcase.tsx"
+      "sample_files": "command-palette.tsx, home.tsx, how-it-works-page.tsx"
     },
     {
-      "file_count": "13",
+      "file_count": "72",
+      "path": "backend",
+      "sample_files": ".env.example, Dockerfile, alembic.ini"
+    },
+    {
+      "file_count": "14",
       "path": "root",
-      "sample_files": "docker-compose.yml, package.json, .prettierignore"
+      "sample_files": ".gitignore, .prettierignore, .prettierrc"
     },
     {
-      "file_count": "5",
+      "file_count": "7",
+      "path": "launch-video",
+      "sample_files": "AGENTS.md, CLAUDE.md, generate_soundtrack.py"
+    },
+    {
+      "file_count": "7",
       "path": "src/lib",
-      "sample_files": "error-capture.ts, api.ts, error-page.ts"
+      "sample_files": "api.test.ts, api.ts, error-capture.ts"
+    },
+    {
+      "file_count": "6",
+      "path": "src",
+      "sample_files": "monoform.css, routeTree.gen.ts, router.tsx"
     },
     {
       "file_count": "5",
-      "path": "src",
-      "sample_files": "routeTree.gen.ts, router.tsx, server.ts"
-    },
-    {
-      "file_count": "4",
-      "path": "src/routes",
-      "sample_files": "__root.tsx, dashboard.tsx, index.tsx"
-    },
-    {
-      "file_count": "3",
       "path": "src/hooks",
-      "sample_files": "use-mobile.tsx, useAnalysis.ts, useChat.ts"
+      "sample_files": "use-graph-viewport.ts, use-mobile.tsx, useAnalysis.ts"
     },
     {
-      "file_count": "2",
-      "path": "scratch",
-      "sample_files": "test_api.py, commit_history.ps1"
+      "file_count": "5",
+      "path": "src/routes",
+      "sample_files": "__root.tsx, dashboard.tsx, features.tsx"
     }
   ],
   "grouped_env_variables": {
@@ -3276,24 +4281,62 @@
       }
     ]
   },
-  "high_risk_files": [],
-  "indexed_at": "2026-07-20T11:01:04.500961+00:00",
+  "high_risk_files": [
+    {
+      "complexity": 1,
+      "coupling": 0.8,
+      "dependencies": [],
+      "dependencies_count": 0,
+      "dependents": [
+        "src/components/studio/architecture-canvas.tsx",
+        "src/components/studio/code-flow-stepper.tsx",
+        "src/components/studio/code-viewer-drawer.tsx",
+        "src/components/studio/copilot-rail.tsx",
+        "src/components/studio/drift-timeline-view.tsx",
+        "src/components/studio/explorer-rail.tsx",
+        "src/components/studio/studio-topbar.tsx",
+        "src/components/studio/studio-workspace.tsx"
+      ],
+      "dependents_count": 8,
+      "first_30_lines": "export type StudioTab = \"architecture\" | \"flow\" | \"drift\" | \"doc\";\nexport type ExplorerTab = \"files\" | \"modules\" | \"entrypoints\";\n\nexport interface GitCommitItem {\n  sha: string;\n  short_sha: string;\n  message: string;\n  full_message: string;\n  author: string;\n  author_avatar?: string | null;\n  date: string;\n  files_changed?: number;\n  insertions?: number;\n  deletions?: number;\n  risk_level?: \"low\" | \"moderate\" | \"high\";\n  drift_summary?: string;\n  impacted_files?: string[];\n  new_dependencies?: string[];\n}\n\nexport interface GraphNode {\n  id: string;\n  label: string;\n  path: string;\n  language?: string;\n  line_count?: number;\n  complexity?: number;\n  coupling?: number;\n  is_entry?: boolean;\n  x?: number;",
+      "id": "src/components/studio/studio-types.ts",
+      "is_entry": false,
+      "label": "studio-types",
+      "line_count": 64,
+      "path": "src/components/studio/studio-types.ts",
+      "risk_level": "High",
+      "source_dependents": [
+        "src/components/studio/architecture-canvas.tsx",
+        "src/components/studio/code-flow-stepper.tsx",
+        "src/components/studio/code-viewer-drawer.tsx",
+        "src/components/studio/copilot-rail.tsx",
+        "src/components/studio/drift-timeline-view.tsx",
+        "src/components/studio/explorer-rail.tsx",
+        "src/components/studio/studio-topbar.tsx",
+        "src/components/studio/studio-workspace.tsx"
+      ],
+      "source_dependents_count": 8,
+      "test_dependents": [],
+      "test_dependents_count": 0
+    }
+  ],
+  "indexed_at": "2026-11-07T14:18:12.289792+00:00",
   "language_breakdown": {
-    "CSS": 1,
+    "CSS": 2,
     "Docker": 1,
-    "JSON": 4,
+    "HTML": 1,
+    "JSON": 7,
     "JavaScript": 1,
-    "Markdown": 2,
-    "Python": 64,
-    "TOML": 1,
+    "Markdown": 5,
+    "Python": 69,
     "Text": 1,
-    "TypeScript": 73,
-    "Unknown": 8,
+    "TypeScript": 105,
+    "Unknown": 9,
     "YAML": 1
   },
   "manifest": {
-    "build_command": "npm run build (runs: vite build)",
-    "dev_command": "npm run dev (runs: vite dev)",
+    "build_command": "npm run build",
+    "dev_command": "npm run dev",
     "dev_dependencies": [
       "@eslint/js",
       "@lovable.dev/vite-tanstack-config",
@@ -3310,7 +4353,22 @@
       "prettier",
       "typescript",
       "typescript-eslint",
-      "vite"
+      "vite",
+      "vitest"
+    ],
+    "grouped_tech_stack": [
+      "@radix-ui/* (26 packages)",
+      "@react-three/* (3 packages)",
+      "@tanstack/* (4 packages)",
+      "react",
+      "tailwindcss",
+      "fastapi",
+      "pydantic* (2 packages)",
+      "sqlalchemy",
+      "pgvector",
+      "redis",
+      "celery",
+      "openai"
     ],
     "install_command": "npm install",
     "install_command_provenance": "common default, not declared in repo",
@@ -3322,10 +4380,10 @@
         "install_provenance": "common default, not declared in repo",
         "manifest_type": "package.json",
         "run_command": "npm run dev",
-        "run_provenance": "package.json:7",
-        "test_command": null,
-        "test_count": 1,
-        "test_provenance": "common default, not declared in repo"
+        "run_provenance": "package.json:7 (scripts.dev: vite dev)",
+        "test_command": "npm test",
+        "test_count": 4,
+        "test_provenance": "package.json:11 (scripts.test: vitest run)"
       },
       {
         "folder": "backend",
@@ -3335,13 +4393,24 @@
         "run_command": "uvicorn app.main:app --reload",
         "run_provenance": "common default, not declared in repo",
         "test_command": "pytest backend",
-        "test_count": 7,
+        "test_count": 11,
         "test_provenance": "common default, not declared in repo"
+      },
+      {
+        "folder": "launch-video",
+        "install_command": "cd launch-video && npm install",
+        "install_provenance": "common default, not declared in repo",
+        "manifest_type": "package.json",
+        "run_command": "cd launch-video && npm run dev",
+        "run_provenance": "launch-video/package.json:6 (scripts.dev: npx --yes hyperframes@0.9.9 preview)",
+        "test_command": null,
+        "test_count": 0,
+        "test_provenance": null
       }
     ],
     "project_name": "tanstack_start_ts",
-    "run_command": "npm run dev (runs: vite dev)",
-    "run_command_provenance": "package.json:7 (scripts.dev)",
+    "run_command": "npm run dev",
+    "run_command_provenance": "package.json:7 (scripts.dev: vite dev)",
     "runtime_dependencies": [
       "@cloudflare/vite-plugin",
       "@hookform/resolvers",
@@ -3371,11 +4440,19 @@
       "@radix-ui/react-toggle",
       "@radix-ui/react-toggle-group",
       "@radix-ui/react-tooltip",
+      "@react-three/drei",
+      "@react-three/fiber",
+      "@react-three/postprocessing",
+      "@streamdown/cjk",
+      "@streamdown/code",
+      "@streamdown/math",
+      "@streamdown/mermaid",
       "@tailwindcss/vite",
       "@tanstack/react-query",
       "@tanstack/react-router",
       "@tanstack/react-start",
       "@tanstack/router-plugin",
+      "@types/three",
       "class-variance-authority",
       "clsx",
       "cmdk",
@@ -3383,7 +4460,12 @@
       "embla-carousel-react",
       "html2canvas",
       "input-otp",
+      "lenis",
       "lucide-react",
+      "motion",
+      "nanoid",
+      "ogl",
+      "postprocessing",
       "react",
       "react-day-picker",
       "react-dom",
@@ -3391,12 +4473,49 @@
       "react-resizable-panels",
       "recharts",
       "sonner",
+      "streamdown",
       "tailwind-merge",
       "tailwindcss",
+      "three",
       "tw-animate-css",
+      "use-stick-to-bottom",
       "vaul",
       "vite-tsconfig-paths",
-      "zod"
+      "zod",
+      "fastapi",
+      "uvicorn",
+      "python-multipart",
+      "pydantic",
+      "pydantic-settings",
+      "sqlalchemy",
+      "asyncpg",
+      "pgvector",
+      "alembic",
+      "redis",
+      "celery",
+      "flower",
+      "openai",
+      "langchain",
+      "langchain-openai",
+      "langchain-community",
+      "langchain-core",
+      "tenacity",
+      "httpx",
+      "gitpython",
+      "tree-sitter",
+      "tree-sitter-python",
+      "tree-sitter-javascript",
+      "tree-sitter-typescript",
+      "networkx",
+      "scipy",
+      "numpy",
+      "python-jose",
+      "cryptography",
+      "structlog",
+      "colorama",
+      "aiofiles",
+      "python-dotenv",
+      "click"
     ],
     "scripts": {
       "build": "vite build",
@@ -3404,7 +4523,8 @@
       "dev": "vite dev",
       "format": "prettier --write .",
       "lint": "eslint .",
-      "preview": "vite preview"
+      "preview": "vite preview",
+      "test": "vitest run"
     },
     "tech_stack": [
       "@cloudflare/vite-plugin",
@@ -3435,11 +4555,19 @@
       "@radix-ui/react-toggle",
       "@radix-ui/react-toggle-group",
       "@radix-ui/react-tooltip",
+      "@react-three/drei",
+      "@react-three/fiber",
+      "@react-three/postprocessing",
+      "@streamdown/cjk",
+      "@streamdown/code",
+      "@streamdown/math",
+      "@streamdown/mermaid",
       "@tailwindcss/vite",
       "@tanstack/react-query",
       "@tanstack/react-router",
       "@tanstack/react-start",
       "@tanstack/router-plugin",
+      "@types/three",
       "class-variance-authority",
       "clsx",
       "cmdk",
@@ -3447,7 +4575,12 @@
       "embla-carousel-react",
       "html2canvas",
       "input-otp",
+      "lenis",
       "lucide-react",
+      "motion",
+      "nanoid",
+      "ogl",
+      "postprocessing",
       "react",
       "react-day-picker",
       "react-dom",
@@ -3455,21 +4588,61 @@
       "react-resizable-panels",
       "recharts",
       "sonner",
+      "streamdown",
       "tailwind-merge",
       "tailwindcss",
+      "three",
       "tw-animate-css",
+      "use-stick-to-bottom",
       "vaul",
       "vite-tsconfig-paths",
-      "zod"
+      "zod",
+      "fastapi",
+      "uvicorn",
+      "python-multipart",
+      "pydantic",
+      "pydantic-settings",
+      "sqlalchemy",
+      "asyncpg",
+      "pgvector",
+      "alembic",
+      "redis",
+      "celery",
+      "flower",
+      "openai",
+      "langchain",
+      "langchain-openai",
+      "langchain-community",
+      "langchain-core",
+      "tenacity",
+      "httpx",
+      "gitpython",
+      "tree-sitter",
+      "tree-sitter-python",
+      "tree-sitter-javascript",
+      "tree-sitter-typescript",
+      "networkx",
+      "scipy",
+      "numpy",
+      "python-jose",
+      "cryptography",
+      "structlog",
+      "colorama",
+      "aiofiles",
+      "python-dotenv",
+      "click"
     ],
-    "test_command": null,
-    "test_command_type": null
+    "test_command": "npm test",
+    "test_command_provenance": "package.json:11 (scripts.test: vitest run)",
+    "test_command_type": "declared (package.json scripts.test)"
   },
-  "readme_summary": "<div align=\"center\"> <img src=\"https://img.shields.io/badge/Status-Beta-blue\" alt=\"Status\" /> <img src=\"https://img.shields.io/badge/License-MIT-green\" alt=\"License\" /> <img src=\"https://img.shields.io/badge/Stack-FastAPI%20%7C%20React%20%7C%20pgvector-black\" alt=\"Tech Stack\" />\n\n<h1>\ud83c\udf0c DevLens AI</h1>",
+  "readme_summary": "> An intelligent cognitive layer for software codebases. Ingest any GitHub repository to generate interactive dependency graphs, blast-radius impact analysis, and AST-grounded code intelligence.\n\n**Live Deployment:** devlens-ai.kp5336464.workers.dev",
   "repo_full_name": "KaranParmar19/DEVLENS.ai",
-  "source_modules_count": 134,
+  "snapshot_age_days": 0,
+  "snapshot_is_stale": false,
+  "source_modules_count": 167,
   "starter_empty_reason": null,
-  "test_modules_count": 8,
-  "total_edges": 10,
-  "total_modules": 157
+  "test_modules_count": 15,
+  "total_edges": 35,
+  "total_modules": 202
 }

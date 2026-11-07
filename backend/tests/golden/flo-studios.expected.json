@@ -1,0 +1,10 @@
+{
+  "repo_full_name": "patelhashilkumar/flo-studios",
+  "manifest_type": "package.json",
+  "install_command": "npm install",
+  "run_command": "npm run dev",
+  "test_command": "npm test",
+  "has_tests": true,
+  "required_tech_stack_subset": ["react", "three", "gsap"],
+  "core_or_high_risk_file": "src/components/SEO.jsx"
+}

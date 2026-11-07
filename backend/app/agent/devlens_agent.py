@@ -50,7 +50,10 @@ def _is_valid_prose_purpose(text: str | None) -> bool:
     s_lower = core.lower()
     if any(pat in s_lower for pat in code_patterns):
         return False
-    if s_lower.startswith(("eslint-", "@ts-", "todo", "fixme", "noqa", "type: ignore", "coding:", "-*-")):
+    if s_lower.startswith((
+        "eslint-", "@ts-", "todo", "fixme", "noqa", "type: ignore", "coding:", "-*-",
+        "file:", "function:", "class:", "method:", "module-level code",
+    )):
         return False
     # Require at least 3 alphabetic words
     words = re.findall(r"[A-Za-z]{2,}", core)
@@ -61,7 +64,8 @@ def _is_valid_prose_purpose(text: str | None) -> bool:
 
 def _first_sentence(text: str) -> str:
     """Extract the first sentence from prose text and ensure it ends with a period."""
-    collapsed = " ".join(text.split()).strip()
+    cleaned = re.sub(r"[─━═=\-*_]{3,}", " ", text.replace("\u2014", " - ").replace("\u2013", "-"))
+    collapsed = " ".join(cleaned.split()).strip()
     sentence = re.split(r"\.(?:\s+|$)", collapsed)[0].strip()
     sentence = sentence.rstrip(".")
     return f"{sentence}." if sentence else ""
@@ -70,13 +74,18 @@ def _first_sentence(text: str) -> str:
 def _extract_leading_comment_or_docstring(snippet: str) -> str | None:
     """
     If snippet starts with a module docstring or leading comment (ignoring blank lines,
-    shebang, or encoding declarations), extract its first sentence. Otherwise return None.
+    shebang, encoding declarations, or synthetic chunker headers), extract its first sentence.
+    Otherwise return None.
     """
     raw_lines = [l.strip() for l in snippet.splitlines() if l.strip()]
     idx = 0
     while idx < len(raw_lines):
         line = raw_lines[idx]
-        if line.startswith("#!") or re.match(r"^#.*coding[:=]", line):
+        if (
+            line.startswith("#!")
+            or re.match(r"^#.*coding[:=]", line)
+            or re.match(r"^(?:#|//)\s*(?:File:|Function:|Class:|Method:|Module-level code)", line, re.IGNORECASE)
+        ):
             idx += 1
             continue
         break
@@ -115,10 +124,12 @@ def _extract_leading_comment_or_docstring(snippet: str) -> str | None:
                     return cand
             return None
 
-    # Case 2: Leading single-line comment (# or //)
-    if first.startswith(("//", "#")):
+    # Case 2: Leading single-line comment (# or //), excluding C preprocessor directives
+    if first.startswith(("//", "#")) and not re.match(r"^#\s*(?:include|define|ifdef|ifndef|if\b|endif|pragma)\b", first):
         collected_comments: list[str] = []
         for sub_line in raw_lines[idx : idx + 10]:
+            if re.match(r"^#\s*(?:include|define|ifdef|ifndef|if\b|endif|pragma)\b", sub_line):
+                break
             if sub_line.startswith("//"):
                 c_text = re.sub(r"^/{2,}\s*", "", sub_line).strip()
             elif sub_line.startswith("#"):
@@ -722,8 +733,9 @@ class DevLensAgent:
                 for sf in ft.suggested_files:
                     test_str = f" | Test: [[{sf.nearby_test}]]" if sf.nearby_test else " | No dedicated test file detected"
                     dep_word = "1 source dependent" if sf.source_dependents_count == 1 else f"{sf.source_dependents_count} source dependents"
+                    line_word = "1 line" if sf.line_count == 1 else f"{sf.line_count} lines"
                     lines.append(
-                        f"- **[[{sf.path}]]** ({sf.line_count} lines, {dep_word}{test_str}):\n"
+                        f"- **[[{sf.path}]]** ({line_word}, {dep_word}{test_str}):\n"
                         f"  Verified purpose: {sf.verified_purpose}"
                     )
             if ft.verification_steps:
@@ -742,7 +754,7 @@ class DevLensAgent:
         lines.append(format_snapshot_footer(facts))
 
         known_paths = set(facts.get("file_metrics", {}).keys())
-        rendered_md = "\n".join(lines)
+        rendered_md = "\n".join(lines).replace("\u2014", " - ").replace("\u2013", "-")
         if known_paths:
             rendered_md = _clean_markdown_citations(rendered_md, known_paths)
         return rendered_md
