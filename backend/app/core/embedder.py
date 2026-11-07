@@ -122,7 +122,7 @@ async def _embed_batch_with_retry(
                 "model": settings.openai_embedding_model,
                 "input": batch,
             }
-            if "text-embedding-3" in settings.openai_embedding_model:
+            if settings.openai_embedding_dimensions:
                 embed_kwargs["dimensions"] = settings.openai_embedding_dimensions
 
             response = await client.embeddings.create(**embed_kwargs)

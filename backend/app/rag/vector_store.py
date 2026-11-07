@@ -74,12 +74,12 @@ class VectorStore:
                 self.semantic_enabled = False  # partially embedded
             embeddings.extend([None] * (len(chunks) - len(embeddings)))
 
-        # Guard against dimension mismatch: if provider returned dimensions other than 1536,
-        # degrade gracefully to keyword search with NULL embeddings rather than crashing DB insert
-        if any(e is not None and len(e) != 1536 for e in embeddings):
-            logger.warning("embedding_dimensions_mismatch_degrading_to_null", repo_id=str(self.repo_id))
-            embeddings = [None] * len(chunks)
-            self.semantic_enabled = False
+        # Enforce exact 1536 dimensions; fail loudly on mismatch instead of falling back to NULL
+        for idx, e in enumerate(embeddings):
+            if e is not None and len(e) != 1536:
+                raise ValueError(
+                    f"Embedding dimension mismatch: expected 1536 dimensions, got {len(e)} at index {idx}."
+                )
 
         try:
             if delete_existing:
