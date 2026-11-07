@@ -377,13 +377,30 @@ class DevLensAgent:
         ]
 
         qs = doc.quick_start
-        if qs.install_command:
-            lines.append(f"- **Install**: `{qs.install_command}`")
-        if qs.run_command:
-            lines.append(f"- **Run/Dev**: `{qs.run_command}`")
-        if qs.test_command:
-            cmd_type = f" ({qs.test_command_type})" if qs.test_command_type else ""
-            lines.append(f"- **Test**: `{qs.test_command}`{cmd_type}")
+        manifest = facts.get("manifest", {})
+        if manifest.get("monorepo_packages"):
+            lines.append("- **Monorepo Packages Setup**:")
+            for pkg in manifest["monorepo_packages"]:
+                folder = pkg["folder"]
+                lines.append(f"  - **`{folder}/`** ({pkg['manifest_type']}):")
+                if pkg.get("install_command"):
+                    lines.append(f"    - Install: `{pkg['install_command']}`")
+                if pkg.get("run_command"):
+                    lines.append(f"    - Run/Dev: `{pkg['run_command']}`")
+                lines.append(f"    - Test: `{pkg['test_command']}`")
+        else:
+            if qs.install_command:
+                lines.append(f"- **Install**: `{qs.install_command}`")
+            if qs.run_command:
+                lines.append(f"- **Run/Dev**: `{qs.run_command}`")
+            if qs.test_command:
+                if qs.test_command == "no tests found":
+                    lines.append("- **Test**: no tests found")
+                else:
+                    cmd_type = f" ({qs.test_command_type})" if qs.test_command_type else ""
+                    lines.append(f"- **Test**: `{qs.test_command}`{cmd_type}")
+            else:
+                lines.append("- **Test**: no tests found")
         if qs.env_variables:
             lines.append(f"- **Environment Variables**: {', '.join(qs.env_variables)}")
         else:
@@ -555,10 +572,16 @@ class DevLensAgent:
         drops: list[str] = []
 
         # 1. Overwrite quick start with ground truth from manifest
+        test_cmd = manifest.get("test_command")
+        if facts.get("test_modules_count", 0) == 0:
+            test_cmd = "no tests found"
+        elif not test_cmd:
+            test_cmd = "no tests found"
+
         parsed_schema.quick_start = QuickStartInfo(
             install_command=manifest.get("install_command") or "",
             run_command=manifest.get("run_command") or manifest.get("dev_command"),
-            test_command=manifest.get("test_command"),
+            test_command=test_cmd,
             test_command_type=manifest.get("test_command_type") or "declared",
             env_variables=facts.get("env_variables", []),
         )

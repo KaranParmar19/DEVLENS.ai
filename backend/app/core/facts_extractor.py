@@ -436,12 +436,21 @@ class FactsExtractor:
             "dependencies_map": dependencies_map,
         }
 
-    async def extract_manifest_facts(self) -> dict[str, Any]:
+    async def extract_manifest_facts(self, test_modules_count: int | None = None) -> dict[str, Any]:
         """
         Extract facts from package.json, pyproject.toml, Makefile, go.mod, Cargo.toml, requirements.txt.
+        Supports multi-manifest monorepos, lists install/run/test per folder.
         Separates runtime dependencies from dev dependencies.
         Labels test commands as declared or inferred.
+        Guards test commands: when test_modules_count == 0, outputs 'no tests found'.
         """
+        if test_modules_count is None:
+            nodes = self.graph_cache.get("nodes", [])
+            if nodes:
+                test_modules_count = sum(
+                    1 for n in nodes if is_test_file(n.get("path") or n.get("id", ""))
+                )
+
         manifest_facts: dict[str, Any] = {
             "manifest_type": None,
             "project_name": None,
@@ -455,6 +464,7 @@ class FactsExtractor:
             "test_command_type": None,
             "dev_command": None,
             "build_command": None,
+            "monorepo_packages": [],
         }
 
         # Check Makefile for declared targets
@@ -512,7 +522,7 @@ class FactsExtractor:
                 elif "build" in makefile_targets:
                     manifest_facts["build_command"] = "make build"
 
-                return manifest_facts
+                return await self._finalize_manifest(manifest_facts, test_modules_count)
             except Exception as e:
                 logger.warning("failed_to_parse_package_json", error=str(e))
 
@@ -586,7 +596,7 @@ class FactsExtractor:
                 if "build" in makefile_targets:
                     manifest_facts["build_command"] = "make build"
 
-                return manifest_facts
+                return await self._finalize_manifest(manifest_facts, test_modules_count)
             except Exception as e:
                 logger.warning("failed_to_parse_pyproject_toml", error=str(e))
 
@@ -616,7 +626,7 @@ class FactsExtractor:
                 manifest_facts["run_command"] = "make serve"
             if "build" in makefile_targets:
                 manifest_facts["build_command"] = "make build"
-            return manifest_facts
+            return await self._finalize_manifest(manifest_facts, test_modules_count)
 
         # 4. Standalone Makefile
         if makefile_content and ("test" in makefile_targets or "build" in makefile_targets):
@@ -631,7 +641,7 @@ class FactsExtractor:
                 manifest_facts["run_command"] = "make run"
             elif "serve" in makefile_targets:
                 manifest_facts["run_command"] = "make serve"
-            return manifest_facts
+            return await self._finalize_manifest(manifest_facts, test_modules_count)
 
         # 5. go.mod
         go_content = await self.extract_file_content("go.mod")
@@ -646,7 +656,106 @@ class FactsExtractor:
             ]
             manifest_facts["runtime_dependencies"] = deps[:10]
             manifest_facts["tech_stack"] = deps[:10]
-            return manifest_facts
+            return await self._finalize_manifest(manifest_facts, test_modules_count)
+
+        return await self._finalize_manifest(manifest_facts, test_modules_count)
+
+    async def _finalize_manifest(self, manifest_facts: dict[str, Any], test_modules_count: int) -> dict[str, Any]:
+        """
+        Enforce multi-manifest monorepo discovery and 0-test guard.
+        Reads every package.json, pyproject.toml, and requirements file found.
+        Never recommends a test command when facts show 0 test modules.
+        """
+        nodes = self.graph_cache.get("nodes", [])
+        all_file_paths = [n.get("path") or n.get("id", "") for n in nodes]
+        all_manifest_paths = [
+            p for p in all_file_paths
+            if PurePosixPath(p).name in ("package.json", "pyproject.toml")
+            or (PurePosixPath(p).name.startswith("requirements") and PurePosixPath(p).suffix == ".txt")
+        ]
+
+        manifests_by_dir: dict[str, list[str]] = {}
+        for mp in all_manifest_paths:
+            d = PurePosixPath(mp).parent.as_posix()
+            manifests_by_dir.setdefault(d, []).append(mp)
+
+        if len(manifests_by_dir) > 1 or any(d not in (".", "") for d in manifests_by_dir):
+            monorepo_packages = []
+            for d, m_files in sorted(manifests_by_dir.items(), key=lambda x: x[0]):
+                folder = "root" if d in (".", "") else d
+                folder_tests = (
+                    any(is_test_file(f) and f.startswith(d) for f in all_file_paths)
+                    if folder != "root"
+                    else (test_modules_count > 0)
+                )
+
+                p_json = next((f for f in m_files if PurePosixPath(f).name == "package.json"), None)
+                py_proj = next((f for f in m_files if PurePosixPath(f).name == "pyproject.toml"), None)
+                req_txt = next((f for f in m_files if PurePosixPath(f).name.startswith("requirements")), None)
+
+                cd_prefix = f"cd {folder} && " if folder != "root" else ""
+
+                if p_json:
+                    content = await self.extract_file_content(p_json)
+                    if content:
+                        try:
+                            pdata = json.loads(content)
+                            pscripts = pdata.get("scripts", {})
+                            test_cmd = (
+                                "no tests found"
+                                if (not folder_tests or test_modules_count == 0)
+                                else (f"{cd_prefix}npm test" if "test" in pscripts else "no tests found")
+                            )
+                            run_cmd = (
+                                f"{cd_prefix}npm run dev"
+                                if "dev" in pscripts
+                                else (f"{cd_prefix}npm start" if "start" in pscripts else None)
+                            )
+                            monorepo_packages.append({
+                                "folder": folder,
+                                "manifest_type": "package.json",
+                                "install_command": f"{cd_prefix}npm install",
+                                "run_command": run_cmd,
+                                "test_command": test_cmd,
+                            })
+                        except Exception:
+                            pass
+                elif py_proj:
+                    test_cmd = (
+                        "no tests found"
+                        if (not folder_tests or test_modules_count == 0)
+                        else f"{cd_prefix}pytest"
+                    )
+                    monorepo_packages.append({
+                        "folder": folder,
+                        "manifest_type": "pyproject.toml",
+                        "install_command": f"{cd_prefix}pip install -e .",
+                        "run_command": None,
+                        "test_command": test_cmd,
+                    })
+                elif req_txt:
+                    test_cmd = (
+                        "no tests found"
+                        if (not folder_tests or test_modules_count == 0)
+                        else (f"pytest {folder}" if folder != "root" else "pytest")
+                    )
+                    monorepo_packages.append({
+                        "folder": folder,
+                        "manifest_type": "requirements.txt",
+                        "install_command": f"pip install -r {req_txt}",
+                        "run_command": None,
+                        "test_command": test_cmd,
+                    })
+
+            manifest_facts["monorepo_packages"] = monorepo_packages
+
+        # 0 test modules guard across the repository:
+        # Never recommend a test command when facts show 0 test modules. Say "no tests found".
+        if test_modules_count is not None and test_modules_count == 0:
+            manifest_facts["test_command"] = "no tests found"
+            manifest_facts["test_command_type"] = "verified (0 test modules detected in repository)"
+            for pkg in manifest_facts.get("monorepo_packages", []):
+                pkg["test_command"] = "no tests found"
 
         return manifest_facts
 
@@ -788,7 +897,8 @@ class FactsExtractor:
         Collect all computed facts into one single authoritative dictionary.
         """
         metrics = self.compute_graph_metrics()
-        manifest = await self.extract_manifest_facts()
+        test_modules_count = metrics.get("test_modules_count", 0)
+        manifest = await self.extract_manifest_facts(test_modules_count=test_modules_count)
         env_vars = await self.extract_env_variables()
         readme_summary = await self.extract_readme_summary()
         folder_breakdown = self.compute_folder_breakdown()
@@ -859,7 +969,15 @@ class FactsExtractor:
             lines.append(f"\n[Verified Project Overview from README]:\n{facts['readme_summary']}")
 
         manifest = facts["manifest"]
-        if manifest["manifest_type"]:
+        if manifest.get("monorepo_packages"):
+            lines.append("\n[Verified Monorepo Packages / Multi-folder Setup]:")
+            for pkg in manifest["monorepo_packages"]:
+                lines.append(f"- Folder: `{pkg['folder']}/` ({pkg['manifest_type']})")
+                lines.append(f"  Install: `{pkg['install_command']}`")
+                if pkg.get("run_command"):
+                    lines.append(f"  Run/Dev: `{pkg['run_command']}`")
+                lines.append(f"  Test: `{pkg['test_command']}`")
+        elif manifest["manifest_type"]:
             lines.append(f"\n[Verified Build & Package Setup ({manifest['manifest_type']})]:")
             if manifest["project_name"]:
                 lines.append(f"- Project Name: {manifest['project_name']}")
@@ -982,15 +1100,31 @@ def build_deterministic_fallback_doc(facts: dict[str, Any]) -> str:
 
     manifest = facts.get("manifest", {})
     quick_start_lines = []
-    if manifest.get("install_command"):
-        quick_start_lines.append(f"- **Install**: `{manifest['install_command']}`")
-    if manifest.get("run_command"):
-        quick_start_lines.append(f"- **Run/Dev**: `{manifest['run_command']}`")
-    if manifest.get("test_command"):
-        cmd_type = f" ({manifest.get('test_command_type')})" if manifest.get("test_command_type") else ""
-        quick_start_lines.append(f"- **Test**: `{manifest['test_command']}`{cmd_type}")
-    if manifest.get("build_command"):
-        quick_start_lines.append(f"- **Build**: `{manifest['build_command']}`")
+    if manifest.get("monorepo_packages"):
+        quick_start_lines.append("- **Monorepo Packages Setup**:")
+        for pkg in manifest["monorepo_packages"]:
+            folder = pkg["folder"]
+            quick_start_lines.append(f"  - **`{folder}/`** ({pkg['manifest_type']}):")
+            if pkg.get("install_command"):
+                quick_start_lines.append(f"    - Install: `{pkg['install_command']}`")
+            if pkg.get("run_command"):
+                quick_start_lines.append(f"    - Run/Dev: `{pkg['run_command']}`")
+            quick_start_lines.append(f"    - Test: `{pkg['test_command']}`")
+    else:
+        if manifest.get("install_command"):
+            quick_start_lines.append(f"- **Install**: `{manifest['install_command']}`")
+        if manifest.get("run_command"):
+            quick_start_lines.append(f"- **Run/Dev**: `{manifest['run_command']}`")
+        if manifest.get("test_command"):
+            if manifest["test_command"] == "no tests found":
+                quick_start_lines.append("- **Test**: no tests found")
+            else:
+                cmd_type = f" ({manifest.get('test_command_type')})" if manifest.get("test_command_type") else ""
+                quick_start_lines.append(f"- **Test**: `{manifest['test_command']}`{cmd_type}")
+        else:
+            quick_start_lines.append("- **Test**: no tests found")
+        if manifest.get("build_command"):
+            quick_start_lines.append(f"- **Build**: `{manifest['build_command']}`")
 
     cmd_lines = []
     if manifest.get("runtime_dependencies"):

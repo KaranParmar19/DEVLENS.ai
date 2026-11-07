@@ -658,3 +658,81 @@ def test_first_task_guarding_when_purpose_unverified():
     assert task_title == "Add a test for payment_processor.ts"
     assert "Stripe" not in task_title
     assert "Add a test for" in task_title
+
+
+def test_zero_test_modules_guard():
+    # If 0 test modules exist, never recommend test command, say 'no tests found'
+    mock_graph = {
+        "nodes": [
+            {"id": "src/app.ts", "path": "src/app.ts"},
+            {"id": "package.json", "path": "package.json"},
+        ],
+        "edges": [],
+    }
+    extractor = FactsExtractor(
+        db=None,  # type: ignore
+        repo_id=None,  # type: ignore
+        repo_full_name="test-org/zero-tests",
+        graph_cache=mock_graph,
+    )
+
+    pkg_json = json.dumps({
+        "name": "zero-tests",
+        "scripts": {"test": "jest", "dev": "vite"},
+        "devDependencies": {"jest": "^29.0.0"}
+    })
+
+    with patch.object(extractor, "extract_file_content", AsyncMock(side_effect=lambda p: pkg_json if p == "package.json" else None)):
+        manifest = asyncio.run(extractor.extract_manifest_facts(test_modules_count=0))
+        assert manifest["test_command"] == "no tests found"
+        assert "0 test modules detected" in manifest["test_command_type"]
+
+
+def test_monorepo_multi_manifest_support():
+    mock_graph = {
+        "nodes": [
+            {"id": "frontend/package.json", "path": "frontend/package.json"},
+            {"id": "frontend/src/App.tsx", "path": "frontend/src/App.tsx"},
+            {"id": "frontend/src/App.test.tsx", "path": "frontend/src/App.test.tsx"},
+            {"id": "backend/requirements.txt", "path": "backend/requirements.txt"},
+            {"id": "backend/app/main.py", "path": "backend/app/main.py"},
+            {"id": "backend/tests/test_main.py", "path": "backend/tests/test_main.py"},
+        ],
+        "edges": [],
+    }
+    extractor = FactsExtractor(
+        db=None,  # type: ignore
+        repo_id=None,  # type: ignore
+        repo_full_name="test-org/monorepo",
+        graph_cache=mock_graph,
+    )
+
+    frontend_pkg = json.dumps({
+        "name": "client",
+        "scripts": {"dev": "vite", "test": "vitest run"}
+    })
+    backend_req = "fastapi>=0.100.0\nuvicorn>=0.23.0\npytest>=7.0.0\n"
+
+    def mock_fetch(p: str):
+        if p == "frontend/package.json":
+            return frontend_pkg
+        elif p == "backend/requirements.txt":
+            return backend_req
+        return None
+
+    with patch.object(extractor, "extract_file_content", AsyncMock(side_effect=mock_fetch)):
+        manifest = asyncio.run(extractor.extract_manifest_facts(test_modules_count=1))
+        pkgs = manifest.get("monorepo_packages", [])
+        assert len(pkgs) == 2
+        folders = [p["folder"] for p in pkgs]
+        assert "frontend" in folders
+        assert "backend" in folders
+
+        front = next(p for p in pkgs if p["folder"] == "frontend")
+        assert front["install_command"] == "cd frontend && npm install"
+        assert front["run_command"] == "cd frontend && npm run dev"
+        assert front["test_command"] == "cd frontend && npm test"
+
+        back = next(p for p in pkgs if p["folder"] == "backend")
+        assert back["install_command"] == "pip install -r backend/requirements.txt"
+        assert back["test_command"] == "pytest backend"
