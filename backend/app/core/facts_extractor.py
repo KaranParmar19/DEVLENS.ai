@@ -947,6 +947,15 @@ class FactsExtractor:
             for pkg in manifest_facts.get("monorepo_packages", []):
                 pkg["test_command"] = "no tests found"
 
+        # If no run command is declared, explicitly set "no run command declared"
+        if not manifest_facts.get("run_command"):
+            manifest_facts["run_command"] = "no run command declared"
+            manifest_facts["run_command_provenance"] = None
+        for pkg in manifest_facts.get("monorepo_packages", []):
+            if not pkg.get("run_command"):
+                pkg["run_command"] = "no run command declared"
+                pkg["run_provenance"] = None
+
         return manifest_facts
 
     async def extract_env_variables(self) -> list[str]:
@@ -1319,8 +1328,10 @@ class FactsExtractor:
             for pkg in manifest["monorepo_packages"]:
                 lines.append(f"- Folder: `{pkg['folder']}/` ({pkg['manifest_type']})")
                 lines.append(f"  Install: `{pkg['install_command']}` ({pkg.get('install_provenance') or 'common default, not declared in repo'})")
-                if pkg.get("run_command"):
+                if pkg.get("run_command") and pkg["run_command"] != "no run command declared":
                     lines.append(f"  Run/Dev: `{pkg['run_command']}` ({pkg.get('run_provenance') or 'common default, not declared in repo'})")
+                else:
+                    lines.append("  Run/Dev: no run command declared")
                 if pkg.get("test_command") and pkg["test_command"] != "no tests found":
                     lines.append(f"  Test: `{pkg['test_command']}` ({pkg.get('test_provenance') or 'common default, not declared in repo'})")
                 else:
@@ -1331,8 +1342,10 @@ class FactsExtractor:
                 lines.append(f"- Project Name: {manifest['project_name']}")
             if manifest.get("install_command"):
                 lines.append(f"- Install Command: {manifest['install_command']} ({manifest.get('install_command_provenance') or 'common default, not declared in repo'})")
-            if manifest.get("run_command"):
+            if manifest.get("run_command") and manifest["run_command"] != "no run command declared":
                 lines.append(f"- Run Command: {manifest['run_command']} ({manifest.get('run_command_provenance') or 'common default, not declared in repo'})")
+            else:
+                lines.append("- Run Command: no run command declared")
             if manifest["test_command"]:
                 if manifest["test_command"] == "no tests found":
                     lines.append("- Test Command: no tests found")
@@ -1467,9 +1480,11 @@ def build_deterministic_fallback_doc(facts: dict[str, Any]) -> str:
             if pkg.get("install_command"):
                 inst_prov = pkg.get("install_provenance") or "common default, not declared in repo"
                 quick_start_lines.append(f"    - Install: `{pkg['install_command']}` ({inst_prov})")
-            if pkg.get("run_command"):
+            if pkg.get("run_command") and pkg["run_command"] != "no run command declared":
                 run_prov = pkg.get("run_provenance") or "common default, not declared in repo"
                 quick_start_lines.append(f"    - Run/Dev: `{pkg['run_command']}` ({run_prov})")
+            else:
+                quick_start_lines.append("    - Run/Dev: no run command declared")
             if pkg.get("test_command") and pkg["test_command"] != "no tests found":
                 test_prov = pkg.get("test_provenance") or "common default, not declared in repo"
                 quick_start_lines.append(f"    - Test: `{pkg['test_command']}` ({test_prov})")
@@ -1477,9 +1492,11 @@ def build_deterministic_fallback_doc(facts: dict[str, Any]) -> str:
         if manifest.get("install_command"):
             inst_prov = manifest.get("install_command_provenance") or "common default, not declared in repo"
             quick_start_lines.append(f"- **Install**: `{manifest['install_command']}` ({inst_prov})")
-        if manifest.get("run_command"):
+        if manifest.get("run_command") and manifest["run_command"] != "no run command declared":
             run_prov = manifest.get("run_command_provenance") or "common default, not declared in repo"
             quick_start_lines.append(f"- **Run/Dev**: `{manifest['run_command']}` ({run_prov})")
+        else:
+            quick_start_lines.append("- **Run/Dev**: no run command declared")
         if manifest.get("test_command"):
             if manifest["test_command"] == "no tests found":
                 quick_start_lines.append("- **Test**: no tests found")

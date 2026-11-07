@@ -446,9 +446,11 @@ class DevLensAgent:
                 if pkg.get("install_command"):
                     inst_prov = pkg.get("install_provenance") or "common default, not declared in repo"
                     quick_start_lines.append(f"    - Install: `{pkg['install_command']}` ({inst_prov})")
-                if pkg.get("run_command"):
+                if pkg.get("run_command") and pkg["run_command"] != "no run command declared":
                     run_prov = pkg.get("run_provenance") or "common default, not declared in repo"
                     quick_start_lines.append(f"    - Run/Dev: `{pkg['run_command']}` ({run_prov})")
+                else:
+                    quick_start_lines.append("    - Run/Dev: no run command declared")
                 if pkg.get("test_command") and pkg["test_command"] != "no tests found":
                     test_prov = pkg.get("test_provenance") or "common default, not declared in repo"
                     quick_start_lines.append(f"    - Test: `{pkg['test_command']}` ({test_prov})")
@@ -456,9 +458,11 @@ class DevLensAgent:
             if qs.install_command:
                 inst_prov = manifest.get("install_command_provenance") or "common default, not declared in repo"
                 quick_start_lines.append(f"- **Install**: `{qs.install_command}` ({inst_prov})")
-            if qs.run_command:
+            if qs.run_command and qs.run_command != "no run command declared":
                 run_prov = manifest.get("run_command_provenance") or "common default, not declared in repo"
                 quick_start_lines.append(f"- **Run/Dev**: `{qs.run_command}` ({run_prov})")
+            else:
+                quick_start_lines.append("- **Run/Dev**: no run command declared")
             if qs.test_command:
                 if qs.test_command == "no tests found":
                     quick_start_lines.append("- **Test**: no tests found")
@@ -715,7 +719,7 @@ class DevLensAgent:
 
         parsed_schema.quick_start = QuickStartInfo(
             install_command=manifest.get("install_command") or "",
-            run_command=manifest.get("run_command") or manifest.get("dev_command"),
+            run_command=manifest.get("run_command") or manifest.get("dev_command") or "no run command declared",
             test_command=test_cmd,
             test_command_type=manifest.get("test_command_type") or "declared",
             env_variables=facts.get("env_variables", []),
@@ -889,15 +893,19 @@ class DevLensAgent:
                 )
 
             test_cmd = facts.get("manifest", {}).get("test_command")
+            raw_run_cmd = facts.get("manifest", {}).get("run_command")
+            run_cmd = raw_run_cmd if (raw_run_cmd and raw_run_cmd != "no run command declared") else "no run command declared"
             if facts.get("test_modules_count", 0) > 0 and test_cmd and test_cmd != "no tests found":
                 if top_st.nearby_test:
                     verification_steps = f"Run `{test_cmd}` (targeting `[[{top_st.nearby_test}]]`) to verify changes."
                 else:
                     verification_steps = f"Run `{test_cmd}` to verify that existing test suites pass."
             else:
-                run_cmd = facts.get("manifest", {}).get("run_command") or "application run command"
                 entry_file = facts.get("entry_points", [{}])[0].get("path") if facts.get("entry_points") else top_st.path
-                verification_steps = f"Read `[[{entry_file}]]`, then run `{run_cmd}`."
+                if run_cmd == "no run command declared":
+                    verification_steps = f"Read `[[{entry_file}]]`, then run: no run command declared."
+                else:
+                    verification_steps = f"Read `[[{entry_file}]]`, then run `{run_cmd}`."
         else:
             task_title = "Explore Repository Architecture"
             empty_reason = facts.get(
@@ -905,11 +913,20 @@ class DevLensAgent:
                 "No low-risk starter modules identified: all core source modules have active dependents or participate in central application flows."
             )
             task_rationale = empty_reason
-            entry_file = facts.get("entry_points", [{}])[0].get("path") if facts.get("entry_points") else "entry module"
-            run_cmd = facts.get("manifest", {}).get("run_command") or "application run command"
+            fallback_paths = sorted(facts.get("file_metrics", {}).keys())
+            entry_file = (
+                facts.get("entry_points", [{}])[0].get("path")
+                if facts.get("entry_points")
+                else (fallback_paths[0] if fallback_paths else "")
+            )
+            raw_run_cmd = facts.get("manifest", {}).get("run_command")
+            run_cmd = raw_run_cmd if (raw_run_cmd and raw_run_cmd != "no run command declared") else "no run command declared"
             test_cmd = facts.get("manifest", {}).get("test_command")
             if facts.get("test_modules_count", 0) == 0 or not test_cmd or test_cmd == "no tests found":
-                verification_steps = f"Read `[[{entry_file}]]`, then run `{run_cmd}`."
+                if run_cmd == "no run command declared":
+                    verification_steps = f"Read `[[{entry_file}]]`, then run: no run command declared."
+                else:
+                    verification_steps = f"Read `[[{entry_file}]]`, then run `{run_cmd}`."
             else:
                 verification_steps = f"Run the test suite using `{test_cmd}` to verify the baseline setup."
 
