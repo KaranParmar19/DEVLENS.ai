@@ -333,9 +333,6 @@ async def _ingest_pipeline(
 
         vector_store = VectorStore(db, repo_id)
 
-        # Always clear old chunks: a previous FAILED run may have left partial rows
-        await vector_store.delete_all()
-
         # Chunk all files
         all_chunks = []
         for path, content in file_contents.items():
@@ -345,8 +342,9 @@ async def _ingest_pipeline(
 
         logger.info("chunking_done", total_chunks=len(all_chunks))
 
-        # BUG-07 FIX: upsert_chunks now commits sub-batches internally.
-        chunk_count = await vector_store.upsert_chunks(all_chunks)
+        # Single transaction delete and insert:
+        # Atomic replacement ensures existing chunks are preserved if embedding or insertion fails.
+        chunk_count = await vector_store.upsert_chunks(all_chunks, delete_existing=True)
 
         # Record honestly whether semantic (vector) search is available
         graph_cache.setdefault("meta", {})["search_mode"] = (

@@ -40,23 +40,22 @@ class VectorStore:
 
     # ── Upsert ────────────────────────────────────────────────────────────
 
-    async def upsert_chunks(self, chunks: list[Chunk]) -> int:
+    async def upsert_chunks(self, chunks: list[Chunk], delete_existing: bool = False) -> int:
         """
         Embed and store a list of code chunks.
-        Uses batch embedding for efficiency, commits every DB_INSERT_BATCH_SIZE
-        rows for durability.
-
-        BUG-07 FIX: commits after each DB batch so partial progress is
-        saved even if the caller raises before the final commit.
+        When delete_existing is True, atomically deletes existing chunks and inserts
+        new chunks in a single transaction.
 
         Returns the number of chunks stored.
         """
         if not chunks:
+            if delete_existing:
+                await self.delete_all(commit=True)
             return 0
 
         total_stored = 0
 
-        # Embed all chunks in one batched call (embed_texts handles sub-batching).
+        # Embed all chunks before starting the DB transaction.
         # If the provider is unavailable (quota/auth/network) we store chunks
         # with NULL embeddings and rely on keyword/symbol search. We never
         # store fake vectors.
@@ -75,47 +74,57 @@ class VectorStore:
                 self.semantic_enabled = False  # partially embedded
             embeddings.extend([None] * (len(chunks) - len(embeddings)))
 
-        # Insert in DB_INSERT_BATCH_SIZE sub-batches with commits
-        for batch_start in range(0, len(chunks), DB_INSERT_BATCH_SIZE):
-            batch_chunks = chunks[batch_start : batch_start + DB_INSERT_BATCH_SIZE]
-            batch_embeddings = embeddings[batch_start : batch_start + DB_INSERT_BATCH_SIZE]
-
-            db_chunks = [
-                CodeChunk(
-                    repo_id=self.repo_id,
-                    file_path=chunk.file_path,
-                    language=chunk.language,
-                    chunk_index=chunk.chunk_index,
-                    content=chunk.content,
-                    token_count=chunk.token_count,
-                    chunk_type=chunk.chunk_type,
-                    symbol_name=chunk.symbol_name,
-                    start_line=chunk.start_line,
-                    end_line=chunk.end_line,
-                    embedding=embedding,
+        try:
+            if delete_existing:
+                await self.db.execute(
+                    delete(CodeChunk).where(CodeChunk.repo_id == self.repo_id)
                 )
-                for chunk, embedding in zip(batch_chunks, batch_embeddings)
-            ]
 
-            self.db.add_all(db_chunks)
-            # BUG-07 FIX: commit each sub-batch for durability
+            # Insert in DB_INSERT_BATCH_SIZE sub-batches within a single transaction
+            for batch_start in range(0, len(chunks), DB_INSERT_BATCH_SIZE):
+                batch_chunks = chunks[batch_start : batch_start + DB_INSERT_BATCH_SIZE]
+                batch_embeddings = embeddings[batch_start : batch_start + DB_INSERT_BATCH_SIZE]
+
+                db_chunks = [
+                    CodeChunk(
+                        repo_id=self.repo_id,
+                        file_path=chunk.file_path,
+                        language=chunk.language,
+                        chunk_index=chunk.chunk_index,
+                        content=chunk.content,
+                        token_count=chunk.token_count,
+                        chunk_type=chunk.chunk_type,
+                        symbol_name=chunk.symbol_name,
+                        start_line=chunk.start_line,
+                        end_line=chunk.end_line,
+                        embedding=embedding,
+                    )
+                    for chunk, embedding in zip(batch_chunks, batch_embeddings)
+                ]
+
+                self.db.add_all(db_chunks)
+                await self.db.flush()
+                total_stored += len(db_chunks)
+
+                logger.info(
+                    "chunks_upserted_batch",
+                    repo_id=str(self.repo_id),
+                    batch_start=batch_start,
+                    batch_count=len(db_chunks),
+                    total_so_far=total_stored,
+                )
+
             await self.db.commit()
-            total_stored += len(db_chunks)
-
             logger.info(
-                "chunks_upserted_batch",
+                "chunks_upserted_complete",
                 repo_id=str(self.repo_id),
-                batch_start=batch_start,
-                batch_count=len(db_chunks),
-                total_so_far=total_stored,
+                total=total_stored,
             )
-
-        logger.info(
-            "chunks_upserted_complete",
-            repo_id=str(self.repo_id),
-            total=total_stored,
-        )
-        return total_stored
+            return total_stored
+        except Exception as e:
+            await self.db.rollback()
+            logger.error("upsert_chunks_failed_rolled_back", repo_id=str(self.repo_id), error=str(e))
+            raise
 
     # ── By-File Lookup ────────────────────────────────────────────────────
 
@@ -265,7 +274,7 @@ class VectorStore:
 
     # ── Delete (for re-indexing) ───────────────────────────────────────────
 
-    async def delete_all(self) -> int:
+    async def delete_all(self, commit: bool = True) -> int:
         """
         Delete all chunks for this repo. Called before re-indexing
         to avoid stale embeddings from a previous commit.
@@ -273,7 +282,8 @@ class VectorStore:
         result = await self.db.execute(
             delete(CodeChunk).where(CodeChunk.repo_id == self.repo_id)
         )
-        await self.db.commit()
+        if commit:
+            await self.db.commit()
         count = result.rowcount
         logger.info("chunks_deleted", repo_id=str(self.repo_id), count=count)
         return count
