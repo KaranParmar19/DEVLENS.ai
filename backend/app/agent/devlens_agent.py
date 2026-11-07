@@ -479,8 +479,8 @@ class DevLensAgent:
         else:
             quick_start_lines.append("- **Environment Variables**: No .env.example declared in repository.")
 
-        tech_stack = manifest.get("tech_stack") or manifest.get("runtime_dependencies") or doc.tech_stack or []
-        tech_stack = [str(t) for t in tech_stack if not str(t).endswith("(dev)")]
+        tech_stack = doc.tech_stack if (hasattr(doc, "tech_stack") and doc.tech_stack) else (manifest.get("runtime_dependencies") or [])
+        tech_stack = [str(t) for t in tech_stack if not str(t).endswith("(dev)") and not str(t).startswith("@types/")]
         if tech_stack:
             quick_start_lines.append(f"- **Tech Stack**: {', '.join(tech_stack)}")
 
@@ -736,6 +736,14 @@ class DevLensAgent:
                     sample_files=fb.get("sample_files", ""),
                 ))
         parsed_schema.folder_map = valid_folder_map
+
+        # 1c. Overwrite tech_stack strictly from runtime_dependencies only (exclude devDependencies, @types/*)
+        runtime_deps = manifest.get("runtime_dependencies") or []
+        parsed_schema.tech_stack = [
+            str(dep) for dep in runtime_deps
+            if not str(dep).startswith("@types/")
+            and not str(dep).endswith("(dev)")
+        ]
 
         # 2. Choose careful_files in code: Render every High-risk file from computed data
         # The model may only write the explanation, and only from the snippet
