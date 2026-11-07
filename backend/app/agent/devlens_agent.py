@@ -406,7 +406,8 @@ class DevLensAgent:
                     quick_start_lines.append(f"    - Install: `{pkg['install_command']}`")
                 if pkg.get("run_command"):
                     quick_start_lines.append(f"    - Run/Dev: `{pkg['run_command']}`")
-                quick_start_lines.append(f"    - Test: `{pkg['test_command']}`")
+                if pkg.get("test_command") and pkg["test_command"] != "no tests found":
+                    quick_start_lines.append(f"    - Test: `{pkg['test_command']}`")
         else:
             if qs.install_command:
                 quick_start_lines.append(f"- **Install**: `{qs.install_command}`")

@@ -708,13 +708,21 @@ class FactsExtractor:
         valid_dirs = set(manifests_by_dir.keys())
         if len(valid_dirs) > 1:
             monorepo_packages = []
+            package_folders = [("root" if d in (".", "") else d) for d in manifests_by_dir.keys()]
+
             for d, m_files in sorted(manifests_by_dir.items(), key=lambda x: x[0]):
                 folder = "root" if d in (".", "") else d
-                folder_tests = (
-                    any(is_test_file(f) and f.startswith(d) for f in all_file_paths)
-                    if folder != "root"
-                    else (test_modules_count > 0)
-                )
+                if folder != "root":
+                    folder_tests = sum(
+                        1 for f in all_file_paths
+                        if is_test_file(f) and (f.startswith(folder + "/") or f.startswith(folder + "\\"))
+                    )
+                else:
+                    other_dirs = [fld for fld in package_folders if fld != "root"]
+                    folder_tests = sum(
+                        1 for f in all_file_paths
+                        if is_test_file(f) and not any(f.startswith(od + "/") or f.startswith(od + "\\") for od in other_dirs)
+                    )
 
                 p_json = next((f for f in m_files if PurePosixPath(f).name == "package.json"), None)
                 py_proj = next((f for f in m_files if PurePosixPath(f).name == "pyproject.toml"), None)
@@ -728,14 +736,14 @@ class FactsExtractor:
                         try:
                             pdata = json.loads(content)
                             pscripts = pdata.get("scripts", {})
-                            if folder == "root" and manifest_facts.get("test_command"):
-                                test_cmd = manifest_facts["test_command"]
+                            if folder_tests > 0:
+                                if folder == "root" and manifest_facts.get("test_command"):
+                                    test_cmd = manifest_facts["test_command"]
+                                else:
+                                    test_cmd = f"{cd_prefix}npm test" if "test" in pscripts else None
                             else:
-                                test_cmd = (
-                                    "no tests found"
-                                    if (not folder_tests or test_modules_count == 0)
-                                    else (f"{cd_prefix}npm test" if "test" in pscripts else "no tests found")
-                                )
+                                test_cmd = None
+
                             run_cmd = (
                                 f"{cd_prefix}npm run dev"
                                 if "dev" in pscripts
@@ -747,40 +755,55 @@ class FactsExtractor:
                                 "install_command": f"{cd_prefix}npm install",
                                 "run_command": run_cmd,
                                 "test_command": test_cmd,
+                                "test_count": folder_tests,
                             })
                         except Exception:
                             pass
                 elif py_proj:
-                    if folder == "root" and manifest_facts.get("test_command"):
-                        test_cmd = manifest_facts["test_command"]
+                    if folder_tests > 0:
+                        if folder == "root" and manifest_facts.get("test_command"):
+                            test_cmd = manifest_facts["test_command"]
+                        else:
+                            test_cmd = f"{cd_prefix}pytest"
                     else:
-                        test_cmd = (
-                            "no tests found"
-                            if (not folder_tests or test_modules_count == 0)
-                            else f"{cd_prefix}pytest"
-                        )
+                        test_cmd = None
+
+                    # Detect run command
+                    run_cmd = None
+                    if any(f.endswith("main.py") and f.startswith(folder) for f in all_file_paths):
+                        run_cmd = "uvicorn app.main:app --reload" if any("uvicorn" in f or "fastapi" in f for f in all_file_paths) else f"{cd_prefix}python main.py"
+
                     monorepo_packages.append({
                         "folder": folder,
                         "manifest_type": "pyproject.toml",
                         "install_command": f"{cd_prefix}pip install -e .",
-                        "run_command": None,
+                        "run_command": run_cmd,
                         "test_command": test_cmd,
+                        "test_count": folder_tests,
                     })
                 elif req_txt:
-                    if folder == "root" and manifest_facts.get("test_command"):
-                        test_cmd = manifest_facts["test_command"]
+                    if folder_tests > 0:
+                        if folder == "root" and manifest_facts.get("test_command"):
+                            test_cmd = manifest_facts["test_command"]
+                        else:
+                            test_cmd = f"pytest {folder}" if folder != "root" else "pytest"
                     else:
-                        test_cmd = (
-                            "no tests found"
-                            if (not folder_tests or test_modules_count == 0)
-                            else (f"pytest {folder}" if folder != "root" else "pytest")
-                        )
+                        test_cmd = None
+
+                    # Detect run command from Dockerfile or app entry point
+                    run_cmd = None
+                    prefix_path = folder if folder != "root" else ""
+                    has_main = any(f in (f"{prefix_path}/app/main.py".lstrip("/"), f"{prefix_path}/main.py".lstrip("/")) for f in all_file_paths)
+                    if has_main:
+                        run_cmd = "uvicorn app.main:app --reload"
+
                     monorepo_packages.append({
                         "folder": folder,
                         "manifest_type": "requirements.txt",
                         "install_command": f"pip install -r {req_txt}",
-                        "run_command": None,
+                        "run_command": run_cmd,
                         "test_command": test_cmd,
+                        "test_count": folder_tests,
                     })
 
             manifest_facts["monorepo_packages"] = monorepo_packages
