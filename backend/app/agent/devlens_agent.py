@@ -397,7 +397,9 @@ class DevLensAgent:
         quick_start_lines = []
         qs = doc.quick_start
         manifest = facts.get("manifest", {})
-        if manifest.get("monorepo_packages"):
+        if manifest.get("parse_error"):
+            quick_start_lines.append(f"- {manifest['parse_error']}")
+        elif manifest.get("monorepo_packages"):
             quick_start_lines.append("- **Monorepo Packages Setup**:")
             for pkg in manifest["monorepo_packages"]:
                 folder = pkg["folder"]

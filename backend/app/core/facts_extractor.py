@@ -540,6 +540,9 @@ class FactsExtractor:
                 return await self._finalize_manifest(manifest_facts, test_modules_count)
             except Exception as e:
                 logger.warning("failed_to_parse_package_json", error=str(e))
+                manifest_facts["manifest_type"] = "package.json"
+                manifest_facts["parse_error"] = "could not read package.json"
+                return await self._finalize_manifest(manifest_facts, test_modules_count)
 
         # 2. pyproject.toml
         pyproject_content = await self.extract_file_content("pyproject.toml")
@@ -614,6 +617,9 @@ class FactsExtractor:
                 return await self._finalize_manifest(manifest_facts, test_modules_count)
             except Exception as e:
                 logger.warning("failed_to_parse_pyproject_toml", error=str(e))
+                manifest_facts["manifest_type"] = "pyproject.toml"
+                manifest_facts["parse_error"] = "could not read pyproject.toml"
+                return await self._finalize_manifest(manifest_facts, test_modules_count)
 
         # 3. requirements.txt
         req_content = await self.extract_file_content("requirements.txt")
@@ -1165,7 +1171,10 @@ class FactsExtractor:
             lines.append(f"\n[Verified Project Overview from README]:\n{facts['readme_summary']}")
 
         manifest = facts["manifest"]
-        if manifest.get("monorepo_packages"):
+        if manifest.get("parse_error"):
+            lines.append(f"\n[Verified Build & Package Setup ({manifest.get('manifest_type') or 'manifest'})]:")
+            lines.append(f"- Parse Error: {manifest['parse_error']}")
+        elif manifest.get("monorepo_packages"):
             lines.append("\n[Verified Monorepo Packages / Multi-folder Setup]:")
             for pkg in manifest["monorepo_packages"]:
                 lines.append(f"- Folder: `{pkg['folder']}/` ({pkg['manifest_type']})")
@@ -1303,7 +1312,9 @@ def build_deterministic_fallback_doc(facts: dict[str, Any]) -> str:
 
     manifest = facts.get("manifest", {})
     quick_start_lines = []
-    if manifest.get("monorepo_packages"):
+    if manifest.get("parse_error"):
+        quick_start_lines.append(f"- {manifest['parse_error']}")
+    elif manifest.get("monorepo_packages"):
         quick_start_lines.append("- **Monorepo Packages Setup**:")
         for pkg in manifest["monorepo_packages"]:
             folder = pkg["folder"]

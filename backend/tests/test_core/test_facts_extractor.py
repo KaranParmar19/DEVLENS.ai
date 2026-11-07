@@ -878,3 +878,49 @@ def test_dynamic_section_renumbering_when_sections_omitted():
     assert "## 7." not in rendered
     assert "## 8." not in rendered
     assert "Repository Invariants & Gotchas" not in rendered
+
+
+def test_manifest_parse_failure_handling():
+    mock_graph = {
+        "nodes": [{"id": "package.json", "path": "package.json"}],
+        "edges": [],
+    }
+    extractor = FactsExtractor(
+        db=None,  # type: ignore
+        repo_id=None,  # type: ignore
+        repo_full_name="test-org/corrupt-manifest",
+        graph_cache=mock_graph,
+    )
+
+    with patch.object(extractor, "extract_file_content", AsyncMock(side_effect=lambda p: "{invalid json content" if p == "package.json" else None)):
+        manifest = asyncio.run(extractor.extract_manifest_facts())
+        assert manifest["parse_error"] == "could not read package.json"
+        assert manifest["manifest_type"] == "package.json"
+
+        facts = {"manifest": manifest, "total_modules": 1, "total_edges": 0}
+        fallback = build_deterministic_fallback_doc(facts)
+        assert "- could not read package.json" in fallback
+
+        from app.schemas.onboarding import OnboardingDocSchema, QuickStartInfo, FirstTaskSection
+        from app.agent.devlens_agent import DevLensAgent
+        doc = OnboardingDocSchema(
+            repo_name="test-org/corrupt-manifest",
+            summary="Overview",
+            architecture="Arch",
+            quick_start=QuickStartInfo(),
+            folder_map=[],
+            how_it_works="Data flows through modules.",
+            careful_files=[],
+            gotchas=[],
+            first_task=FirstTaskSection(title="Generic task"),
+            glossary=[],
+        )
+        agent = DevLensAgent(db=None, repo_id=None, repo_full_name="test-org/corrupt-manifest")  # type: ignore
+        rendered = agent._render_schema_to_markdown(doc, facts=facts)
+        assert "- could not read package.json" in rendered
+
+    with patch.object(extractor, "extract_file_content", AsyncMock(side_effect=lambda p: "corrupt = [toml" if p == "pyproject.toml" else None)):
+        manifest_py = asyncio.run(extractor.extract_manifest_facts())
+        assert manifest_py["parse_error"] == "could not read pyproject.toml"
+        assert manifest_py["manifest_type"] == "pyproject.toml"
+
