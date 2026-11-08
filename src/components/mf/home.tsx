@@ -1796,19 +1796,20 @@ export function HomePage() {
 
           <motion.h1
             className="mf-mega"
+            style={{ textTransform: "uppercase" }}
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
           >
-            See the{" "}
+            SEE THE{" "}
             <MorphText
-              words={["shape", "flows", "graph", "logic", "depth"]}
+              words={["SHAPE", "FLOWS", "GRAPH", "LOGIC", "DEPTH"]}
               morphTime={1.1}
               holdTime={1.8}
               strength={8}
             />
             <br />
-            of any codebase.
+            OF ANY CODEBASE.
           </motion.h1>
 
           <div className="mf-hero-foot">
