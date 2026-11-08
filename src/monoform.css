@@ -1,9 +1,41 @@
-@import url('https://fonts.googleapis.com/css2?family=Titan+One&family=Lilita+One&family=Bowlby+One+SC&family=Fredoka:wght@600;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Titan+One&family=Lilita+One&family=Bowlby+One+SC&family=Fredoka:wght@600;700;900&family=Nunito:wght@700;800;900&display=swap');
 
 @font-face {
   font-family: 'Qilka';
   src: url('/fonts/Qilka-Bold.otf') format('opentype');
-  font-weight: 100 900;
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Qilka';
+  src: url('/fonts/Qilka-Bold.otf') format('opentype');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Qilka';
+  src: url('/fonts/Qilka-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Qilka';
+  src: url('/fonts/Qilka-Bold.otf') format('opentype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Qilka';
+  src: url('/fonts/Qilka-Bold.otf') format('opentype');
+  font-weight: 900;
   font-style: normal;
   font-display: swap;
 }
@@ -651,9 +683,10 @@ button.mf-btn.sm {
 }
 .mf-hero .mf-mega {
   color: #0a0a0a;
-  font-family: 'Qilka', 'Fredoka', ui-rounded, 'Lilita One', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Qilka', 'Fredoka', 'Nunito', ui-rounded, 'Lilita One', -apple-system, BlinkMacSystemFont, sans-serif;
   font-weight: 800;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.015em;
+  text-transform: uppercase;
 }
 .mf-hero .mf-lead {
   color: #52525b;

@@ -1798,9 +1798,9 @@ export function HomePage() {
             className="mf-mega"
             style={{
               textTransform: "uppercase",
-              fontFamily: "'Qilka', 'Fredoka', ui-rounded, 'Lilita One', -apple-system, BlinkMacSystemFont, sans-serif",
+              fontFamily: "'Qilka', 'Fredoka', 'Nunito', ui-rounded, 'Lilita One', -apple-system, BlinkMacSystemFont, sans-serif",
               fontWeight: 800,
-              letterSpacing: "-0.02em",
+              letterSpacing: "-0.015em",
             }}
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
