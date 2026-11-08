@@ -54,14 +54,14 @@ def make_file_tool(vector_store: VectorStore) -> Tool:
             end = chunk.get("end_line", "?")
             chunk_type = chunk.get("chunk_type", "code")
             parts.append(
-                f"\n**Lines {start}–{end}** [{chunk_type}]\n"
+                f"\n**Lines {start}-{end}** [{chunk_type}]\n"
                 f"```{language}\n{chunk['content']}\n```"
             )
 
         full_content = "\n".join(parts)
         # Hard cap at 4000 chars to avoid context overflow
         if len(full_content) > 4000:
-            full_content = full_content[:4000] + "\n\n*[content truncated — file too large]*"
+            full_content = full_content[:4000] + "\n\n*[content truncated: file too large]*"
 
         return full_content
 

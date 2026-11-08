@@ -74,7 +74,7 @@ def make_blast_tool(graph_cache: dict) -> Tool:
 
         if not visited:
             return (
-                f"✅ **No blast radius** — `{matched_id}` has no dependents.\n"
+                f"✅ **No blast radius**: `{matched_id}` has no dependents.\n"
                 "This file is safe to change without impacting other modules."
             )
 
@@ -88,7 +88,7 @@ def make_blast_tool(graph_cache: dict) -> Tool:
 
         lines = [
             f"## Blast Radius: `{matched_id}`",
-            f"**Risk:** {risk_label} — **{total} file(s) affected**",
+            f"**Risk:** {risk_label} ({total} files affected)",
             "",
         ]
 

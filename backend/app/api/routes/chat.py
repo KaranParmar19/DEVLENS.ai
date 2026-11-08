@@ -173,7 +173,7 @@ async def chat_ws(session_id: str, websocket: WebSocket):
                 except Exception as stream_exc:
                     logger.exception("ws_chat_stream_error", session_id=session_id)
                     await websocket.send_text(
-                        StreamError(message="Streaming error — please retry.").model_dump_json()
+                        StreamError(message="Streaming error: please retry.").model_dump_json()
                     )
                     continue
 

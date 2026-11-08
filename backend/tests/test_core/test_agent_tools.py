@@ -105,3 +105,39 @@ def test_deterministic_fallback_generation(sample_graph_cache):
     assert "org/test-repo" in fallback
     assert "AST Index" in fallback
     assert "High risk" in fallback
+
+
+def test_clean_antislop_sanitization():
+    from app.agent.devlens_agent import _clean_antislop
+
+    # Test 1: Banish em-dashes (R-02)
+    slop_dash = "This module handles ingress — routing requests to the controller."
+    assert "—" not in _clean_antislop(slop_dash)
+    assert _clean_antislop(slop_dash) == "This module handles ingress, routing requests to the controller."
+
+    # Test 2: Strip chatbot conversational closers
+    slop_closers = (
+        "The authentication route is defined in [[server/src/auth.ts]].\n\n"
+        "I hope this helps! Let me know if you have any questions!"
+    )
+    cleaned = _clean_antislop(slop_closers)
+    assert "hope this helps" not in cleaned.lower()
+    assert "let me know" not in cleaned.lower()
+    assert cleaned.endswith("[[server/src/auth.ts]].")
+
+    # Test 3: Strip theatrical and conversational openers
+    slop_opener = "Sure thing! Here's what you need to know: the database connection pool is in [[db.ts]]."
+    cleaned_opener = _clean_antislop(slop_opener)
+    assert "sure thing" not in cleaned_opener.lower()
+    assert "here's what you need to know" not in cleaned_opener.lower()
+    assert "the database connection pool is in [[db.ts]]." in cleaned_opener.lower()
+
+    # Test 4: Replace empty buzzwords
+    slop_buzz = "We will delve into this robust module to ensure seamless integration."
+    cleaned_buzz = _clean_antislop(slop_buzz)
+    assert "delve into" not in cleaned_buzz.lower()
+    assert "robust" not in cleaned_buzz.lower()
+    assert "seamless" not in cleaned_buzz.lower()
+    assert "analyze" in cleaned_buzz.lower()
+    assert "reliable" in cleaned_buzz.lower()
+    assert "integrated" in cleaned_buzz.lower()

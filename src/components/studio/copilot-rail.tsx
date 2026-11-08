@@ -384,6 +384,16 @@ export function CopilotRail({
       );
     }
 
+    // Anti-slop client-side sanitizer: strip em dashes (R-02) and chatbot closers
+    const cleanContent = content
+      .replace(/—/g, ", ")
+      .replace(/–/g, "-")
+      .replace(
+        /(?:\n\s*|\.\s+)(?:I\s+)?(?:hope\s+this\s+helps!?|(?:please\s+)?let\s+me\s+know\s+if\s+you\s+(?:have\s+(?:any\s+)?questions|need\s+(?:any(?:thing| more help| further assistance)|help))!?|feel\s+free\s+to\s+ask(?:\s+(?:if\s+you\s+have\s+questions|any\s+follow-up\s+questions))!?|happy\s+coding!?|hope\s+that\s+(?:clears\s+things\s+up|helps|makes\s+sense)!?)\s*$/i,
+        "",
+      )
+      .trim();
+
     // Split on code fences ```lang ... ```
     const codeFenceRegex = /```([a-zA-Z0-9_\-\.]*)\n([\s\S]*?)```/g;
     const elements = [];
@@ -391,9 +401,9 @@ export function CopilotRail({
     let match: RegExpExecArray | null;
 
     let segmentIdx = 0;
-    while ((match = codeFenceRegex.exec(content)) !== null) {
+    while ((match = codeFenceRegex.exec(cleanContent)) !== null) {
       if (match.index > lastIndex) {
-        const textSegment = content.slice(lastIndex, match.index);
+        const textSegment = cleanContent.slice(lastIndex, match.index);
         elements.push(
           <div key={`txt-${segmentIdx++}`} style={{ whiteSpace: "pre-wrap" }}>
             {renderFormattedText(textSegment)}
@@ -473,8 +483,8 @@ export function CopilotRail({
       lastIndex = match.index + match[0].length;
     }
 
-    if (lastIndex < content.length) {
-      const remaining = content.slice(lastIndex);
+    if (lastIndex < cleanContent.length) {
+      const remaining = cleanContent.slice(lastIndex);
       elements.push(
         <div key={`txt-${segmentIdx++}`} style={{ whiteSpace: "pre-wrap" }}>
           {renderFormattedText(remaining)}

@@ -262,6 +262,87 @@ def _clean_markdown_citations(
     return re.sub(r"\[\[(.*?)\]\]", repl, text)
 
 
+# ── Anti-Slop & Direct Technical Communication (R-02, R-16, R-36) ─────────────
+
+_SLOP_BUZZWORDS = {
+    r"\bdelve(?:s|d)?\s+into\b": "analyze",
+    r"\bdelve(?:s|d)?\b": "explore",
+    r"\bseamlessly\b": "directly",
+    r"\bseamless\b": "integrated",
+    r"\brobust(?:ly)?\b": "reliable",
+    r"\belevate(?:s|d)?\b": "improve",
+    r"\bempower(?:s|d)?\b": "enable",
+    r"\bunlock(?:s|ed)?\b": "access",
+    r"\bgame-changer\b": "major change",
+    r"\btestament\s+to\b": "evidence of",
+    r"\bcutting-edge\b": "modern",
+    r"\bnext-level\b": "advanced",
+    r"\brevolutionary\b": "significant",
+}
+
+_SLOP_CLOSER_PATTERNS = [
+    r"(?:i\s+)?hope\s+this\s+helps[!.]?",
+    r"(?:please\s+)?let\s+me\s+know\s+if\s+you\s+(?:have\s+(?:any\s+)?questions|need\s+(?:any(?:thing| more help| further assistance)|help))[!.]?",
+    r"feel\s+free\s+to\s+ask(?:\s+(?:if\s+you\s+have\s+questions|any\s+follow-up\s+questions))?[!.]?",
+    r"hope\s+that\s+(?:clears\s+things\s+up|helps|makes\s+sense)[!.]?",
+    r"happy\s+coding[!.]?",
+    r"don't\s+hesitate\s+to\s+reach\s+out[!.]?",
+    r"is\s+there\s+anything\s+else\s+i\s+can\s+help\s+you\s+with\??",
+    r"reach\s+out\s+if\s+you\s+have\s+questions[!.]?",
+]
+
+_SLOP_CLOSER_SENTENCE = r"(?:" + "|".join(_SLOP_CLOSER_PATTERNS) + r")"
+_SLOP_CLOSERS_REGEX = re.compile(
+    r"(?:\s+" + _SLOP_CLOSER_SENTENCE + r")+\s*\Z",
+    re.IGNORECASE,
+)
+
+_SLOP_OPENER_PATTERNS = [
+    r"(?:sure(?:\s+thing)?|certainly|absolutely|great\s+question)[!.,]?",
+    r"here(?:'s|\s+is)\s+(?:what\s+you\s+need\s+to\s+know|a\s+breakdown|an\s+overview):?",
+    r"let's\s+d(?:ive|elve)\s+in:?",
+    r"honestly,?",
+    r"here's\s+the\s+thing:?",
+    r"at\s+its\s+core,?",
+    r"what\s+really\s+matters\s+is:?",
+]
+
+_SLOP_OPENER_SENTENCE = r"(?:" + "|".join(_SLOP_OPENER_PATTERNS) + r")"
+_SLOP_OPENERS_REGEX = re.compile(
+    r"\A(?:" + _SLOP_OPENER_SENTENCE + r"\s*)+",
+    re.IGNORECASE,
+)
+
+
+def _clean_antislop(text: str) -> str:
+    """
+    Sanitize text strictly adhering to antislop and antislop-copywriting guidelines:
+    1. R-02: Banish em dashes (—) and en dashes (–); replace with commas, hyphens, colons, or periods.
+    2. Strip conversational chatbot closers ('Hope this helps!', 'Let me know if you have questions!').
+    3. Strip theatrical and conversational openers ('Sure thing!', 'Here is what you need to know:').
+    4. Replace empty AI buzzwords (delve, elevate, empower, seamless, robust, etc.).
+    """
+    if not text:
+        return text
+
+    # 1. R-02: Replace em dash (—) and en dash (–)
+    cleaned = re.sub(r"\s*[\u2014]\s*", ", ", text)
+    cleaned = re.sub(r"\s+--\s+", ", ", cleaned)
+    cleaned = cleaned.replace("\u2013", "-")
+
+    # 2. Strip conversational closers at the end of the text
+    cleaned = _SLOP_CLOSERS_REGEX.sub("", cleaned).strip()
+
+    # 3. Strip theatrical openers at the start of text
+    cleaned = _SLOP_OPENERS_REGEX.sub("", cleaned).strip()
+
+    # 4. Replace empty AI buzzwords in prose (case-insensitive)
+    for pattern, replacement in _SLOP_BUZZWORDS.items():
+        cleaned = re.sub(pattern, replacement, cleaned, flags=re.IGNORECASE)
+
+    return cleaned
+
+
 class DevLensAgent:
     """
     Wraps a tool-calling agent grounded in the repository's AST index.
@@ -411,7 +492,7 @@ class DevLensAgent:
                 chunk_parts = []
                 for c in chunks:
                     sources.add(c["file_path"])
-                    loc = f"lines {c['start_line']}–{c['end_line']}" if c.get("start_line") else ""
+                    loc = f"lines {c['start_line']}-{c['end_line']}" if c.get("start_line") else ""
                     sym = f" [symbol: {c['symbol_name']}]" if c.get("symbol_name") else ""
                     chunk_parts.append(
                         f"#### File: [[{c['file_path']}]] {loc}{sym}\n```{c.get('language', '').lower()}\n{c['content'][:700]}\n```"
@@ -451,12 +532,7 @@ class DevLensAgent:
                 for n in nodes[:5]:
                     lines.append(f"- `[[{n['id']}]]` ({n.get('desc', 'N/A')})")
 
-        lines.append(
-            "\n---\n"
-            "💡 *Tip: DevLens AI is operating in AST Engine mode. To enable conversational synthesis, "
-            "set `OPENAI_API_KEY` (or compatible endpoint via `OPENAI_API_BASE`) in `backend/.env`.*"
-        )
-        return "\n".join(lines)
+        return _clean_antislop("\n".join(lines))
 
     # ── Synchronous / REST Chat ───────────────────────────────────────────────
 
@@ -542,6 +618,9 @@ class DevLensAgent:
                 logger.warning("agent_llm_failed_using_grounded_fallback", error=str(exc))
                 full_reply = self._generate_deterministic_fallback(message, context_text, list(collected_sources))
 
+        # Apply strict antislop cleaning to eliminate buzzwords, closers, and em-dashes
+        full_reply = _clean_antislop(full_reply)
+
         # Extract any [[file_path]] citations from final response
         for citation in re.findall(r"\[\[(.*?)\]\]", full_reply):
             collected_sources.add(citation)
@@ -581,8 +660,10 @@ class DevLensAgent:
         try:
             async for chunk in self.llm.astream(messages):
                 if hasattr(chunk, "content") and chunk.content:
-                    streamed_chunks.append(chunk.content)
-                    yield chunk.content
+                    # Enforce R-02 em dash and en dash elimination in streaming chunks
+                    cleaned_chunk = chunk.content.replace("\u2014", ", ").replace("\u2013", "-")
+                    streamed_chunks.append(cleaned_chunk)
+                    yield cleaned_chunk
 
             full_text = "".join(streamed_chunks)
             for citation in re.findall(r"\[\[(.*?)\]\]", full_text):
@@ -590,7 +671,9 @@ class DevLensAgent:
 
         except Exception as exc:
             logger.warning("agent_stream_failed_using_grounded_fallback", error=str(exc))
-            fallback_text = self._generate_deterministic_fallback(message, context_text, list(collected_sources))
+            fallback_text = _clean_antislop(
+                self._generate_deterministic_fallback(message, context_text, list(collected_sources))
+            )
             for citation in re.findall(r"\[\[(.*?)\]\]", fallback_text):
                 collected_sources.add(citation)
 
@@ -835,7 +918,7 @@ class DevLensAgent:
                 chunks = await self.vector_store.get_chunks_by_file(path)
                 if chunks:
                     c = chunks[0]
-                    loc = f"lines {c['start_line']}–{c['end_line']}" if c.get("start_line") else ""
+                    loc = f"lines {c['start_line']}-{c['end_line']}" if c.get("start_line") else ""
                     context_parts.append(
                         f"### [[{c['file_path']}]] {loc}\n```{c.get('language', '').lower()}\n{c['content'][:600]}\n```"
                     )
