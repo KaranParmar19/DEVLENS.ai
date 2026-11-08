@@ -1795,12 +1795,12 @@ export function HomePage() {
           </motion.div>
 
           <motion.h1
-            className="mf-mega"
+            className="mf-mega boogaloo-regular"
             style={{
               textTransform: "uppercase",
-              fontFamily: "'Qilka', 'Fredoka', 'Nunito', ui-rounded, 'Lilita One', -apple-system, BlinkMacSystemFont, sans-serif",
-              fontWeight: 800,
-              letterSpacing: "-0.015em",
+              fontFamily: '"Boogaloo", sans-serif',
+              fontWeight: 400,
+              fontStyle: "normal",
             }}
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
