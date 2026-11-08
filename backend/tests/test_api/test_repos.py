@@ -56,9 +56,24 @@ async def test_analyze_invalid_url():
 @pytest.mark.asyncio
 async def test_get_nonexistent_repo():
     """GET /repos/{bad_id} should return 404."""
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        response = await client.get(
-            f"/api/v1/repos/{uuid.uuid4()}",
-            headers={"X-API-Key": settings.api_key},
-        )
-    assert response.status_code == 404
+    from app.api.deps import get_db
+    from unittest.mock import AsyncMock, MagicMock
+
+    mock_db = AsyncMock()
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = None
+    mock_db.execute.return_value = mock_result
+
+    async def override_get_db():
+        yield mock_db
+
+    app.dependency_overrides[get_db] = override_get_db
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.get(
+                f"/api/v1/repos/{uuid.uuid4()}",
+                headers={"X-API-Key": settings.api_key},
+            )
+        assert response.status_code == 404
+    finally:
+        app.dependency_overrides.pop(get_db, None)

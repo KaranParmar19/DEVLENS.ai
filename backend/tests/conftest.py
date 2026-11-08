@@ -25,12 +25,7 @@ from sqlalchemy.pool import NullPool
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    """Create an event loop scoped to the entire test session."""
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
+# In pytest-asyncio >= 0.24, event_loop fixture is managed automatically.
 
 
 @pytest_asyncio.fixture(scope="session")
@@ -43,7 +38,7 @@ async def test_engine():
     )
 
     # Create all tables
-    from app.models import Base  # noqa: F401 — triggers model registration
+    from app.database import Base  # noqa: F401 — triggers model registration
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
