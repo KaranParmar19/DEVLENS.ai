@@ -1912,8 +1912,8 @@ export function HomePage() {
         <div className="mf-wrap">
           <div className="mf-sec-head">
             <Reveal>
-              <h2 className="mf-h1" style={{ maxWidth: "10em" }}>
-                Five views on one repository.
+              <h2 className="mf-h1" style={{ maxWidth: "10em", textTransform: "uppercase", fontFamily: '"Boogaloo", sans-serif' }}>
+                FIVE VIEWS ON ONE REPOSITORY.
               </h2>
             </Reveal>
             <Link to="/features" className="mf-btn ghost">
@@ -1931,7 +1931,7 @@ export function HomePage() {
                 <Link to="/features" className="mf-row">
                   <span className="mf-num">0{idx + 1}</span>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 6 }}>
-                    <span className="mf-row-title">{f.t}</span>
+                    <span className="mf-row-title" style={{ textTransform: "uppercase", fontFamily: '"Boogaloo", sans-serif' }}>{f.t}</span>
                     <span
                       className="mf-pill"
                       style={{
@@ -1961,7 +1961,7 @@ export function HomePage() {
           <Reveal>
             <div className="pl-deck-header">
               <div className="pl-deck-eyebrow">
-                <span className="pl-deck-label mf-mono">TECHNICAL SPECIFICATIONS</span>
+                <span className="pl-deck-label" style={{ textTransform: "uppercase", fontFamily: '"Boogaloo", sans-serif', fontSize: "1.1rem" }}>TECHNICAL SPECIFICATIONS</span>
               </div>
               <span className="pl-deck-hint mf-mono">
                 Drag or click cards to explore
@@ -1977,10 +1977,10 @@ export function HomePage() {
         <div className="mf-wrap">
           <div className="mf-sec-head mf-pipeline-sec-head">
             <Reveal>
-              <h2 className="mf-h1 mf-pipeline-h1">
-                From GitHub URL<br />
-                to interactive map<br />
-                in three steps.
+              <h2 className="mf-h1 mf-pipeline-h1" style={{ textTransform: "uppercase", fontFamily: '"Boogaloo", sans-serif' }}>
+                FROM GITHUB URL<br />
+                TO INTERACTIVE MAP<br />
+                IN THREE STEPS.
               </h2>
             </Reveal>
             <Reveal>

@@ -20,19 +20,19 @@ export const PLUMBLINE_STEPS = [
     id: "ingest",
     step: "01",
     marker: "01",
-    title: "Paste a repo",
+    title: "PASTE A REPO",
   },
   {
     id: "parse",
     step: "02",
     marker: "02",
-    title: "Tree-sitter parses it",
+    title: "TREE-SITTER PARSES IT",
   },
   {
     id: "interrogate",
     step: "03",
     marker: "03",
-    title: "Inspect and ask questions",
+    title: "INSPECT AND ASK QUESTIONS",
   },
 ];
 
@@ -202,8 +202,8 @@ export function PlumblinePipeline() {
                     <span className="plumbline-phase-idx mf-mono">1 of 3</span>
                   </div>
 
-                  <h3 className="plumbline-pane-heading">
-                    Shallow clone in a temporary directory.
+                  <h3 className="plumbline-pane-heading" style={{ textTransform: "uppercase", fontFamily: '"Boogaloo", sans-serif' }}>
+                    SHALLOW CLONE IN A TEMPORARY DIRECTORY.
                   </h3>
                   <p className="plumbline-pane-desc">
                     Paste a public GitHub URL or connect a Personal Access Token for private repos. DevLens runs a shallow clone, skips vendored build folders, and deletes the temporary files when your session ends.
@@ -270,8 +270,8 @@ export function PlumblinePipeline() {
                     <span className="plumbline-phase-idx mf-mono">2 of 3</span>
                   </div>
 
-                  <h3 className="plumbline-pane-heading">
-                    Parse files and link imports with Tree-sitter.
+                  <h3 className="plumbline-pane-heading" style={{ textTransform: "uppercase", fontFamily: '"Boogaloo", sans-serif' }}>
+                    PARSE FILES AND LINK IMPORTS WITH TREE-SITTER.
                   </h3>
                   <p className="plumbline-pane-desc">
                     Tree-sitter parses each file into a syntax tree and extracts functions, classes, and import statements. Cross-file imports are linked into a directed dependency graph.
@@ -335,8 +335,8 @@ export function PlumblinePipeline() {
                     <span className="plumbline-phase-idx mf-mono">3 of 3</span>
                   </div>
 
-                  <h3 className="plumbline-pane-heading">
-                    Inspect the graph and ask questions with line links.
+                  <h3 className="plumbline-pane-heading" style={{ textTransform: "uppercase", fontFamily: '"Boogaloo", sans-serif' }}>
+                    INSPECT THE GRAPH AND ASK QUESTIONS WITH LINE LINKS.
                   </h3>
                   <p className="plumbline-pane-desc">
                     Click any file in the graph to see what imports it, trace request paths across modules, or ask a question in plain English. Every answer points to the exact file and line number.

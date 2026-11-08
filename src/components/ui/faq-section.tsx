@@ -43,7 +43,7 @@ export const DEFAULT_DEVLENS_FAQS: FAQItemData[] = [
 ];
 
 export function FAQSection({
-  title = "Questions & Answers",
+  title = "QUESTIONS & ANSWERS",
   subtitle = "Common questions about how DevLens indexes and maps repositories.",
   items = DEFAULT_DEVLENS_FAQS,
   defaultOpenIndex = 0,
@@ -62,7 +62,7 @@ export function FAQSection({
         {/* Left Column: Heading, Subtitle & Large Crisp FAQ Watermark */}
         <div className="ffaq-left">
           <div className="ffaq-left-content">
-            <h2 className="ffaq-title">{title}</h2>
+            <h2 className="ffaq-title" style={{ textTransform: "uppercase", fontFamily: '"Boogaloo", sans-serif' }}>{title}</h2>
             <p className="ffaq-subtitle">{subtitle}</p>
           </div>
 
@@ -98,6 +98,8 @@ export function FAQSection({
                     <span
                       className="ffaq-card-question"
                       style={{
+                        textTransform: "uppercase",
+                        fontFamily: '"Boogaloo", sans-serif',
                         transform: isHovered ? "translateX(6px)" : "translateX(0px)",
                         transition: "transform 0.22s cubic-bezier(0.16, 1, 0.3, 1)",
                       }}
