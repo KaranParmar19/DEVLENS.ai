@@ -60,6 +60,13 @@ const QUICK = [
   { label: "denoland/deno", tag: "Rust Runtime", lang: "Rust" },
 ];
 
+const MENU_LINKS: MotionMenuLink[] = [
+  { label: "Overview", to: "/dashboard", badge: "Dashboard" },
+  { label: "Features", to: "/features" },
+  { label: "How it works", to: "/how-it-works" },
+  { label: "Home", to: "/" },
+];
+
 const STARTER_SHOWCASE_ENTRIES: RepoHistoryEntry[] = [
   {
     id: "starter-facebook-react",
@@ -333,27 +340,6 @@ function DashboardPage() {
     }
   };
 
-  if (repo) {
-    return (
-      <StudioWorkspace
-        repoUrl={repo}
-        jobId={jobId}
-        sessionId={sessionId}
-        onClose={() => navigate({ search: { repo: undefined } })}
-      />
-    );
-  }
-
-  const menuLinks: MotionMenuLink[] = useMemo(
-    () => [
-      { label: "Overview", to: "/dashboard", badge: "Dashboard" },
-      { label: "Features", to: "/features" },
-      { label: "How it works", to: "/how-it-works" },
-      { label: "Home", to: "/" },
-    ],
-    []
-  );
-
   const secondaryLinks: MotionSecondaryLink[] = useMemo(
     () => [
       ...(isAuthenticated
@@ -376,6 +362,21 @@ function DashboardPage() {
     ],
     [isAuthenticated, user?.username, logout, loginWithGitHub]
   );
+
+  if (repo) {
+    return (
+      <StudioWorkspace
+        repoUrl={repo}
+        jobId={jobId}
+        sessionId={sessionId}
+        onClose={() =>
+          navigate({
+            search: { repo: undefined, jobId: undefined, sessionId: undefined },
+          })
+        }
+      />
+    );
+  }
 
   const topBarActions = (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -673,7 +674,7 @@ function DashboardPage() {
       {/* Floating Top Navbar */}
       <div className="mf-dashboard-nav-wrap">
         <MotionOverlayMenu
-          links={menuLinks}
+          links={MENU_LINKS}
           secondary={secondaryLinks}
           note={overlayNote}
           actions={topBarActions}
