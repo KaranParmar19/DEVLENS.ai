@@ -1795,26 +1795,20 @@ export function HomePage() {
           </motion.div>
 
           <motion.h1
-            className="mf-mega boogaloo-regular"
-            style={{
-              textTransform: "uppercase",
-              fontFamily: '"Boogaloo", sans-serif',
-              fontWeight: 400,
-              fontStyle: "normal",
-            }}
+            className="mf-mega"
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
           >
-            SEE THE{" "}
+            See the{" "}
             <MorphText
-              words={["SHAPE", "FLOWS", "GRAPH", "LOGIC", "DEPTH"]}
+              words={["shape", "flows", "graph", "logic", "depth"]}
               morphTime={1.1}
               holdTime={1.8}
               strength={8}
             />
             <br />
-            OF ANY CODEBASE.
+            of any codebase.
           </motion.h1>
 
           <div className="mf-hero-foot">
@@ -1824,7 +1818,7 @@ export function HomePage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.16, ease: [0.16, 1, 0.3, 1] }}
             >
-              <p className="mf-lead" style={{ marginBottom: 28, textTransform: "none", fontFamily: '"Boogaloo", sans-serif', fontSize: "1.25rem", lineHeight: 1.5 }}>
+              <p className="mf-lead" style={{ marginBottom: 28 }}>
                 Paste a GitHub URL to see how its files connect and how requests move through the
                 code. Every answer links back to the exact file and line number.
               </p>
@@ -1843,12 +1837,10 @@ export function HomePage() {
                   placeholder="owner/repo or full URL"
                   aria-label="Repository"
                   spellCheck={false}
-                  style={{ fontFamily: '"Boogaloo", sans-serif', fontSize: "1.1rem" }}
                 />
                 <motion.button
                   className="mf-btn"
                   type="submit"
-                  style={{ textTransform: "uppercase", fontFamily: '"Boogaloo", sans-serif', fontSize: "1.05rem" }}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.97 }}
                   transition={{ type: "spring", stiffness: 400, damping: 25 }}
@@ -1863,14 +1855,13 @@ export function HomePage() {
                     key={t.label}
                     type="button"
                     className="mf-pill mf-chip"
-                    style={{ textTransform: "none", fontFamily: '"Boogaloo", sans-serif', fontSize: "0.95rem" }}
                     whileHover={{ y: -2, scale: 1.03 }}
                     whileTap={{ scale: 0.96 }}
                     transition={{ type: "spring", stiffness: 450, damping: 28 }}
                     onClick={() => go(t.label)}
                   >
                     <span>{t.label}</span>
-                    <span style={{ opacity: 0.6, fontSize: "0.8rem", marginLeft: 4 }}>({t.tag})</span>
+                    <span style={{ opacity: 0.5, fontSize: "0.625rem" }}>({t.tag})</span>
                   </motion.button>
                 ))}
               </div>
@@ -1882,8 +1873,8 @@ export function HomePage() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5, delay: 0.22 }}
             >
-              <div className="mf-big-stat" style={{ fontFamily: '"Boogaloo", sans-serif' }}>&lt;8s</div>
-              <div className="mf-muted" style={{ marginTop: 10, textTransform: "none", fontFamily: '"Boogaloo", sans-serif', fontSize: "1.1rem" }}>
+              <div className="mf-big-stat">&lt;8s</div>
+              <div className="mf-mono mf-muted" style={{ marginTop: 10 }}>
                 Median time to full AST graph
               </div>
             </motion.div>
@@ -1915,107 +1906,42 @@ export function HomePage() {
         <div className="mf-wrap">
           <div className="mf-sec-head">
             <Reveal>
-              <h2 className="mf-h1" style={{ maxWidth: "10em", textTransform: "uppercase", fontFamily: '"Boogaloo", sans-serif' }}>
-                FIVE VIEWS ON ONE REPOSITORY.
+              <h2 className="mf-h1" style={{ maxWidth: "10em" }}>
+                Five views on one repository.
               </h2>
             </Reveal>
-            <Link to="/features" className="mf-btn ghost" style={{ textTransform: "uppercase", fontFamily: '"Boogaloo", sans-serif' }}>
+            <Link to="/features" className="mf-btn ghost">
               See all features
             </Link>
           </div>
 
-          <div className="mf-grid c3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20 }}>
+          <div>
             {FEATURES.map((f, idx) => (
               <motion.div
                 key={f.n}
-                whileHover={{ y: -4 }}
+                whileHover={{ x: 6 }}
                 transition={{ type: "spring", stiffness: 400, damping: 26 }}
               >
-                <Link
-                  to="/features"
-                  className="mf-card"
-                  style={{
-                    textDecoration: "none",
-                    height: "100%",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between",
-                    padding: "26px 24px",
-                    borderRadius: "18px",
-                    border: "1px solid var(--mf-line)",
-                    background: "var(--mf-bg, #ffffff)",
-                    transition: "transform 0.28s ease, border-color 0.28s ease, box-shadow 0.28s ease",
-                  }}
-                >
-                  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span className="mf-num" style={{ fontFamily: '"Boogaloo", sans-serif', fontSize: "1.15rem", letterSpacing: "0.04em" }}>
-                        0{idx + 1}
-                      </span>
-                      <span
-                        className="mf-pill"
-                        style={{
-                          padding: "3px 9px",
-                          fontSize: "0.6875rem",
-                          letterSpacing: "0.06em",
-                          textTransform: "uppercase",
-                          fontFamily: '"Boogaloo", sans-serif',
-                        }}
-                      >
-                        {f.tag}
-                      </span>
-                    </div>
-                    <div>
-                      <h3
-                        className="mf-row-title"
-                        style={{
-                          textTransform: "uppercase",
-                          fontFamily: '"Boogaloo", sans-serif',
-                          fontSize: "1.35rem",
-                          margin: "0 0 8px 0",
-                          lineHeight: 1.2,
-                        }}
-                      >
-                        {f.t}
-                      </h3>
-                      <p
-                        className="mf-body"
-                        style={{
-                          margin: 0,
-                          textTransform: "none",
-                          fontFamily: '"Boogaloo", sans-serif',
-                          fontSize: "1.05rem",
-                          lineHeight: 1.45,
-                          color: "var(--mf-ink-2)",
-                        }}
-                      >
-                        {f.d}
-                      </p>
-                    </div>
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      paddingTop: 14,
-                      borderTop: "1px solid var(--mf-line)",
-                    }}
-                  >
+                <Link to="/features" className="mf-row">
+                  <span className="mf-num">0{idx + 1}</span>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 6 }}>
+                    <span className="mf-row-title">{f.t}</span>
                     <span
+                      className="mf-pill"
                       style={{
-                        fontFamily: '"Boogaloo", sans-serif',
-                        fontSize: "0.85rem",
-                        textTransform: "uppercase",
-                        color: "var(--mf-ink-3)",
+                        padding: "3px 9px",
+                        fontSize: "0.625rem",
+                        letterSpacing: "0.06em",
+                        transition: "all 0.25s ease",
                       }}
                     >
-                      Explore view
-                    </span>
-                    <span className="mf-arrow" style={{ fontSize: 20 }}>
-                      ↗
+                      {f.tag}
                     </span>
                   </div>
+                  <span className="mf-body">{f.d}</span>
+                  <span className="mf-arrow" style={{ fontSize: 24 }}>
+                    ↗
+                  </span>
                 </Link>
               </motion.div>
             ))}
@@ -2029,22 +1955,13 @@ export function HomePage() {
           <Reveal>
             <div className="pl-deck-header">
               <div className="pl-deck-eyebrow">
-                <span className="pl-deck-label" style={{ textTransform: "uppercase", fontFamily: '"Boogaloo", sans-serif', fontSize: "1.1rem" }}>TECHNICAL SPECIFICATIONS</span>
+                <span className="pl-deck-label mf-mono">TECHNICAL SPECIFICATIONS</span>
               </div>
-              <span className="pl-deck-hint" style={{ textTransform: "none", fontFamily: '"Boogaloo", sans-serif', fontSize: "1.05rem" }}>
+              <span className="pl-deck-hint mf-mono">
                 Drag or click cards to explore
               </span>
             </div>
             <PolaroidLineCarousel />
-          </Reveal>
-        </div>
-      </section>
-
-      {/* Engine Architecture Bento Spec Cards */}
-      <section className="mf-section" data-theme="light" style={{ paddingTop: 0, paddingBottom: "clamp(48px, 6vw, 80px)" }}>
-        <div className="mf-wrap">
-          <Reveal>
-            <StatsSection />
           </Reveal>
         </div>
       </section>
@@ -2054,10 +1971,10 @@ export function HomePage() {
         <div className="mf-wrap">
           <div className="mf-sec-head mf-pipeline-sec-head">
             <Reveal>
-              <h2 className="mf-h1 mf-pipeline-h1" style={{ textTransform: "uppercase", fontFamily: '"Boogaloo", sans-serif' }}>
-                FROM GITHUB URL<br />
-                TO INTERACTIVE MAP<br />
-                IN THREE STEPS.
+              <h2 className="mf-h1 mf-pipeline-h1">
+                From GitHub URL<br />
+                to interactive map<br />
+                in three steps.
               </h2>
             </Reveal>
             <Reveal>

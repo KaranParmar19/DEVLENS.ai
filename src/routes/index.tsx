@@ -5,7 +5,7 @@ export const Route = createFileRoute("/")({
   component: HomePage,
   head: () => ({
     meta: [
-      { title: "DevLens | SEE THE SHAPE OF ANY CODEBASE" },
+      { title: "DevLens | See the shape of any codebase" },
       {
         name: "description",
         content:
