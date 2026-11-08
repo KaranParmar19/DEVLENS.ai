@@ -1796,7 +1796,12 @@ export function HomePage() {
 
           <motion.h1
             className="mf-mega"
-            style={{ textTransform: "uppercase" }}
+            style={{
+              textTransform: "uppercase",
+              fontFamily: "'Qilka', 'Fredoka', ui-rounded, 'Lilita One', -apple-system, BlinkMacSystemFont, sans-serif",
+              fontWeight: 800,
+              letterSpacing: "-0.02em",
+            }}
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}

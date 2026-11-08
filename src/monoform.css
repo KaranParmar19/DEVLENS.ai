@@ -3,15 +3,7 @@
 @font-face {
   font-family: 'Qilka';
   src: url('/fonts/Qilka-Bold.otf') format('opentype');
-  font-weight: bold;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Qilka';
-  src: url('/fonts/Qilka-Bold.otf') format('opentype');
-  font-weight: normal;
+  font-weight: 100 900;
   font-style: normal;
   font-display: swap;
 }
@@ -659,6 +651,9 @@ button.mf-btn.sm {
 }
 .mf-hero .mf-mega {
   color: #0a0a0a;
+  font-family: 'Qilka', 'Fredoka', ui-rounded, 'Lilita One', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 .mf-hero .mf-lead {
   color: #52525b;
