@@ -4,7 +4,32 @@
 let lastCapturedError: { error: unknown; at: number } | undefined;
 const TTL_MS = 5_000;
 
+export function isAbortError(error: unknown): boolean {
+  if (!error) return false;
+  if (typeof error === "object") {
+    const err = error as { code?: string; name?: string; message?: string; cause?: unknown };
+    if (
+      err.code === "ECONNRESET" ||
+      err.code === "ERR_STREAM_PREMATURE_CLOSE" ||
+      err.code === "UND_ERR_ABORTED" ||
+      err.name === "AbortError" ||
+      err.message === "aborted" ||
+      err.message === "The user aborted a request." ||
+      err.message === "Connection closed before response was finished"
+    ) {
+      return true;
+    }
+    if (err.cause && isAbortError(err.cause)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function record(error: unknown) {
+  if (isAbortError(error)) {
+    return;
+  }
   lastCapturedError = { error, at: Date.now() };
 }
 
