@@ -352,7 +352,7 @@ export function CopilotRail({
             display: "flex",
             alignItems: "center",
             gap: 8,
-            color: "rgba(255,255,255,0.6)",
+            color: isLight ? "rgba(9, 9, 11, 0.65)" : "rgba(255,255,255,0.6)",
             fontSize: "0.8125rem",
           }}
         >
@@ -371,7 +371,7 @@ export function CopilotRail({
                   width: 4,
                   height: 4,
                   borderRadius: "50%",
-                  backgroundColor: "#ffffff",
+                  backgroundColor: isLight ? "#09090b" : "#ffffff",
                   display: "inline-block",
                 }}
               />
@@ -484,7 +484,7 @@ export function CopilotRail({
                 display: "inline-block",
                 width: 6,
                 height: 12,
-                backgroundColor: "#ffffff",
+                backgroundColor: isLight ? "#09090b" : "#ffffff",
                 marginLeft: 4,
                 verticalAlign: "middle",
                 animation: "mf-pulse 0.8s infinite",
@@ -635,11 +635,11 @@ export function CopilotRail({
             style={{
               fontFamily: "var(--mf-mono, monospace)",
               fontSize: "0.5625rem",
-              backgroundColor: "rgba(255,255,255,0.08)",
-              border: "1px solid rgba(255,255,255,0.12)",
+              backgroundColor: isLight ? "rgba(0, 0, 0, 0.06)" : "rgba(255,255,255,0.08)",
+              border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.12)" : "rgba(255,255,255,0.12)"}`,
               borderRadius: 4,
               padding: "1px 5px",
-              color: "rgba(255,255,255,0.6)",
+              color: isLight ? "rgba(9, 9, 11, 0.65)" : "rgba(255,255,255,0.6)",
               textTransform: "uppercase",
             }}
           >
@@ -656,7 +656,7 @@ export function CopilotRail({
                 style={{
                   background: "transparent",
                   border: "none",
-                  color: "rgba(255,255,255,0.6)",
+                  color: isLight ? "rgba(9, 9, 11, 0.65)" : "rgba(255,255,255,0.6)",
                   fontFamily: "var(--mf-mono, monospace)",
                   fontSize: "0.6875rem",
                   cursor: "pointer",
@@ -675,7 +675,7 @@ export function CopilotRail({
                 style={{
                   background: "transparent",
                   border: "none",
-                  color: "rgba(255,255,255,0.45)",
+                  color: isLight ? "rgba(9, 9, 11, 0.55)" : "rgba(255,255,255,0.45)",
                   fontFamily: "var(--mf-mono, monospace)",
                   fontSize: "0.6875rem",
                   cursor: "pointer",
@@ -694,9 +694,9 @@ export function CopilotRail({
               onClick={onToggleCollapse}
               style={{
                 background: "transparent",
-                border: "1px solid rgba(255,255,255,0.12)",
+                border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.14)" : "rgba(255,255,255,0.12)"}`,
                 borderRadius: 4,
-                color: "rgba(255,255,255,0.6)",
+                color: isLight ? "rgba(9, 9, 11, 0.7)" : "rgba(255,255,255,0.6)",
                 width: 22,
                 height: 22,
                 display: "grid",
@@ -716,8 +716,8 @@ export function CopilotRail({
       <div
         style={{
           padding: "10px 14px",
-          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-          backgroundColor: "rgba(255,255,255,0.01)",
+          borderBottom: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.08)"}`,
+          backgroundColor: isLight ? "#fbfbfe" : "rgba(255,255,255,0.01)",
         }}
       >
         <div
@@ -725,7 +725,7 @@ export function CopilotRail({
             fontFamily: "var(--mf-mono, monospace)",
             fontSize: "0.625rem",
             textTransform: "uppercase",
-            color: "rgba(255, 255, 255, 0.4)",
+            color: isLight ? "rgba(9, 9, 11, 0.55)" : "rgba(255, 255, 255, 0.4)",
             marginBottom: 6,
             letterSpacing: "0.06em",
           }}
@@ -741,18 +741,18 @@ export function CopilotRail({
               whileHover={{
                 scale: 1.03,
                 y: -1,
-                backgroundColor: "rgba(255,255,255,0.12)",
-                color: "#ffffff",
+                backgroundColor: isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255,255,255,0.12)",
+                color: isLight ? "#09090b" : "#ffffff",
               }}
               whileTap={{ scale: 0.96 }}
               transition={{ type: "spring", stiffness: 420, damping: 25 }}
               style={{
-                background: "rgba(255, 255, 255, 0.04)",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
+                background: isLight ? "rgba(0, 0, 0, 0.04)" : "rgba(255, 255, 255, 0.04)",
+                border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.12)" : "rgba(255, 255, 255, 0.1)"}`,
                 borderRadius: 999,
                 padding: "3px 9px",
                 fontSize: "0.6875rem",
-                color: "rgba(255, 255, 255, 0.8)",
+                color: isLight ? "rgba(9, 9, 11, 0.85)" : "rgba(255, 255, 255, 0.8)",
                 cursor: "pointer",
                 textAlign: "left",
               }}
@@ -778,31 +778,35 @@ export function CopilotRail({
       >
         {messages.length === 0 ? (
           <div
-            style={{ textAlign: "center", padding: "40px 12px", color: "rgba(255,255,255,0.4)" }}
+            style={{
+              textAlign: "center",
+              padding: "40px 12px",
+              color: isLight ? "rgba(9, 9, 11, 0.55)" : "rgba(255,255,255,0.4)",
+            }}
           >
             <div
               style={{
                 width: 38,
                 height: 38,
                 borderRadius: "50%",
-                border: "1px solid rgba(255,255,255,0.18)",
+                border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.18)" : "rgba(255,255,255,0.18)"}`,
                 display: "grid",
                 placeItems: "center",
                 margin: "0 auto 12px",
                 fontFamily: "var(--mf-mono, monospace)",
                 fontSize: "0.75rem",
-                color: "#ffffff",
+                color: isLight ? "#09090b" : "#ffffff",
               }}
             >
               Q&A
             </div>
-            <p style={{ fontSize: "0.8125rem", lineHeight: 1.5, margin: "0 0 8px" }}>
-              Ask anything about <strong style={{ color: "#ffffff" }}>{repoLabel}</strong>.
+            <p style={{ fontSize: "0.8125rem", lineHeight: 1.5, margin: "0 0 8px", color: isLight ? "rgba(9, 9, 11, 0.8)" : "rgba(255,255,255,0.8)" }}>
+              Ask anything about <strong style={{ color: isLight ? "#09090b" : "#ffffff" }}>{repoLabel}</strong>.
             </p>
             <p
               style={{
                 fontSize: "0.6875rem",
-                color: "rgba(255,255,255,0.4)",
+                color: isLight ? "rgba(9, 9, 11, 0.55)" : "rgba(255,255,255,0.4)",
                 margin: 0,
                 fontFamily: "var(--mf-mono, monospace)",
               }}

@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import type { GraphData } from "./studio-types";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import type { GraphData, GraphNode } from "./studio-types";
 
 interface CodeFlowStepperProps {
   graphData?: GraphData | null;
@@ -26,146 +26,343 @@ interface FlowCategory {
   steps: FlowStep[];
 }
 
-const FLOWS: FlowCategory[] = [
-  {
-    id: "ingestion",
-    title: "Repository AST Ingestion",
-    steps: [
-      {
-        id: "ingest-1",
-        stepNumber: "01",
-        stage: "Ingress Handshake & Worktree Clone",
-        file: "backend/app/core/github_client.py",
-        symbol: "clone_repository(repo_url, depth=1)",
-        inputContract: "{ repo_url: string, branch?: string }",
-        outputContract: "WorktreeDir { path: string, commit_sha: string }",
-        description: "Clones repository worktree into an isolated ephemeral volume using a shallow depth-1 git fetch.",
-        failureRisk: "Git rate limiting or 401 Bad Credentials if private token is invalid.",
-      },
-      {
-        id: "ingest-2",
-        stepNumber: "02",
-        stage: "Abstract Syntax Tree Parsing",
-        file: "backend/app/core/chunker.py",
-        symbol: "parse_ast_symbols(file_path: Path)",
-        inputContract: "RawFileContentBuffer",
-        outputContract: "ASTSymbolTable { classes, functions, imports }",
-        description: "Iterates through source files using Tree-sitter AST queries to extract function declarations, classes, and import statements.",
-        failureRisk: "Parser crash on non-standard syntax extensions (e.g. JSX pragmas).",
-      },
-      {
-        id: "ingest-3",
-        stepNumber: "03",
-        stage: "Dependency DAG Resolution",
-        file: "backend/app/core/graph_builder.py",
-        symbol: "construct_directed_graph(symbols)",
-        inputContract: "Array<ASTSymbolTable>",
-        outputContract: "NetworkX.DiGraph { nodes: 420, edges: 1120 }",
-        description: "Maps import statements to resolved relative files, constructing a directed acyclic graph (DAG) of the entire module topology.",
-        failureRisk: "Circular import loops will cause infinite topological sort cycles without cycle guards.",
-      },
-      {
-        id: "ingest-4",
-        stepNumber: "04",
-        stage: "pgvector Embedding Generation",
-        file: "backend/app/rag/vector_store.py",
-        symbol: "generate_and_store_embeddings(chunks)",
-        inputContract: "Array<CodeChunk { content, metadata }>",
-        outputContract: "HNSW_Index_Commit { chunks_indexed: 1840 }",
-        description: "Batches AST chunks into OpenAI text-embedding-3-small and commits vectors to Postgres pgvector table with cosine index.",
-        failureRisk: "OpenAI rate limit quota (TPM) exceeded if chunking produces excessive token volumes.",
-      },
-    ],
-  },
-  {
-    id: "auth",
-    title: "GitHub OAuth Handshake",
-    steps: [
-      {
-        id: "auth-1",
-        stepNumber: "01",
-        stage: "OAuth Initiation & State Generation",
-        file: "backend/app/api/routes/auth.py",
-        symbol: "get_github_login_url()",
-        inputContract: "void",
-        outputContract: "RedirectResponse { state: string, url: string }",
-        description: "Generates an anti-CSRF state token and redirects browser to GitHub OAuth authorization portal.",
-        failureRisk: "CSRF state replay if cookie expiration policy is misconfigured.",
-      },
-      {
-        id: "auth-2",
-        stepNumber: "02",
-        stage: "Code Exchange & Token Grant",
-        file: "backend/app/api/routes/auth.py",
-        symbol: "github_oauth_callback(code, state)",
-        inputContract: "{ code: string, state: string }",
-        outputContract: "OAuthTokenPayload { access_token, scope }",
-        description: "Exchanges single-use authorization code with GitHub API for an access token scoped to repository read permissions.",
-        failureRisk: "Expired code or network timeout communicating with api.github.com.",
-      },
-      {
-        id: "auth-3",
-        stepNumber: "03",
-        stage: "Session Storage & Key Derivation",
-        file: "backend/app/database.py",
-        symbol: "upsert_user_session(github_id, token)",
-        inputContract: "{ github_id: string, access_token: string }",
-        outputContract: "UserSession { api_key: string, user_id: UUID }",
-        description: "Encrypts token at rest and provisions an ephemeral session API key returned to client in secure cookie.",
-        failureRisk: "PostgreSQL transaction deadlock during concurrent callback bursts.",
-      },
-    ],
-  },
-  {
-    id: "symbol-resolution",
-    title: "AST Symbol Resolution & Call Graph",
-    steps: [
-      {
-        id: "sym-1",
-        stepNumber: "01",
-        stage: "Lexical & Syntax Tokenization",
-        file: "backend/app/core/lexer.py",
-        symbol: "tokenize_source_buffer(content: str)",
-        inputContract: "RawFileContentBuffer (TypeScript / Rust / Python)",
-        outputContract: "TokenStream { tokens, spans, positions }",
-        description: "Scans raw source bytes and produces typed token stream using language-specific Tree-sitter grammar tables.",
-        failureRisk: "Grammar syntax errors on incomplete or malformed source files.",
-      },
-      {
-        id: "sym-2",
-        stepNumber: "02",
-        stage: "Cross-File Symbol Table Linking",
-        file: "backend/app/core/linker.py",
-        symbol: "resolve_import_specifiers(symbol_table, graph)",
-        inputContract: "ExportManifest + ImportSpecifiers",
-        outputContract: "ResolvedSymbolTable { definitions, references }",
-        description: "Binds exported identifiers, classes, and function signatures across module boundaries to build a unified project symbol index.",
-        failureRisk: "Unresolved aliases or circular relative path imports.",
-      },
-      {
-        id: "sym-3",
-        stepNumber: "03",
-        stage: "Downstream Blast Radius Reachability",
-        file: "backend/app/core/reachability.py",
-        symbol: "compute_blast_radius(target_symbol, call_graph)",
-        inputContract: "TargetSymbolId + DirectedGraph",
-        outputContract: "ReachabilityReport { affected_nodes, critical_paths }",
-        description: "Executes depth-first traversal across topological graph edges to compute exact impact radius and fragile downstream dependents.",
-        failureRisk: "Deep recursion limit on cyclic dependency graphs without visited set checks.",
-      },
-    ],
-  },
-];
+function classifyStage(path: string, isEntry: boolean, index: number): string {
+  const lower = path.toLowerCase();
+  if (isEntry || index === 0) return "Application Ingress & Bootstrap";
+  if (lower.includes("/route") || lower.includes("router") || lower.includes("/api/"))
+    return "Route & Endpoint Dispatcher";
+  if (lower.includes("/middleware")) return "Middleware & Security Interceptor";
+  if (lower.includes("/controller")) return "Controller & Business Logic";
+  if (lower.includes("/page") || lower.includes("/view") || lower.includes("/screen"))
+    return "View & UI Page Orchestrator";
+  if (
+    lower.includes("/context") ||
+    lower.includes("/store") ||
+    lower.includes("/state") ||
+    lower.includes("reducer")
+  )
+    return "State Management & Reactive Store";
+  if (
+    lower.includes("/service") ||
+    lower.includes("/client") ||
+    lower.includes("fetch") ||
+    lower.includes("socket")
+  )
+    return "Service & Network Transport";
+  if (
+    lower.includes("/model") ||
+    lower.includes("/schema") ||
+    lower.includes("/entity") ||
+    lower.includes("/db")
+  )
+    return "Data Model & Persistence Entity";
+  if (lower.includes("/component")) return "Interactive Component & UI Render";
+  if (lower.includes("/util") || lower.includes("/lib") || lower.includes("/helper"))
+    return "Utility & Shared Computation Sink";
+  const filename = path.split("/").pop() || path;
+  return `${filename} Module Logic`;
+}
 
-export function CodeFlowStepper({ onAskCopilot, onSelectFile, theme = "dark" }: CodeFlowStepperProps) {
+function createStep(
+  node: GraphNode,
+  idx: number,
+  flowId: string,
+  _inDegree: number,
+  _outDegree: number,
+  callers: string[],
+  deps: string[],
+  isEntry: boolean,
+): FlowStep {
+  const stage = classifyStage(node.path, isEntry, idx);
+  const callersList = callers.map((c) => c.split("/").pop()).filter(Boolean);
+  const depsList = deps.map((d) => d.split("/").pop()).filter(Boolean);
+
+  const inputContract =
+    callers.length > 0
+      ? `${callers.length} caller(s) [${callersList.slice(0, 3).join(", ")}${callersList.length > 3 ? "..." : ""}]`
+      : "Root Ingress (HTTP Request / CLI / UI bootstrap)";
+
+  const outputContract =
+    deps.length > 0
+      ? `${deps.length} outbound import(s) [${depsList.slice(0, 3).join(", ")}${depsList.length > 3 ? "..." : ""}]`
+      : "Terminal Leaf (Self-contained / No downstream imports)";
+
+  const lines = node.line_count ?? 0;
+  const lang = node.language || "Source";
+  const complexity = node.complexity ? Number(node.complexity).toFixed(1) : "1.0";
+  const coupling = node.coupling ? `${(Number(node.coupling) * 100).toFixed(0)}%` : "0%";
+
+  const description = `${node.label} (${node.path}) is written in ${lang} with ${lines} lines of code. Cyclomatic complexity: ${complexity}. Architectural coupling: ${coupling}. Connects directly to ${deps.length} downstream dependency module(s).`;
+
+  let failureRisk =
+    "Isolated leaf: 0 callers import this file in the AST graph; runtime issues are contained.";
+  if (callers.length >= 5) {
+    failureRisk = `Critical blast radius: ${callers.length} dependent modules import this file (${callersList.slice(0, 3).join(", ")}${callersList.length > 3 ? ", etc." : ""}). Regressions or breaking interface changes here propagate across the entire application.`;
+  } else if (callers.length > 0) {
+    failureRisk = `Moderate blast radius: Directly imported by ${callers.length} module(s) (${callersList.join(", ")}). Failure impacts these direct consumers.`;
+  }
+
+  return {
+    id: `${flowId}-step-${idx + 1}`,
+    stepNumber: String(idx + 1).padStart(2, "0"),
+    stage,
+    file: node.path,
+    symbol: `${node.label} (${lines} LOC · ${lang})`,
+    inputContract,
+    outputContract,
+    description,
+    failureRisk,
+  };
+}
+
+function buildRealFlows(graphData?: GraphData | null): FlowCategory[] {
+  if (!graphData || !graphData.nodes || graphData.nodes.length === 0) {
+    return [];
+  }
+
+  const { nodes, edges = [] } = graphData;
+
+  const nodeMap = new Map<string, GraphNode>();
+  for (const n of nodes) {
+    nodeMap.set(n.path, n);
+    nodeMap.set(n.id, n);
+  }
+
+  const outEdges = new Map<string, string[]>();
+  const inEdges = new Map<string, string[]>();
+
+  for (const [src, dst] of edges) {
+    if (!outEdges.has(src)) outEdges.set(src, []);
+    outEdges.get(src)!.push(dst);
+
+    if (!inEdges.has(dst)) inEdges.set(dst, []);
+    inEdges.get(dst)!.push(src);
+  }
+
+  const codeExts = new Set([
+    ".js",
+    ".jsx",
+    ".ts",
+    ".tsx",
+    ".py",
+    ".go",
+    ".rs",
+    ".java",
+    ".c",
+    ".cpp",
+    ".rb",
+    ".php",
+    ".vue",
+    ".svelte",
+  ]);
+
+  const candidateEntries = nodes.filter((n) => {
+    const ext = n.path.slice(n.path.lastIndexOf("."));
+    if (!codeExts.has(ext)) return false;
+    return (
+      n.is_entry ||
+      /(main|index|app|server|entry|cli|manage|wsgi|asgi)\.[a-z0-9]+$/i.test(n.path)
+    );
+  });
+
+  candidateEntries.sort((a, b) => {
+    if (a.is_entry && !b.is_entry) return -1;
+    if (!a.is_entry && b.is_entry) return 1;
+    const outA = outEdges.get(a.path)?.length ?? 0;
+    const outB = outEdges.get(b.path)?.length ?? 0;
+    return outB - outA;
+  });
+
+  const finalEntries =
+    candidateEntries.length > 0
+      ? candidateEntries.slice(0, 4)
+      : nodes.slice(0, 1);
+
+  const flows: FlowCategory[] = [];
+  const processedSpineKeys: string[] = [];
+
+  const traceSpine = (startNode: GraphNode, maxHops = 6): GraphNode[] => {
+    const path: GraphNode[] = [startNode];
+    const visited = new Set<string>([startNode.path, startNode.id]);
+    let curr = startNode;
+
+    while (path.length < maxHops) {
+      const targets = outEdges.get(curr.path) ?? outEdges.get(curr.id) ?? [];
+      const unvisitedTargets = targets
+        .map((t) => nodeMap.get(t))
+        .filter((n): n is GraphNode => !!n && !visited.has(n.path) && !visited.has(n.id));
+
+      if (unvisitedTargets.length === 0) break;
+
+      unvisitedTargets.sort((a, b) => {
+        const weightA = (inEdges.get(a.path)?.length ?? 0) + (outEdges.get(a.path)?.length ?? 0);
+        const weightB = (inEdges.get(b.path)?.length ?? 0) + (outEdges.get(b.path)?.length ?? 0);
+        return weightB - weightA;
+      });
+
+      const nextNode = unvisitedTargets[0];
+      visited.add(nextNode.path);
+      visited.add(nextNode.id);
+      path.push(nextNode);
+      curr = nextNode;
+    }
+
+    return path;
+  };
+
+  for (let eIdx = 0; eIdx < finalEntries.length; eIdx++) {
+    const entry = finalEntries[eIdx];
+    const spine = traceSpine(entry, 6);
+    if (spine.length < 2 && finalEntries.length > 1) {
+      continue;
+    }
+
+    const spineKey = spine.map((n) => n.path).join("|");
+    const isSubset = processedSpineKeys.some((existing) => existing.includes(spineKey));
+    if (isSubset) continue;
+
+    processedSpineKeys.push(spineKey);
+
+    const isClient = /client|frontend|web|ui/i.test(entry.path);
+    const isServer = /server|backend|api/i.test(entry.path);
+    const fileName = entry.path.split("/").pop() || entry.label;
+    let flowTitle = `Runtime Ingress (${fileName})`;
+    if (isClient) flowTitle = `Client Flow (${fileName})`;
+    else if (isServer) flowTitle = `Server Pipeline (${fileName})`;
+
+    const flowId = `entry-${eIdx + 1}`;
+    const steps = spine.map((node, stepIdx) =>
+      createStep(
+        node,
+        stepIdx,
+        flowId,
+        inEdges.get(node.path)?.length ?? 0,
+        outEdges.get(node.path)?.length ?? 0,
+        inEdges.get(node.path) ?? [],
+        outEdges.get(node.path) ?? [],
+        stepIdx === 0,
+      ),
+    );
+
+    flows.push({
+      id: flowId,
+      title: flowTitle,
+      steps,
+    });
+  }
+
+  // Critical Hub Flow (highest blast-radius file with at least 2 dependents)
+  const sortedByDependents = [...nodes].sort((a, b) => {
+    const countA = inEdges.get(a.path)?.length ?? 0;
+    const countB = inEdges.get(b.path)?.length ?? 0;
+    return countB - countA;
+  });
+
+  const hubNode = sortedByDependents[0];
+  if (hubNode && (inEdges.get(hubNode.path)?.length ?? 0) >= 2) {
+    const hubCallers = inEdges.get(hubNode.path) ?? [];
+    const hubDeps = outEdges.get(hubNode.path) ?? [];
+
+    const criticalNodes: GraphNode[] = [];
+    const hubVisited = new Set<string>();
+
+    for (const cPath of hubCallers.slice(0, 2)) {
+      const cNode = nodeMap.get(cPath);
+      if (cNode && !hubVisited.has(cNode.path)) {
+        criticalNodes.push(cNode);
+        hubVisited.add(cNode.path);
+      }
+    }
+
+    criticalNodes.push(hubNode);
+    hubVisited.add(hubNode.path);
+
+    for (const dPath of hubDeps.slice(0, 3)) {
+      const dNode = nodeMap.get(dPath);
+      if (dNode && !hubVisited.has(dNode.path)) {
+        criticalNodes.push(dNode);
+        hubVisited.add(dNode.path);
+      }
+    }
+
+    if (criticalNodes.length >= 2) {
+      const spineKey = criticalNodes.map((n) => n.path).join("|");
+      const isSubset = processedSpineKeys.some((existing) => existing.includes(spineKey));
+      if (!isSubset) {
+        processedSpineKeys.push(spineKey);
+        const flowId = "critical-hub";
+        const hubFileName = hubNode.path.split("/").pop() || hubNode.label;
+        const steps = criticalNodes.map((node, stepIdx) =>
+          createStep(
+            node,
+            stepIdx,
+            flowId,
+            inEdges.get(node.path)?.length ?? 0,
+            outEdges.get(node.path)?.length ?? 0,
+            inEdges.get(node.path) ?? [],
+            outEdges.get(node.path) ?? [],
+            stepIdx === 0,
+          ),
+        );
+
+        flows.push({
+          id: flowId,
+          title: `Critical Hub (${hubFileName})`,
+          steps,
+        });
+      }
+    }
+  }
+
+  // Fallback: if no flows, provide single overview flow
+  if (flows.length === 0 && nodes.length > 0) {
+    const sampleNodes = nodes.slice(0, 5);
+    const flowId = "overview";
+    flows.push({
+      id: flowId,
+      title: "Repository Overview",
+      steps: sampleNodes.map((node, stepIdx) =>
+        createStep(
+          node,
+          stepIdx,
+          flowId,
+          inEdges.get(node.path)?.length ?? 0,
+          outEdges.get(node.path)?.length ?? 0,
+          inEdges.get(node.path) ?? [],
+          outEdges.get(node.path) ?? [],
+          stepIdx === 0,
+        ),
+      ),
+    });
+  }
+
+  return flows;
+}
+
+export function CodeFlowStepper({
+  graphData,
+  onAskCopilot,
+  onSelectFile,
+  theme = "dark",
+}: CodeFlowStepperProps) {
   const isLight = theme === "light";
-  const [activeFlowId, setActiveFlowId] = useState("ingestion");
+  const flows = useMemo(() => buildRealFlows(graphData), [graphData]);
+  const [activeFlowId, setActiveFlowId] = useState<string>("");
   const [activeStepIdx, setActiveStepIdx] = useState(0);
 
-  const currentFlow = FLOWS.find((f) => f.id === activeFlowId) ?? FLOWS[0];
-  const current = currentFlow.steps[activeStepIdx] ?? currentFlow.steps[0];
+  // Synchronize activeFlowId when computed flows change
+  useEffect(() => {
+    if (flows.length > 0 && (!activeFlowId || !flows.some((f) => f.id === activeFlowId))) {
+      setActiveFlowId(flows[0].id);
+      setActiveStepIdx(0);
+    }
+  }, [flows, activeFlowId]);
+
+  const currentFlow = flows.find((f) => f.id === activeFlowId) ?? flows[0];
+  const current = currentFlow?.steps[activeStepIdx] ?? currentFlow?.steps[0];
 
   const nextStep = useCallback(() => {
+    if (!currentFlow) return;
     setActiveStepIdx((i) => Math.min(i + 1, currentFlow.steps.length - 1));
   }, [currentFlow]);
 
@@ -182,6 +379,59 @@ export function CodeFlowStepper({ onAskCopilot, onSelectFile, theme = "dark" }: 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [nextStep, prevStep]);
+
+  // Empty state if no graph data or flow available
+  if (!currentFlow || !current) {
+    return (
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          backgroundColor: isLight ? "#fbfbfe" : "#08080a",
+          color: isLight ? "#09090b" : "#ffffff",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 32,
+          textAlign: "center",
+          fontFamily: "var(--mf-font, 'Geist', sans-serif)",
+        }}
+      >
+        <div
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: "50%",
+            border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.15)" : "rgba(255, 255, 255, 0.15)"}`,
+            display: "grid",
+            placeItems: "center",
+            marginBottom: 16,
+            fontFamily: "var(--mf-mono, monospace)",
+            fontSize: "1rem",
+            color: isLight ? "rgba(9, 9, 11, 0.6)" : "rgba(255, 255, 255, 0.6)",
+          }}
+        >
+          ∅
+        </div>
+        <h3 style={{ fontSize: "1.25rem", fontWeight: 500, margin: "0 0 8px" }}>
+          No Code Execution Flow Available
+        </h3>
+        <p
+          style={{
+            fontSize: "0.875rem",
+            color: isLight ? "rgba(9, 9, 11, 0.6)" : "rgba(255, 255, 255, 0.6)",
+            maxWidth: 420,
+            margin: 0,
+            lineHeight: 1.5,
+          }}
+        >
+          This repository does not have enough indexed dependency edges or entry points to compute an
+          execution flow graph.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -246,7 +496,7 @@ export function CodeFlowStepper({ onAskCopilot, onSelectFile, theme = "dark" }: 
             padding: 4,
           }}
         >
-          {FLOWS.map((flow) => {
+          {flows.map((flow) => {
             const isActive = flow.id === activeFlowId;
             return (
               <button
