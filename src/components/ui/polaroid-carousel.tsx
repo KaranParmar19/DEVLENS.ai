@@ -475,7 +475,7 @@ export function PolaroidLineCarousel({
                 <span className="pl-card-index">{sl.index}</span>
               </div>
 
-              {/* Giant Metric Row with Handwritten Caveat Numerals */}
+              {/* Giant Metric Row */}
               <div className="pl-card-metric-row">
                 {(() => {
                   const { prefix, digits, suffix } = parseMetric(sl.value, sl.suffix, sl.prefix);

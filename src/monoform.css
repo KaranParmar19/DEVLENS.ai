@@ -138,10 +138,10 @@ html, body {
   letter-spacing: inherit !important;
 }
 .mf-scribble {
-  font-family: "Caveat", "Newsreader", cursive, sans-serif;
-  font-size: clamp(1.4rem, 2.2vw, 1.95rem);
+  font-family: var(--mf-font);
+  font-size: clamp(1.1rem, 1.6vw, 1.35rem);
   font-weight: 500;
-  line-height: 1.35;
+  line-height: 1.45;
   letter-spacing: -0.01em;
   color: var(--mf-ink);
   max-width: 100% !important;
@@ -4952,11 +4952,11 @@ html[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
 }
 
 .pl-card-index {
-  font-family: "Caveat", "Newsreader", cursive, sans-serif;
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--mf-ink-2, #475569);
-  letter-spacing: 0.04em;
+  font-family: var(--mf-mono);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--mf-ink-2, #64748b);
+  letter-spacing: 0.05em;
   line-height: 1;
 }
 
@@ -4964,7 +4964,7 @@ html[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
   line-height: 1;
   display: flex;
   align-items: baseline;
-  min-height: clamp(3.2rem, 4.8vw, 4.4rem);
+  min-height: clamp(2.8rem, 4vw, 3.6rem);
 }
 
 .pl-card-number {
@@ -4972,36 +4972,39 @@ html[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
   align-items: baseline;
   line-height: 1;
   color: var(--mf-ink, #09090b);
-  font-family: "Caveat", "Newsreader", cursive, sans-serif;
-  font-size: clamp(3.4rem, 5.2vw, 4.8rem);
+  font-family: var(--mf-font);
+  font-size: clamp(2.8rem, 4.2vw, 3.8rem);
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
 }
 
 .pl-card-prefix {
-  font-family: "Caveat", "Newsreader", cursive, sans-serif;
-  font-size: clamp(2.2rem, 3.4vw, 3.0rem);
-  font-weight: 700;
-  color: var(--mf-ink-2, #475569);
+  font-family: var(--mf-font);
+  font-size: 0.6em;
+  font-weight: 600;
+  color: var(--mf-ink-2, #64748b);
   margin-right: 0.12em;
   line-height: 1;
-  align-self: center;
+  align-self: baseline;
+  letter-spacing: -0.02em;
 }
 
 .pl-card-metric-val {
-  font-family: "Caveat", "Newsreader", cursive, sans-serif;
+  font-family: inherit;
   font-weight: 700;
   line-height: 1;
 }
 
 .pl-card-suffix {
-  font-family: "Caveat", "Newsreader", cursive, sans-serif;
-  font-size: clamp(2.0rem, 3.0vw, 2.6rem);
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  color: var(--mf-ink, #09090b);
+  font-family: var(--mf-font);
+  font-size: 0.55em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--mf-ink-2, #64748b);
   margin-left: 0.1em;
   line-height: 1;
+  align-self: baseline;
 }
 
 .pl-card-text {
@@ -5011,23 +5014,23 @@ html[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
 }
 
 .pl-card-title {
-  font-family: "Caveat", "Newsreader", cursive, sans-serif;
-  font-size: clamp(1.42rem, 1.95vw, 1.7rem);
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  line-height: 1.25;
+  font-family: var(--mf-font);
+  font-size: clamp(1.05rem, 1.25vw, 1.2rem);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.3;
   color: var(--mf-ink, #09090b);
   margin: 0;
 }
 
 .pl-card-desc {
-  font-family: "Caveat", "Newsreader", cursive, sans-serif;
-  font-size: clamp(1.15rem, 1.45vw, 1.34rem);
-  line-height: 1.45;
-  letter-spacing: -0.005em;
-  color: #334155;
+  font-family: var(--mf-font);
+  font-size: clamp(0.8125rem, 0.9vw, 0.875rem);
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  color: var(--mf-ink-2, #64748b);
   margin: 0;
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .pl-card-foot {
@@ -5052,29 +5055,29 @@ html[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
 }
 
 .pl-chip {
-  font-family: "Caveat", "Newsreader", cursive, sans-serif;
-  font-size: 1.05rem;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 6px;
-  background: #f8fafc;
-  border: 1px solid #cbd5e1;
-  color: #0f172a;
-  letter-spacing: 0;
-  line-height: 1.25;
+  font-family: var(--mf-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: var(--mf-soft, #f8fafc);
+  border: 1px solid var(--mf-line, #e2e8f0);
+  color: var(--mf-ink, #0f172a);
+  letter-spacing: 0.02em;
+  line-height: 1.3;
 }
 
 .pl-lens-tag {
-  font-family: "Caveat", "Newsreader", cursive, sans-serif;
-  font-size: 1.05rem;
-  font-weight: 700;
-  padding: 3px 12px;
+  font-family: var(--mf-font);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 3px 10px;
   border-radius: 999px;
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
-  color: #0f172a;
-  letter-spacing: 0;
-  line-height: 1.25;
+  background: var(--mf-soft, #f1f5f9);
+  border: 1px solid var(--mf-line, #e2e8f0);
+  color: var(--mf-ink, #0f172a);
+  letter-spacing: -0.01em;
+  line-height: 1.3;
 }
 
 .pl-cite-box,
@@ -5087,39 +5090,41 @@ html[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
 .pl-cite-pill {
   display: inline-flex;
   align-items: center;
-  font-family: "Caveat", "Newsreader", cursive, sans-serif;
-  font-size: 1.1rem;
-  font-weight: 700;
-  padding: 4px 12px;
-  border-radius: 8px;
+  font-family: var(--mf-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 6px;
   background: #ecfdf5;
-  border: 1px solid #86efac;
+  border: 1px solid #a7f3d0;
   color: #065f46;
   width: fit-content;
-  line-height: 1.25;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
 }
 
 .pl-sec-pill {
   display: inline-flex;
   align-items: center;
-  font-family: "Caveat", "Newsreader", cursive, sans-serif;
-  font-size: 1.1rem;
-  font-weight: 700;
-  padding: 4px 12px;
-  border-radius: 8px;
-  background: #f8fafc;
-  border: 1px solid #cbd5e1;
-  color: #0f172a;
+  font-family: var(--mf-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: var(--mf-soft, #f8fafc);
+  border: 1px solid var(--mf-line, #e2e8f0);
+  color: var(--mf-ink, #0f172a);
   width: fit-content;
-  line-height: 1.25;
+  line-height: 1.3;
 }
 
 .pl-micro-sub {
-  font-family: "Caveat", "Newsreader", cursive, sans-serif;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #475569;
-  line-height: 1.35;
+  font-family: var(--mf-font);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--mf-ink-2, #64748b);
+  line-height: 1.4;
+  letter-spacing: -0.01em;
 }
 
 /* Bottom Bar Controls — Placed below the hanging stage with zero overlap */
