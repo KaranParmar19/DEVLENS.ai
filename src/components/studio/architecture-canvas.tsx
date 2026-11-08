@@ -294,16 +294,90 @@ export function ArchitectureCanvas({
     [nodes, selectedNodeId],
   );
 
-  // Compute connected nodes for highlighted blast radius
-  const connectedNodeIds = useMemo(() => {
-    if (!selectedNodeId) return new Set<string>();
-    const set = new Set<string>([selectedNodeId]);
+  // Transitive blast radius analysis
+  const blastRadiusData = useMemo(() => {
+    if (!selectedNodeId) {
+      return {
+        epicenterId: null,
+        directCallers: new Set<string>(),
+        transitiveCallers: new Set<string>(),
+        directCallees: new Set<string>(),
+        impactedNodeIds: new Set<string>(),
+        blastEdges: new Set<string>(),
+      };
+    }
+
+    const directCallers = new Set<string>();
+    const transitiveCallers = new Set<string>();
+    const directCallees = new Set<string>();
+    const blastEdges = new Set<string>();
+
+    const reverseMap = new Map<string, string[]>();
+    const forwardMap = new Map<string, string[]>();
+
     edges.forEach(([u, v]) => {
-      if (u === selectedNodeId) set.add(v);
-      if (v === selectedNodeId) set.add(u);
+      if (!reverseMap.has(v)) reverseMap.set(v, []);
+      reverseMap.get(v)!.push(u);
+
+      if (!forwardMap.has(u)) forwardMap.set(u, []);
+      forwardMap.get(u)!.push(v);
     });
-    return set;
+
+    // 1. Direct callers (Tier 1)
+    const tier1 = reverseMap.get(selectedNodeId) || [];
+    tier1.forEach((caller) => {
+      directCallers.add(caller);
+      blastEdges.add(`${caller}->${selectedNodeId}`);
+      blastEdges.add(`${selectedNodeId}->${caller}`);
+    });
+
+    // 2. Transitive callers (Tier 2+) using BFS up the dependency tree
+    const queue = [...tier1];
+    const visited = new Set<string>([selectedNodeId, ...tier1]);
+
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      const parents = reverseMap.get(current) || [];
+      parents.forEach((parent) => {
+        blastEdges.add(`${parent}->${current}`);
+        blastEdges.add(`${current}->${parent}`);
+        if (!visited.has(parent)) {
+          visited.add(parent);
+          transitiveCallers.add(parent);
+          queue.push(parent);
+        }
+      });
+    }
+
+    // 3. Direct callees (outgoing dependencies)
+    const callees = forwardMap.get(selectedNodeId) || [];
+    callees.forEach((callee) => {
+      directCallees.add(callee);
+      blastEdges.add(`${selectedNodeId}->${callee}`);
+      blastEdges.add(`${callee}->${selectedNodeId}`);
+    });
+
+    const impactedNodeIds = new Set<string>([
+      selectedNodeId,
+      ...directCallers,
+      ...transitiveCallers,
+      ...directCallees,
+    ]);
+
+    return {
+      epicenterId: selectedNodeId,
+      directCallers,
+      transitiveCallers,
+      directCallees,
+      impactedNodeIds,
+      blastEdges,
+    };
   }, [selectedNodeId, edges]);
+
+  // Keep connectedNodeIds for inspector compatibility
+  const connectedNodeIds = useMemo(() => {
+    return blastRadiusData.impactedNodeIds;
+  }, [blastRadiusData]);
 
   // Compute incoming callers (fan-in) and outgoing dependencies (fan-out) for drawer
   const inspectingIncomingNodes = useMemo(() => {
@@ -789,8 +863,14 @@ export function ArchitectureCanvas({
             const targetPos = nodePositions.get(v);
             if (!sourcePos || !targetPos) return null;
 
-            const isHighlighted = selectedNodeId && (u === selectedNodeId || v === selectedNodeId);
-            const isDimmed = selectedNodeId && !isHighlighted;
+            const isBlastEdge =
+              blastRadiusMode &&
+              (blastRadiusData.blastEdges.has(`${u}->${v}`) ||
+                blastRadiusData.blastEdges.has(`${v}->${u}`));
+            const isHighlighted =
+              isBlastEdge ||
+              (selectedNodeId && (u === selectedNodeId || v === selectedNodeId));
+            const isDimmed = blastRadiusMode ? !isBlastEdge : selectedNodeId && !isHighlighted;
 
             const sx = sourcePos.x;
             const sy = sourcePos.y;
@@ -809,20 +889,22 @@ export function ArchitectureCanvas({
                   d={pathD}
                   fill="none"
                   stroke={
-                    isHighlighted
+                    isBlastEdge
+                      ? "#ef4444"
+                      : isHighlighted
                       ? isLight
                         ? "#09090b"
                         : "#ffffff"
                       : isDimmed
                       ? isLight
-                        ? "rgba(0, 0, 0, 0.05)"
-                        : "rgba(255, 255, 255, 0.05)"
+                        ? "rgba(0, 0, 0, 0.03)"
+                        : "rgba(255, 255, 255, 0.03)"
                       : isLight
                       ? "rgba(0, 0, 0, 0.16)"
                       : "rgba(255, 255, 255, 0.18)"
                   }
-                  strokeWidth={isHighlighted ? 2 : 1}
-                  strokeDasharray={isHighlighted ? undefined : "3 3"}
+                  strokeWidth={isBlastEdge ? 2.5 : isHighlighted ? 2 : 1}
+                  strokeDasharray={isBlastEdge || isHighlighted ? undefined : "3 3"}
                 />
               );
             }
@@ -835,20 +917,22 @@ export function ArchitectureCanvas({
                 x2={tx}
                 y2={ty}
                 stroke={
-                  isHighlighted
+                  isBlastEdge
+                    ? "#ef4444"
+                    : isHighlighted
                     ? isLight
                       ? "#09090b"
                       : "#ffffff"
                     : isDimmed
                     ? isLight
-                      ? "rgba(0, 0, 0, 0.07)"
-                      : "rgba(255, 255, 255, 0.07)"
+                      ? "rgba(0, 0, 0, 0.03)"
+                      : "rgba(255, 255, 255, 0.03)"
                     : isLight
                     ? "rgba(0, 0, 0, 0.18)"
                     : "rgba(255, 255, 255, 0.2)"
                 }
-                strokeWidth={isHighlighted ? 2 : 1}
-                strokeDasharray={isHighlighted ? undefined : "3 3"}
+                strokeWidth={isBlastEdge ? 2.5 : isHighlighted ? 2 : 1}
+                strokeDasharray={isBlastEdge || isHighlighted ? undefined : "3 3"}
               />
             );
           })}
@@ -859,19 +943,32 @@ export function ArchitectureCanvas({
             if (!pos) return null;
 
             const isSelected = selectedNodeId === node.id;
+            const isEpicenter = blastRadiusMode && selectedNodeId === node.id;
+            const isDirectCaller = blastRadiusMode && blastRadiusData.directCallers.has(node.id);
+            const isTransitiveCaller =
+              blastRadiusMode && blastRadiusData.transitiveCallers.has(node.id);
+            const isDirectCallee = blastRadiusMode && blastRadiusData.directCallees.has(node.id);
+            const isBlastImpacted =
+              isEpicenter || isDirectCaller || isTransitiveCaller || isDirectCallee;
+
             const isConnected = connectedNodeIds.has(node.id);
-            const isDimmed = selectedNodeId && !isSelected && !isConnected;
+            const isDimmed = blastRadiusMode
+              ? !isBlastImpacted
+              : selectedNodeId && !isSelected && !isConnected;
             const isHovered = hoverNodeId === node.id;
-            const radius = node.is_entry ? 14 : isSelected ? 12 : 9;
+            const radius = node.is_entry ? 14 : isSelected || isEpicenter ? 13 : 9;
 
             const isLeftSide = pos.x < radialCenterX;
             const labelAnchor = layoutMode === "lanes" ? "start" : isLeftSide ? "end" : "start";
-            const labelX = layoutMode === "lanes" ? radius + 10 : isLeftSide ? -radius - 8 : radius + 8;
+            const labelX =
+              layoutMode === "lanes" ? radius + 10 : isLeftSide ? -radius - 8 : radius + 8;
 
             const shouldShowLabel =
               layoutMode === "lanes" ||
               zoom >= 1.15 ||
               isSelected ||
+              isEpicenter ||
+              isDirectCaller ||
               isHovered ||
               isConnected ||
               node.is_entry ||
@@ -896,8 +993,52 @@ export function ArchitectureCanvas({
                 onMouseLeave={() => setHoverNodeId(null)}
                 style={{ cursor: "pointer" }}
               >
-                {/* Crisp Hairline Focus Indicator */}
-                {isSelected && (
+                {/* Blast Radius Epicenter Pulsing Ring */}
+                {isEpicenter && (
+                  <>
+                    <circle
+                      r={radius + 14}
+                      fill="none"
+                      stroke="#ef4444"
+                      strokeWidth="2"
+                      strokeDasharray="4 4"
+                      opacity={0.9}
+                    />
+                    <circle
+                      r={radius + 7}
+                      fill="rgba(239, 68, 68, 0.18)"
+                      stroke="#ef4444"
+                      strokeWidth="1.5"
+                    />
+                  </>
+                )}
+
+                {/* Direct Caller Halo */}
+                {isDirectCaller && (
+                  <circle
+                    r={radius + 6}
+                    fill="none"
+                    stroke="#f97316"
+                    strokeWidth="1.5"
+                    strokeDasharray="3 3"
+                    opacity={0.85}
+                  />
+                )}
+
+                {/* Transitive Caller Halo */}
+                {isTransitiveCaller && (
+                  <circle
+                    r={radius + 5}
+                    fill="none"
+                    stroke="#eab308"
+                    strokeWidth="1"
+                    strokeDasharray="2 3"
+                    opacity={0.7}
+                  />
+                )}
+
+                {/* Focus Indicator (Standard Selection) */}
+                {isSelected && !isEpicenter && (
                   <circle
                     r={radius + 8}
                     fill="none"
@@ -909,7 +1050,7 @@ export function ArchitectureCanvas({
                 )}
 
                 {/* Outer focus halo */}
-                {(isSelected || isHovered) && (
+                {(isSelected || isHovered) && !isEpicenter && (
                   <circle
                     r={radius + 8}
                     fill="none"
@@ -924,7 +1065,21 @@ export function ArchitectureCanvas({
                 <circle
                   r={radius}
                   fill={
-                    isSelected
+                    isEpicenter
+                      ? "#ef4444"
+                      : isDirectCaller
+                      ? isLight
+                        ? "#ffffff"
+                        : "#1c1917"
+                      : isTransitiveCaller
+                      ? isLight
+                        ? "#ffffff"
+                        : "#1c1917"
+                      : isDirectCallee
+                      ? isLight
+                        ? "#ffffff"
+                        : "#082f49"
+                      : isSelected
                       ? isLight
                         ? "#09090b"
                         : "#ffffff"
@@ -936,9 +1091,29 @@ export function ArchitectureCanvas({
                       ? "#ffffff"
                       : "#111114"
                   }
-                  stroke={isLight ? "#09090b" : "#ffffff"}
-                  strokeWidth={node.is_entry || isSelected ? 2.5 : 1.5}
-                  opacity={isDimmed ? 0.25 : 1}
+                  stroke={
+                    isEpicenter
+                      ? "#ffffff"
+                      : isDirectCaller
+                      ? "#f97316"
+                      : isTransitiveCaller
+                      ? "#eab308"
+                      : isDirectCallee
+                      ? "#38bdf8"
+                      : isLight
+                      ? "#09090b"
+                      : "#ffffff"
+                  }
+                  strokeWidth={
+                    isEpicenter || isDirectCaller
+                      ? 2.5
+                      : isTransitiveCaller
+                      ? 2
+                      : node.is_entry || isSelected
+                      ? 2.5
+                      : 1.5
+                  }
+                  opacity={isDimmed ? 0.12 : 1}
                   style={{ transition: "all 0.15s" }}
                 />
 
@@ -949,21 +1124,35 @@ export function ArchitectureCanvas({
                     y={4}
                     textAnchor={labelAnchor}
                     fill={
-                      isSelected
+                      isEpicenter
+                        ? "#ef4444"
+                        : isDirectCaller
+                        ? isLight
+                          ? "#c2410c"
+                          : "#fb923c"
+                        : isTransitiveCaller
+                        ? isLight
+                          ? "#a16207"
+                          : "#facc15"
+                        : isDirectCallee
+                        ? isLight
+                          ? "#0284c7"
+                          : "#38bdf8"
+                        : isSelected
                         ? isLight
                           ? "#09090b"
                           : "#ffffff"
                         : isDimmed
                         ? isLight
-                          ? "rgba(9, 9, 11, 0.25)"
-                          : "rgba(255, 255, 255, 0.3)"
+                          ? "rgba(9, 9, 11, 0.2)"
+                          : "rgba(255, 255, 255, 0.25)"
                         : isLight
                         ? "#09090b"
                         : "rgba(255, 255, 255, 0.9)"
                     }
                     fontSize="11"
                     fontFamily="var(--mf-mono, monospace)"
-                    fontWeight={isSelected || node.is_entry ? 600 : 400}
+                    fontWeight={isEpicenter || isDirectCaller || isSelected || node.is_entry ? 600 : 400}
                     letterSpacing="-0.01em"
                     style={{
                       paintOrder: "stroke fill",
@@ -974,6 +1163,9 @@ export function ArchitectureCanvas({
                     }}
                   >
                     {node.label}
+                    {isEpicenter && " [EPICENTER]"}
+                    {isDirectCaller && " (Tier 1)"}
+                    {isTransitiveCaller && " (Tier 2)"}
                   </text>
                 )}
               </g>
@@ -1417,21 +1609,25 @@ export function ArchitectureCanvas({
 
             <button
               type="button"
-              onClick={() => setBlastRadiusMode(true)}
+              onClick={() => {
+                setBlastRadiusMode(true);
+                if (selectedNode) centerNode(selectedNode);
+              }}
               style={{
                 width: "100%",
                 padding: "8px 12px",
                 borderRadius: 999,
-                border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.15)" : "rgba(255, 255, 255, 0.2)"}`,
-                background: isLight ? "rgba(0, 0, 0, 0.04)" : "rgba(255, 255, 255, 0.05)",
-                color: isLight ? "#09090b" : "#ffffff",
+                border: `1px solid ${isLight ? "rgba(239, 68, 68, 0.4)" : "rgba(239, 68, 68, 0.5)"}`,
+                background: isLight ? "rgba(239, 68, 68, 0.08)" : "rgba(239, 68, 68, 0.12)",
+                color: isLight ? "#dc2626" : "#fca5a5",
                 fontFamily: "var(--mf-mono, monospace)",
                 fontSize: "0.75rem",
+                fontWeight: 600,
                 cursor: "pointer",
                 transition: "all 0.15s",
               }}
             >
-              Simulate Blast Radius
+              Simulate Blast Radius 💥
             </button>
 
             <button
@@ -1513,11 +1709,13 @@ export function ArchitectureCanvas({
             top: 20,
             left: "50%",
             transform: "translateX(-50%)",
-            background: isLight ? "rgba(255, 255, 255, 0.96)" : "#111114",
-            border: `1px solid ${isLight ? "#09090b" : "#ffffff"}`,
-            boxShadow: isLight ? "0 16px 40px rgba(0,0,0,0.15)" : "0 16px 40px rgba(0,0,0,0.8)",
+            background: isLight ? "rgba(255, 255, 255, 0.98)" : "#111114",
+            border: `1px solid ${isLight ? "rgba(239, 68, 68, 0.6)" : "#ef4444"}`,
+            boxShadow: isLight
+              ? "0 16px 40px rgba(239, 68, 68, 0.15), 0 4px 16px rgba(0, 0, 0, 0.08)"
+              : "0 16px 40px rgba(0,0,0,0.85), 0 0 24px rgba(239, 68, 68, 0.3)",
             borderRadius: 999,
-            padding: "8px 20px",
+            padding: "8px 22px",
             display: "flex",
             alignItems: "center",
             gap: 16,
@@ -1530,34 +1728,44 @@ export function ArchitectureCanvas({
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span
               style={{
-                width: 8,
-                height: 8,
+                width: 9,
+                height: 9,
                 borderRadius: "50%",
-                background: isLight ? "#09090b" : "#ffffff",
+                background: "#ef4444",
+                boxShadow: "0 0 10px #ef4444",
               }}
             />
-            <span>BLAST RADIUS ACTIVE ·</span>
-            <span style={{ color: isLight ? "#09090b" : "#ffffff", fontWeight: 600 }}>
+            <span style={{ fontWeight: 600 }}>BLAST RADIUS ACTIVE ·</span>
+            <span style={{ color: "#ef4444", fontWeight: 700 }}>
               {selectedNode.label}
             </span>
           </div>
 
-          <div style={{ color: isLight ? "rgba(9, 9, 11, 0.7)" : "rgba(255,255,255,0.7)" }}>
+          <div style={{ color: isLight ? "rgba(9, 9, 11, 0.75)" : "rgba(255,255,255,0.75)" }}>
             Impact:{" "}
-            <strong style={{ color: isLight ? "#09090b" : "#ffffff" }}>
-              {Math.max(connectedNodeIds.size - 1, 1)} direct dependents
+            <strong style={{ color: "#ef4444" }}>
+              {blastRadiusData.directCallers.size} direct
             </strong>
+            {blastRadiusData.transitiveCallers.size > 0 && (
+              <>
+                ,{" "}
+                <strong style={{ color: isLight ? "#a16207" : "#facc15" }}>
+                  {blastRadiusData.transitiveCallers.size} cascading
+                </strong>
+              </>
+            )}{" "}
+            dependents ({Math.max(blastRadiusData.impactedNodeIds.size - 1, 0)} total)
           </div>
 
           <button
             type="button"
             onClick={() =>
               onAskCopilotAboutFile(
-                `Simulate refactoring ${selectedNode.path}. Provide a safe step-by-step decoupling plan to avoid breaking dependents.`,
+                `Simulate refactoring ${selectedNode.path}. It directly affects ${blastRadiusData.directCallers.size} caller(s) and has ${blastRadiusData.transitiveCallers.size} cascading dependent(s). Provide a safe step-by-step decoupling plan to avoid breaking dependents.`,
               )
             }
             style={{
-              padding: "4px 12px",
+              padding: "5px 14px",
               borderRadius: 999,
               background: isLight ? "#09090b" : "#ffffff",
               color: isLight ? "#ffffff" : "#000000",
@@ -1609,6 +1817,10 @@ export function ArchitectureCanvas({
             setSelectedNodeId(nodeId);
             setBlastRadiusMode(true);
             setInspectingNode(null);
+            const target = nodes.find((n) => n.id === nodeId);
+            if (target) {
+              centerNode(target);
+            }
           }}
           onAskCopilot={(prompt) => {
             onAskCopilotAboutFile(prompt);

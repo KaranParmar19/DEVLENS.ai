@@ -169,6 +169,9 @@ export function CodeViewerDrawer({
           bottom: 0,
           right: 0,
           width: "min(680px, 94vw)",
+          height: "100%",
+          maxHeight: "100vh",
+          overflow: "hidden",
           backgroundColor: isLight ? "#ffffff" : "#0d0d11",
           borderLeft: `1px solid ${isLight ? "rgba(0, 0, 0, 0.12)" : "rgba(255, 255, 255, 0.15)"}`,
           boxShadow: isLight
@@ -449,7 +452,18 @@ export function CodeViewerDrawer({
         </div>
 
         {/* ── Drawer Body ─────────────────────────────────────────────────── */}
-        <div className="devlens-scroll" style={{ flex: 1, overflowY: "auto", padding: "20px" }}>
+        <div
+          className="devlens-scroll"
+          style={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: "auto",
+            overflowX: "hidden",
+            padding: "20px",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
           {loading && (
             <div
               style={{
@@ -712,10 +726,21 @@ export function CodeViewerDrawer({
 
           {/* TAB 2: SOURCE CODE */}
           {!loading && !error && activeTab === "code" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 12,
+                flex: 1,
+                minHeight: 0,
+              }}
+            >
               <div
                 className="devlens-scroll"
                 style={{
+                  flex: 1,
+                  minHeight: 0,
+                  maxHeight: "calc(100vh - 210px)",
                   fontFamily: "var(--mf-mono, monospace)",
                   fontSize: "0.75rem",
                   lineHeight: "1.6",
@@ -724,6 +749,7 @@ export function CodeViewerDrawer({
                   borderRadius: 8,
                   padding: "14px 16px",
                   overflowX: "auto",
+                  overflowY: "auto",
                   whiteSpace: "pre",
                 }}
               >
@@ -731,13 +757,14 @@ export function CodeViewerDrawer({
                   <div key={idx} style={{ display: "flex", gap: 16 }}>
                     <span
                       style={{
-                        width: 36,
+                        width: 38,
                         color: isLight
                           ? "rgba(9, 9, 11, 0.35)"
                           : "rgba(255, 255, 255, 0.25)",
                         textAlign: "right",
                         userSelect: "none",
                         flexShrink: 0,
+                        fontFamily: "inherit",
                       }}
                     >
                       {idx + 1}
@@ -752,6 +779,130 @@ export function CodeViewerDrawer({
           {/* TAB 3: TOPOLOGY */}
           {activeTab === "topology" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              {/* Blast Radius Impact Analysis Card */}
+              <div
+                style={{
+                  background: isLight ? "rgba(239, 68, 68, 0.05)" : "rgba(239, 68, 68, 0.08)",
+                  border: `1px solid ${isLight ? "rgba(239, 68, 68, 0.25)" : "rgba(239, 68, 68, 0.3)"}`,
+                  borderRadius: 8,
+                  padding: "14px 16px",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 8,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: "var(--mf-mono, monospace)",
+                      fontSize: "0.6875rem",
+                      fontWeight: 600,
+                      color: isLight ? "#dc2626" : "#fca5a5",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                    }}
+                  >
+                    💥 Blast Radius Impact Analysis
+                  </span>
+                  <span
+                    style={{
+                      fontFamily: "var(--mf-mono, monospace)",
+                      fontSize: "0.625rem",
+                      padding: "2px 6px",
+                      borderRadius: 4,
+                      background:
+                        incomingNodes.length >= 4
+                          ? isLight
+                            ? "rgba(239, 68, 68, 0.15)"
+                            : "rgba(239, 68, 68, 0.25)"
+                          : incomingNodes.length > 0
+                          ? isLight
+                            ? "rgba(249, 115, 22, 0.15)"
+                            : "rgba(249, 115, 22, 0.25)"
+                          : isLight
+                          ? "rgba(34, 197, 94, 0.15)"
+                          : "rgba(34, 197, 94, 0.25)",
+                      color:
+                        incomingNodes.length >= 4
+                          ? isLight
+                            ? "#b91c1c"
+                            : "#f87171"
+                          : incomingNodes.length > 0
+                          ? isLight
+                            ? "#c2410c"
+                            : "#fb923c"
+                          : isLight
+                          ? "#15803d"
+                          : "#4ade80",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {incomingNodes.length >= 4
+                      ? "CRITICAL RISK"
+                      : incomingNodes.length > 0
+                      ? "MODERATE RISK"
+                      : "CONTAINED / LEAF"}
+                  </span>
+                </div>
+                <p
+                  style={{
+                    fontSize: "0.75rem",
+                    lineHeight: 1.5,
+                    color: isLight ? "rgba(9, 9, 11, 0.75)" : "rgba(255, 255, 255, 0.75)",
+                    margin: "0 0 12px",
+                  }}
+                >
+                  {incomingNodes.length > 0
+                    ? `Modifying or introducing a runtime regression into ${node.label} directly endangers ${incomingNodes.length} direct caller module(s). Simulating the blast radius maps the full cascading failure tree across the repository graph.`
+                    : `${node.label} has 0 internal callers in the AST graph. Changes here are contained and will not cause cascading breaks in other modules.`}
+                </p>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => onSimulateBlastRadius(node.id)}
+                    style={{
+                      padding: "6px 12px",
+                      borderRadius: 6,
+                      background: isLight ? "#09090b" : "#ffffff",
+                      color: isLight ? "#ffffff" : "#000000",
+                      border: "none",
+                      fontFamily: "var(--mf-mono, monospace)",
+                      fontSize: "0.6875rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
+                  >
+                    <span>Launch Graph Simulation ↗</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onAskCopilot(
+                        `Explain the blast radius of modifying \`${node.path}\`. Which callers (${incomingNodes.map((n) => n.path).join(", ") || "none"}) break and what are the safest refactoring steps?`,
+                      )
+                    }
+                    style={{
+                      padding: "6px 12px",
+                      borderRadius: 6,
+                      background: isLight ? "rgba(0, 0, 0, 0.05)" : "rgba(255, 255, 255, 0.08)",
+                      border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.12)" : "rgba(255, 255, 255, 0.15)"}`,
+                      color: isLight ? "#09090b" : "#ffffff",
+                      fontFamily: "var(--mf-mono, monospace)",
+                      fontSize: "0.6875rem",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Ask Copilot ↗
+                  </button>
+                </div>
+              </div>
               {/* Fan-In: Callers */}
               <div>
                 <div
