@@ -69,6 +69,7 @@ function AnimatedNumber({
 
       const formatted = separator
         ? current.toLocaleString("en-US", {
+            minimumIntegerDigits: end < 10 && end > 0 && decimals === 0 ? 2 : 1,
             minimumFractionDigits: decimals,
             maximumFractionDigits: decimals,
           })

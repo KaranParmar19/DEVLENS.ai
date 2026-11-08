@@ -18,7 +18,7 @@ export interface PolaroidSlide {
 export const DEVLENS_POLAROID_SLIDES: PolaroidSlide[] = [
   {
     index: "01",
-    value: 8,
+    value: "08",
     suffix: "",
     label: "Languages supported",
     description: "Resolves imports and symbols across TypeScript, JavaScript, Python, Go, Java, Rust, Ruby, and PHP.",
@@ -28,7 +28,7 @@ export const DEVLENS_POLAROID_SLIDES: PolaroidSlide[] = [
   },
   {
     index: "02",
-    value: 5,
+    value: "05",
     suffix: "",
     label: "Interactive views",
     description: "Switch between the dependency map, request tracer, commit history, Q&A, and onboarding notes.",
@@ -69,7 +69,7 @@ export const DEVLENS_POLAROID_SLIDES: PolaroidSlide[] = [
   {
     index: "06",
     prefix: "< ",
-    value: 2,
+    value: "02",
     suffix: "s",
     label: "Deterministic AST parsing",
     description: "Tree-sitter syntax engines extract callers, callees, and type definitions without compiling the project.",
@@ -128,6 +128,11 @@ function parseMetric(val: string | number, suff?: string, pref?: string) {
   if (!prefix && raw.startsWith("<")) {
     prefix = "< ";
     raw = raw.replace(/^<\s*/, "");
+  }
+
+  // Pad single digits 8, 5, 2 (or any single digit 1-9) to 2 digits (e.g. "08", "05", "02")
+  if (/^[1-9]$/.test(raw)) {
+    raw = "0" + raw;
   }
 
   if (!suffix) {
