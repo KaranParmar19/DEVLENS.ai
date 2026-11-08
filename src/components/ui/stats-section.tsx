@@ -247,9 +247,9 @@ export function StatsSection({
 
             {/* Title & Description */}
             <div className="mf-stat-card-body">
-              <h4 className="mf-stat-label">{stat.label}</h4>
+              <h4 className="mf-stat-label" style={{ textTransform: "uppercase", fontFamily: '"Boogaloo", sans-serif' }}>{stat.label}</h4>
               {stat.description && (
-                <p className="mf-stat-desc">{stat.description}</p>
+                <p className="mf-stat-desc" style={{ textTransform: "none", fontFamily: '"Boogaloo", sans-serif', fontSize: "1.05rem" }}>{stat.description}</p>
               )}
             </div>
 

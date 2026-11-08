@@ -205,7 +205,7 @@ export function PlumblinePipeline() {
                   <h3 className="plumbline-pane-heading" style={{ textTransform: "uppercase", fontFamily: '"Boogaloo", sans-serif' }}>
                     SHALLOW CLONE IN A TEMPORARY DIRECTORY.
                   </h3>
-                  <p className="plumbline-pane-desc">
+                  <p className="plumbline-pane-desc" style={{ textTransform: "none", fontFamily: '"Boogaloo", sans-serif', fontSize: "1.1rem", lineHeight: 1.55 }}>
                     Paste a public GitHub URL or connect a Personal Access Token for private repos. DevLens runs a shallow clone, skips vendored build folders, and deletes the temporary files when your session ends.
                   </p>
 
@@ -273,7 +273,7 @@ export function PlumblinePipeline() {
                   <h3 className="plumbline-pane-heading" style={{ textTransform: "uppercase", fontFamily: '"Boogaloo", sans-serif' }}>
                     PARSE FILES AND LINK IMPORTS WITH TREE-SITTER.
                   </h3>
-                  <p className="plumbline-pane-desc">
+                  <p className="plumbline-pane-desc" style={{ textTransform: "none", fontFamily: '"Boogaloo", sans-serif', fontSize: "1.1rem", lineHeight: 1.55 }}>
                     Tree-sitter parses each file into a syntax tree and extracts functions, classes, and import statements. Cross-file imports are linked into a directed dependency graph.
                   </p>
 
@@ -338,7 +338,7 @@ export function PlumblinePipeline() {
                   <h3 className="plumbline-pane-heading" style={{ textTransform: "uppercase", fontFamily: '"Boogaloo", sans-serif' }}>
                     INSPECT THE GRAPH AND ASK QUESTIONS WITH LINE LINKS.
                   </h3>
-                  <p className="plumbline-pane-desc">
+                  <p className="plumbline-pane-desc" style={{ textTransform: "none", fontFamily: '"Boogaloo", sans-serif', fontSize: "1.1rem", lineHeight: 1.55 }}>
                     Click any file in the graph to see what imports it, trace request paths across modules, or ask a question in plain English. Every answer points to the exact file and line number.
                   </p>
 

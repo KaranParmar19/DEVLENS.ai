@@ -491,8 +491,8 @@ export function PolaroidLineCarousel({
 
               {/* Label and Narrative */}
               <div className="pl-card-text">
-                <h4 className="pl-card-title">{sl.label}</h4>
-                <p className="pl-card-desc">{sl.description}</p>
+                <h4 className="pl-card-title" style={{ textTransform: "uppercase", fontFamily: '"Boogaloo", sans-serif' }}>{sl.label}</h4>
+                <p className="pl-card-desc" style={{ textTransform: "none", fontFamily: '"Boogaloo", sans-serif', fontSize: "1.05rem" }}>{sl.description}</p>
               </div>
 
               {/* Bottom Micro-Component Rack */}
@@ -557,8 +557,8 @@ export function PolaroidLineCarousel({
       {/* Bottom Status Control Bar — Positioned cleanly below the hanging stage */}
       <div className="pl-bar">
         <div className="pl-cap" key={active}>
-          <span className="pl-title">{currentSlide.label}</span>
-          <span className="pl-sub">{currentSlide.description}</span>
+          <span className="pl-title" style={{ textTransform: "uppercase", fontFamily: '"Boogaloo", sans-serif' }}>{currentSlide.label}</span>
+          <span className="pl-sub" style={{ textTransform: "none", fontFamily: '"Boogaloo", sans-serif', fontSize: "1.05rem" }}>{currentSlide.description}</span>
         </div>
 
         <div className="pl-count-group mf-mono">

@@ -43,7 +43,7 @@ export const DEFAULT_DEVLENS_FAQS: FAQItemData[] = [
 ];
 
 export function FAQSection({
-  title = "QUESTIONS & ANSWERS",
+  title = "FAQ",
   subtitle = "Common questions about how DevLens indexes and maps repositories.",
   items = DEFAULT_DEVLENS_FAQS,
   defaultOpenIndex = 0,
@@ -62,12 +62,25 @@ export function FAQSection({
         {/* Left Column: Heading, Subtitle & Large Crisp FAQ Watermark */}
         <div className="ffaq-left">
           <div className="ffaq-left-content">
+            <span
+              className="mf-pill"
+              style={{
+                textTransform: "uppercase",
+                fontFamily: '"Boogaloo", sans-serif',
+                width: "fit-content",
+                fontSize: "0.85rem",
+                letterSpacing: "0.08em",
+                padding: "4px 12px",
+              }}
+            >
+              FAQ
+            </span>
             <h2 className="ffaq-title" style={{ textTransform: "uppercase", fontFamily: '"Boogaloo", sans-serif' }}>{title}</h2>
-            <p className="ffaq-subtitle">{subtitle}</p>
+            <p className="ffaq-subtitle" style={{ textTransform: "none", fontFamily: '"Boogaloo", sans-serif', fontSize: "1.15rem" }}>{subtitle}</p>
           </div>
 
           {/* Fully Visible FAQ Watermark Typography */}
-          <div className="ffaq-wm" aria-hidden="true">
+          <div className="ffaq-wm" style={{ textTransform: "uppercase", fontFamily: '"Boogaloo", sans-serif' }} aria-hidden="true">
             FAQ
           </div>
         </div>
@@ -132,7 +145,7 @@ export function FAQSection({
                         transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
                       >
                         <div className="ffaq-answer-inner">
-                          <p className="ffaq-answer-text">{item.answer}</p>
+                          <p className="ffaq-answer-text" style={{ textTransform: "none", fontFamily: '"Boogaloo", sans-serif', fontSize: "1.1rem", lineHeight: 1.55 }}>{item.answer}</p>
                         </div>
                       </motion.div>
                     )}

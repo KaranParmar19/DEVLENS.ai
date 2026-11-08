@@ -6,26 +6,35 @@
 .mf-pipeline-h1,
 .mf-row-title,
 .ffaq-title,
+.ffaq-wm,
 .pl-deck-label,
 .plumbline-pane-heading,
-.plumbline-step-h3 {
+.plumbline-step-h3,
+.mf-stat-label,
+.mf-stat-card-pill,
+.pl-card-title,
+.pl-title,
+.ffaq-card-question {
   font-family: "Boogaloo", sans-serif !important;
   text-transform: uppercase;
   letter-spacing: 0.02em;
 }
 
-/* Explicitly preserve informational body copy in normal case & clear body typography */
+/* Explicitly set informational body copy & descriptions to Boogaloo font in lowercase */
 .mf-lead,
 .mf-body,
 .ffaq-subtitle,
 .ffaq-answer-text,
 .plumbline-pane-desc,
 .pl-deck-hint,
-.plumbline-ast-canvas,
+.pl-card-desc,
+.pl-sub,
+.mf-stat-desc,
 .wireframe-node-label,
 .telem-label {
   text-transform: none !important;
-  font-family: var(--mf-font, "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  font-family: "Boogaloo", sans-serif !important;
+  letter-spacing: 0.01em;
 }
 
 @font-face {
@@ -1990,7 +1999,8 @@ html[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
   pointer-events: none;
   user-select: none;
   color: #e2e5ea;
-  font-family: var(--mf-sans, system-ui, -apple-system, sans-serif);
+  font-family: "Boogaloo", sans-serif !important;
+  text-transform: uppercase;
   transition: color 0.75s var(--mf-ease);
 }
 
