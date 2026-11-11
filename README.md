@@ -237,7 +237,7 @@ sequenceDiagram
    # Terminal 2: FastAPI application
    uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
    ```
-   Interactive Swagger documentation is available at [http://localhost:8000/docs](http://localhost:8000/docs).
+   Interactive Swagger documentation is available at [http://localhost:8000/api/docs](http://localhost:8000/api/docs) (ReDoc at [http://localhost:8000/api/redoc](http://localhost:8000/api/redoc)).
 
 #### Frontend Setup
 
@@ -277,17 +277,20 @@ Key configuration parameters inside `backend/.env`:
 erDiagram
     repositories ||--o{ code_chunks : contains
     repositories ||--o{ sessions : tracks
+    repositories ||--o{ analysis_jobs : runs
+    sessions ||--o{ analysis_jobs : initiates
 
     repositories {
         uuid id PK
         string owner
         string name
+        string full_name
         int stars
         string default_branch
-        string commit_sha
+        string latest_commit_sha
         jsonb languages
         boolean is_monorepo
-        jsonb graph_data
+        jsonb graph_cache
         enum status
         timestamp created_at
     }
@@ -312,6 +315,17 @@ erDiagram
         jsonb chat_history
         timestamp created_at
     }
+
+    analysis_jobs {
+        uuid id PK
+        uuid repo_id FK
+        uuid session_id FK
+        string celery_task_id
+        enum status
+        string current_step
+        int progress_pct
+        timestamp created_at
+    }
 ```
 
 ---
@@ -322,11 +336,18 @@ erDiagram
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| `POST` | `/api/v1/repos/analyze` | Initiates background repository ingestion; returns `job_id` |
-| `GET` | `/api/v1/repos/{owner}/{name}` | Retrieves indexed metadata, file tree, and graph data |
-| `GET` | `/api/v1/repos/{owner}/{name}/graph` | Returns nodes, directed edges, and spring layout coordinates |
-| `POST` | `/api/v1/repos/{owner}/{name}/blast-radius`| Computes downstream impact paths for a given file path |
-| `GET` | `/api/v1/health` | System health check (database, redis connectivity) |
+| `POST` | `/api/v1/repos/analyze` | Initiates background repository ingestion; returns `job_id` and `session_id` |
+| `GET` | `/api/v1/repos/{repo_id}` | Retrieves indexed metadata, latest `session_id`, and `job_id` |
+| `GET` | `/api/v1/analysis/{job_id}/status` | Polls ingestion job progress, step, and status |
+| `GET` | `/api/v1/sessions/{session_id}/graph` | Returns nodes, directed edges, cycles, and spring layout coordinates |
+| `GET` | `/api/v1/sessions/{session_id}/files` | Returns file tree, top-level module groupings, and entry points |
+| `GET` | `/api/v1/sessions/{session_id}/file` | Fetches file contents and extracted symbols for a `path` query parameter |
+| `GET` | `/api/v1/sessions/{session_id}/onboarding` | Generates or returns the repository onboarding walkthrough |
+| `GET` | `/api/v1/sessions/{session_id}/commits` | Fetches recent commits with architectural drift risk classification |
+| `GET` | `/api/v1/sessions/{session_id}/export` | Exports the dependency graph (`mermaid` or `plantuml`) |
+| `POST` | `/api/v1/chat` | Synchronous Q&A fallback over the indexed repository |
+| `GET` | `/api/v1/auth/github/login` | Starts GitHub OAuth flow for private repo access (`/auth/token`, `/auth/me`) |
+| `GET` | `/api/v1/health` | System health check (PostgreSQL and Redis connectivity) |
 
 ### WebSocket Endpoints
 
@@ -370,19 +391,26 @@ DevLensAI/
 │   ├── alembic/                # Database migrations
 │   ├── app/
 │   │   ├── agent/              # LangChain ReAct agent & 4 custom tools
-│   │   ├── core/               # AST chunker, graph builder, file utils
+│   │   ├── api/routes/         # FastAPI REST & WebSocket routers
+│   │   ├── core/               # AST chunker, graph builder, facts extractor, file utils
+│   │   ├── middleware/         # Auth, rate limiting, and structured logging
 │   │   ├── models/             # SQLAlchemy ORM models (pgvector)
-│   │   ├── routes/             # FastAPI REST & WebSocket routers
+│   │   ├── rag/                # Vector store and semantic retriever
+│   │   ├── schemas/            # Pydantic request/response schemas
 │   │   ├── tasks/              # Celery task definitions
+│   │   ├── utils/              # Graph layout and token utilities
 │   │   └── main.py             # FastAPI entry point
 │   ├── tests/                  # Pytest test suite
 │   ├── Dockerfile              # Multi-stage Python build
 │   └── requirements.txt        # Backend dependencies
 ├── src/
-│   ├── components/             # Reusable UI components & canvas views
-│   ├── hooks/                  # WebSocket & state synchronization hooks
-│   ├── pages/                  # Route views (Home, Dashboard, Features)
+│   ├── components/             # Reusable UI components & studio canvas views
+│   ├── hooks/                  # WebSocket, auth, and viewport hooks
+│   ├── lib/                    # API client, error capture, and utilities
+│   ├── routes/                 # TanStack Router views (index, dashboard, features, how-it-works)
 │   ├── monoform.css            # Custom design tokens & animations
+│   ├── router.tsx              # Client router setup
+│   ├── server.ts               # SSR server entry
 │   └── styles.css              # Base styles
 ├── docker-compose.yml          # Containerized local development stack
 ├── package.json                # Frontend dependencies & scripts
