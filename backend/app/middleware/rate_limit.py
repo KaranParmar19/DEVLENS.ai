@@ -49,6 +49,19 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.key_limit = key_limit
         self.window = window_seconds
 
+    @staticmethod
+    def _get_client_ip(request: Request) -> str:
+        """Resolve client IP behind Cloudflare / PaaS reverse proxies."""
+        cf_ip = request.headers.get("CF-Connecting-IP")
+        if cf_ip and cf_ip.strip():
+            return cf_ip.strip()
+        forwarded_for = request.headers.get("X-Forwarded-For")
+        if forwarded_for:
+            first_ip = forwarded_for.split(",")[0].strip()
+            if first_ip:
+                return first_ip
+        return request.client.host if request.client else "unknown"
+
     async def dispatch(self, request: Request, call_next) -> Response:
         # Skip rate limiting on health checks and docs
         if request.url.path in ("/api/v1/health", "/", "/api/docs", "/openapi.json"):
@@ -62,9 +75,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         window_start = now - self.window
 
         # ── Per-IP check ─────────────────────────────────────────────────────
-        ip = request.client.host if request.client else "unknown"
+        ip = self._get_client_ip(request)
         ip_key = f"rl:ip:{ip}"
-        ip_count = await self._sliding_window(redis, ip_key, now, window_start)
+        try:
+            ip_count = await self._sliding_window(redis, ip_key, now, window_start)
+        except Exception as exc:
+            log.warning("rate_limit_redis_error", scope="ip", error=str(exc))
+            return await call_next(request)
 
         if ip_count > self.ip_limit:
             log.warning("rate_limit_exceeded", scope="ip", ip=ip, count=ip_count)
@@ -82,7 +99,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         api_key = request.headers.get("X-API-Key")
         if api_key:
             key_bucket = f"rl:key:{api_key[:16]}"  # prefix only, don't store full key
-            key_count = await self._sliding_window(redis, key_bucket, now, window_start)
+            try:
+                key_count = await self._sliding_window(redis, key_bucket, now, window_start)
+            except Exception as exc:
+                log.warning("rate_limit_redis_error", scope="api_key", error=str(exc))
+                return await call_next(request)
 
             if key_count > self.key_limit:
                 log.warning(

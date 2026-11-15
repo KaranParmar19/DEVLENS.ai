@@ -14,18 +14,24 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 
 # ── Load app models so Alembic can detect schema changes ─────────────────
+from app.config import get_settings
 from app.database import Base
 from app.models import User, Repository, AnalysisJob, Session, CodeChunk  # noqa: F401
+from app.utils.db_url import normalize_async_database_url
 
 # ── Alembic Config ────────────────────────────────────────────────────────
 config = context.config
 
-# Override sqlalchemy.url with the DATABASE_URL env var
-database_url = os.environ.get("DATABASE_URL", config.get_main_option("sqlalchemy.url"))
-# asyncpg driver needed for async engine
-if database_url and not database_url.startswith("postgresql+asyncpg"):
-    database_url = database_url.replace("postgresql://", "postgresql+asyncpg://")
-config.set_main_option("sqlalchemy.url", database_url)
+# Override sqlalchemy.url with DATABASE_URL env var or settings
+raw_database_url = (
+    os.environ.get("DATABASE_URL")
+    or get_settings().database_url
+    or config.get_main_option("sqlalchemy.url")
+    or ""
+)
+database_url = normalize_async_database_url(raw_database_url)
+# Escape '%' for configparser interpolation inside alembic config options
+config.set_main_option("sqlalchemy.url", database_url.replace("%", "%%"))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

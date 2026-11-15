@@ -48,6 +48,7 @@ from app.core.language_detector import detect_language, detect_monorepo, detect_
 from app.core.chunker import chunk_file
 from app.core.graph_builder import GraphBuilder
 from app.rag.vector_store import VectorStore
+from app.utils.db_url import normalize_async_database_url
 
 logger = structlog.get_logger(__name__)
 settings = get_settings()
@@ -56,7 +57,7 @@ settings = get_settings()
 # Created at module level so the engine object is shared, but NullPool ensures
 # NO connections are cached — each session gets a fresh asyncpg connection.
 _worker_engine = create_async_engine(
-    settings.database_url,
+    normalize_async_database_url(settings.database_url),
     echo=settings.debug,
     poolclass=NullPool,          # ← key: no pool → no cross-loop connections
 )

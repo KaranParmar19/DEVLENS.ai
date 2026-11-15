@@ -1,0 +1,20 @@
+# Exclude local environment files and secrets from Docker images
+.env
+.env.*
+!.env.example
+
+# Python caches & virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Version control
+.git/
+.gitignore

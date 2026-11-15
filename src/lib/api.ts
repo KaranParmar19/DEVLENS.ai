@@ -8,7 +8,7 @@
  *   const result = await api.analyze('https://github.com/org/repo');
  */
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const API_BASE = (import.meta.env.VITE_API_URL || "http://localhost:8000").replace(/\/+$/, "");
 const API_KEY = import.meta.env.VITE_API_KEY ?? "";
 
 // ── Base fetch wrapper ──────────────────────────────────────────────────
@@ -239,7 +239,8 @@ export const api = {
 
 // ── WebSocket URL Builder ────────────────────────────────────────────────
 
-const WS_BASE = API_BASE.replace(/^http/, "ws");
+const RAW_WS_URL = (import.meta.env.VITE_WS_URL || "").trim().replace(/\/+$/, "");
+const WS_BASE = RAW_WS_URL || API_BASE.replace(/^http/, "ws");
 
 export const wsUrls = {
   jobProgress: (jobId: string) => `${WS_BASE}/ws/jobs/${jobId}`,

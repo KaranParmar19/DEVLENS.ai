@@ -20,9 +20,11 @@ logger = structlog.get_logger(__name__)
 settings = get_settings()
 
 
+from app.utils.db_url import normalize_async_database_url
+
 # ── SQLAlchemy Async Engine ────────────────────────────────────────────────
 engine: AsyncEngine = create_async_engine(
-    settings.database_url,
+    normalize_async_database_url(settings.database_url),
     echo=settings.debug,        # Log SQL queries in debug mode
     pool_size=10,               # Connection pool size
     max_overflow=20,            # Extra connections beyond pool_size
