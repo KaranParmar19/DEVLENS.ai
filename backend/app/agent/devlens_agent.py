@@ -730,13 +730,15 @@ class DevLensAgent:
 
         # Section: Project Overview & Architecture
         arch_diagram = getattr(doc, "architecture_diagram", None)
+        if not arch_diagram or not arch_diagram.strip() or len(arch_diagram.strip().splitlines()) < 2:
+            from app.core.facts_extractor import build_architecture_mermaid
+            arch_diagram = build_architecture_mermaid(facts, self.graph_cache)
+
         overview_highlights = getattr(doc, "overview_highlights", None) or []
-        if (doc.summary and doc.summary.strip()) or arch_diagram:
-            lines.append(f"## {sec_idx}. Project Overview & Architecture")
-            if arch_diagram and arch_diagram.strip():
-                lines.append(f"```mermaid\n{arch_diagram.strip()}\n```\n")
-            if doc.summary and doc.summary.strip():
-                lines.append(doc.summary.strip())
+        lines.append(f"## {sec_idx}. Project Overview & Architecture")
+        lines.append(f"```mermaid\n{arch_diagram.strip()}\n```\n")
+        if doc.summary and doc.summary.strip():
+            lines.append(doc.summary.strip())
             if overview_highlights:
                 lines.append("")
                 for item in overview_highlights:
@@ -1226,11 +1228,54 @@ class DevLensAgent:
             f"({facts.get('cycles_count', 0)} circular import cycles).{lang_summary}"
         )
         if cleaned_summary:
-            parsed_schema.summary = f"{cleaned_summary}\n\n{metrics_summary}"
+            parsed_schema.summary = cleaned_summary
         elif facts.get("readme_summary"):
-            parsed_schema.summary = f"{facts['readme_summary']}\n\n{metrics_summary}"
+            parsed_schema.summary = facts["readme_summary"]
         else:
-            parsed_schema.summary = f"No README is declared in this repository.\n\n{metrics_summary}"
+            if facts.get("entry_points"):
+                ep_names = ", ".join(f"`{PurePosixPath(ep['path']).name}`" for ep in facts["entry_points"][:3])
+                parsed_schema.summary = f"Core architecture for {parsed_schema.repo_name}, structured around primary entry points {ep_names}."
+            else:
+                parsed_schema.summary = f"Architectural overview and subsystem breakdown for {parsed_schema.repo_name}."
+
+        if not parsed_schema.overview_highlights:
+            gen_highlights = []
+            if facts.get("entry_points"):
+                ep_str = ", ".join(f"`{PurePosixPath(ep['path']).name}`" for ep in facts["entry_points"][:3])
+                gen_highlights.append(f"Primary entry points initialized at {ep_str}.")
+            if manifest.get("tech_stack"):
+                stack_str = ", ".join(str(s) for s in manifest["tech_stack"][:4])
+                gen_highlights.append(f"Core dependencies: {stack_str}.")
+            if facts.get("cycles_count", 0) == 0:
+                gen_highlights.append("Acyclic dependency structure with 0 circular import cycles.")
+            parsed_schema.overview_highlights = gen_highlights
+
+        if not parsed_schema.subsystems:
+            fb_list = facts.get("folder_breakdown", [])
+            gen_subsystems = []
+            for fb in fb_list[:4]:
+                f_path = fb.get("path", "").strip().rstrip("/")
+                if not f_path or f_path == ".":
+                    continue
+                f_name = PurePosixPath(f_path).name.capitalize()
+                sample_files = [f.strip() for f in (fb.get("sample_files") or "").split(",") if f.strip()]
+                sub_files = [f"{f_path}/{s}" if "/" not in s else s for s in sample_files[:4]]
+                sub_title = f"{f_name} Subsystem"
+                sub_para = f"The `{f_path}/` directory manages {fb.get('file_count', 0)} modules responsible for {f_name.lower()} operations in the repository."
+                if sub_files:
+                    sub_para += f" Key implementations include {', '.join(f'[[{p}]]' for p in sub_files)}."
+                gen_subsystems.append(
+                    SubsystemSection(
+                        title=sub_title,
+                        paragraphs=[sub_para],
+                        diagrams=[],
+                        bullet_points=[
+                            f"Contains {fb.get('file_count', 0)} files in `{f_path}/`",
+                        ],
+                        key_files=sub_files,
+                    )
+                )
+            parsed_schema.subsystems = gen_subsystems
 
         # Build deterministic entry-point & shared-hub topology bullets to pair with narrative prose
         how_lines: list[str] = []

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import type { GraphData } from "./studio-types";
 import { MermaidDiagramCard } from "./mermaid-diagram";
 
@@ -9,6 +9,7 @@ export interface OnboardingDocViewProps {
   onSelectFile?: (path: string) => void;
   onAskCopilot?: (prompt: string) => void;
   isLoading?: boolean;
+  isAnalyzingRepo?: boolean;
   error?: string | null;
   onRetry?: () => void;
   theme?: "dark" | "light";
@@ -120,6 +121,408 @@ export function extractHeroSplit(rawMd: string): HeroSplitData | null {
   };
 }
 
+export function buildClientMermaidFallback(graphData?: GraphData | null): string | null {
+  if (!graphData?.nodes || graphData.nodes.length === 0) return null;
+  const nodes = graphData.nodes.slice(0, 6);
+  const nodeMap = new Map<string, string>();
+  const lines = ["graph TD"];
+  nodes.forEach((n, idx) => {
+    const id = `MOD_${idx}`;
+    const rawName = n.path?.split("/").pop() || n.label || `Module_${idx}`;
+    const cleanName = rawName.replace(/[^a-zA-Z0-9_.-]/g, "_");
+    nodeMap.set(n.id, id);
+    lines.push(`    ${id}["${cleanName}"]`);
+  });
+  if (graphData.edges) {
+    let edgeCount = 0;
+    for (const e of graphData.edges) {
+      const rawSrc = Array.isArray(e) ? e[0] : (e as unknown as { source: string }).source;
+      const rawTgt = Array.isArray(e) ? e[1] : (e as unknown as { target: string }).target;
+      const srcId = nodeMap.get(rawSrc);
+      const tgtId = nodeMap.get(rawTgt);
+      if (srcId && tgtId && srcId !== tgtId) {
+        lines.push(`    ${srcId} -->|"imports"| ${tgtId}`);
+        edgeCount++;
+        if (edgeCount >= 8) break;
+      }
+    }
+  }
+  return lines.length >= 3 ? lines.join("\n") : null;
+}
+
+interface GenerationStage {
+  phase: string;
+  title: string;
+  detail: string;
+  tag: string;
+}
+
+const GENERATION_STAGES: GenerationStage[] = [
+  {
+    phase: "PHASE 1 OF 5",
+    title: "Mapping Module Topology",
+    detail:
+      "Parsing abstract syntax tree for verified entry points and exported module boundaries.",
+    tag: "ast-topology",
+  },
+  {
+    phase: "PHASE 2 OF 5",
+    title: "Extracting Schemas & Data Contracts",
+    detail: "Inspecting database models, request routers, and environment configurations.",
+    tag: "schema-contracts",
+  },
+  {
+    phase: "PHASE 3 OF 5",
+    title: "Synthesizing Architecture Diagrams",
+    detail: "Drafting interactive Mermaid entity-relationship models and sequence flows.",
+    tag: "mermaid-synthesis",
+  },
+  {
+    phase: "PHASE 4 OF 5",
+    title: "Authoring Subsystem Deep Dives",
+    detail: "Documenting architectural patterns with verified file and symbol citations.",
+    tag: "subsystem-walkthrough",
+  },
+  {
+    phase: "PHASE 5 OF 5",
+    title: "Compiling Interactive Code Wiki",
+    detail: "Validating cross-links and compiling the two-column walkthrough overview.",
+    tag: "wiki-assembly",
+  },
+];
+
+const TELEMETRY_STREAM = [
+  { atSec: 1, text: "AST scan complete: modules and exports cataloged across repo" },
+  { atSec: 3, text: "Identifying candidate starter files and primary execution entry points" },
+  { atSec: 6, text: "Grounding database schemas, entities, and foreign key relations" },
+  { atSec: 9, text: "Synthesizing Mermaid diagrams with deterministic topological fallbacks" },
+  { atSec: 13, text: "Drafting subsystem deep dives and verifying file citations" },
+  { atSec: 17, text: "Generating contextual Copilot questions for each architectural domain" },
+  { atSec: 21, text: "Assembling split-view hero overview and sticky navigation index" },
+];
+
+function RealtimeDocGenerationLoader({
+  repoLabel,
+  isLight,
+  borderLine,
+  bgCard,
+  textPrimary,
+  textBody,
+  textMuted,
+}: {
+  repoLabel: string;
+  isLight: boolean;
+  borderLine: string;
+  bgCard: string;
+  textPrimary: string;
+  textBody: string;
+  textMuted: string;
+}) {
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setElapsedSeconds((s) => s + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const activeStageIndex = useMemo(() => {
+    if (elapsedSeconds < 4) return 0;
+    if (elapsedSeconds < 9) return 1;
+    if (elapsedSeconds < 15) return 2;
+    if (elapsedSeconds < 21) return 3;
+    return 4;
+  }, [elapsedSeconds]);
+
+  const progressPercent = useMemo(() => {
+    if (elapsedSeconds <= 0) return 12;
+    if (elapsedSeconds < 4) return 15 + Math.round((elapsedSeconds / 4) * 15);
+    if (elapsedSeconds < 9) return 30 + Math.round(((elapsedSeconds - 4) / 5) * 25);
+    if (elapsedSeconds < 15) return 55 + Math.round(((elapsedSeconds - 9) / 6) * 20);
+    if (elapsedSeconds < 21) return 75 + Math.round(((elapsedSeconds - 15) / 6) * 15);
+    return Math.min(95, 90 + Math.round((elapsedSeconds - 21) * 0.4));
+  }, [elapsedSeconds]);
+
+  const formattedTime = useMemo(() => {
+    const mins = Math.floor(elapsedSeconds / 60);
+    const secs = elapsedSeconds % 60;
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  }, [elapsedSeconds]);
+
+  const currentStage = GENERATION_STAGES[activeStageIndex];
+  const visibleLogs = useMemo(() => {
+    return TELEMETRY_STREAM.filter((item) => item.atSec <= elapsedSeconds);
+  }, [elapsedSeconds]);
+
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      style={{
+        padding: "36px 32px",
+        borderRadius: 12,
+        border: `1px solid ${borderLine}`,
+        backgroundColor: bgCard,
+        margin: "24px 0",
+      }}
+    >
+      <style>{`
+        @keyframes devlens-pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.45; transform: scale(0.9); }
+        }
+        @keyframes devlens-blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
+        }
+      `}</style>
+
+      {/* Header bar */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 12,
+          marginBottom: 20,
+          paddingBottom: 16,
+          borderBottom: `1px solid ${borderLine}`,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span
+            style={{
+              display: "inline-block",
+              width: 9,
+              height: 9,
+              borderRadius: "50%",
+              backgroundColor: isLight ? "#2563eb" : "#38bdf8",
+              boxShadow: isLight
+                ? "0 0 0 3px rgba(37, 99, 235, 0.2)"
+                : "0 0 0 3px rgba(56, 189, 248, 0.25)",
+              animation: "devlens-pulse 1.8s infinite ease-in-out",
+            }}
+          />
+          <span
+            style={{
+              fontFamily: "var(--mf-mono, monospace)",
+              fontSize: "0.75rem",
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              color: textMuted,
+            }}
+          >
+            Synthesizing Code Wiki / {repoLabel}
+          </span>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <span
+            style={{
+              fontFamily: "var(--mf-mono, monospace)",
+              fontSize: "0.75rem",
+              color: textMuted,
+            }}
+          >
+            ELAPSED: <strong style={{ color: textPrimary }}>{formattedTime}</strong>
+          </span>
+          <span
+            style={{
+              fontFamily: "var(--mf-mono, monospace)",
+              fontSize: "0.75rem",
+              padding: "2px 8px",
+              borderRadius: 4,
+              backgroundColor: isLight ? "rgba(37, 99, 235, 0.1)" : "rgba(56, 189, 248, 0.15)",
+              color: isLight ? "#1d4ed8" : "#38bdf8",
+              fontWeight: 600,
+            }}
+          >
+            {progressPercent}%
+          </span>
+        </div>
+      </div>
+
+      {/* Primary active stage hero */}
+      <div style={{ marginBottom: 24 }}>
+        <div
+          style={{
+            fontFamily: "var(--mf-mono, monospace)",
+            fontSize: "0.6875rem",
+            textTransform: "uppercase",
+            letterSpacing: "0.09em",
+            color: isLight ? "#2563eb" : "#38bdf8",
+            fontWeight: 600,
+            marginBottom: 6,
+          }}
+        >
+          {currentStage.phase}
+        </div>
+        <h3
+          style={{
+            margin: "0 0 8px",
+            fontSize: "1.25rem",
+            fontWeight: 600,
+            color: textPrimary,
+            letterSpacing: "-0.01em",
+          }}
+        >
+          {currentStage.title}
+        </h3>
+        <p
+          style={{
+            margin: "0 0 16px",
+            fontSize: "0.875rem",
+            lineHeight: 1.6,
+            color: textBody,
+            maxWidth: 620,
+          }}
+        >
+          {currentStage.detail}
+        </p>
+
+        {/* Progress Track */}
+        <div
+          style={{
+            width: "100%",
+            height: 6,
+            borderRadius: 3,
+            backgroundColor: isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.08)",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              height: "100%",
+              width: `${progressPercent}%`,
+              borderRadius: 3,
+              backgroundColor: isLight ? "#2563eb" : "#38bdf8",
+              transition: "width 0.8s cubic-bezier(0.4, 0, 0.2, 1)",
+            }}
+          />
+        </div>
+      </div>
+
+      {/* 5-Stage Checklist Timeline */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+          gap: 10,
+          marginBottom: 24,
+        }}
+      >
+        {GENERATION_STAGES.map((stg, idx) => {
+          const isDone = idx < activeStageIndex;
+          const isActive = idx === activeStageIndex;
+          return (
+            <div
+              key={stg.tag}
+              style={{
+                padding: "10px 12px",
+                borderRadius: 6,
+                border: `1px solid ${
+                  isActive
+                    ? isLight
+                      ? "rgba(37, 99, 235, 0.4)"
+                      : "rgba(56, 189, 248, 0.4)"
+                    : borderLine
+                }`,
+                backgroundColor: isActive
+                  ? isLight
+                    ? "rgba(37, 99, 235, 0.04)"
+                    : "rgba(56, 189, 248, 0.05)"
+                  : "transparent",
+                transition: "all 0.2s ease",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  marginBottom: 4,
+                  fontSize: "0.75rem",
+                  fontFamily: "var(--mf-mono, monospace)",
+                }}
+              >
+                {isDone ? (
+                  <span style={{ color: isLight ? "#16a34a" : "#4ade80", fontWeight: 700 }}>✓</span>
+                ) : isActive ? (
+                  <span
+                    style={{
+                      display: "inline-block",
+                      width: 6,
+                      height: 6,
+                      borderRadius: "50%",
+                      backgroundColor: isLight ? "#2563eb" : "#38bdf8",
+                    }}
+                  />
+                ) : (
+                  <span style={{ color: textMuted }}>{idx + 1}</span>
+                )}
+                <span
+                  style={{
+                    color: isActive ? textPrimary : textMuted,
+                    fontWeight: isActive ? 600 : 400,
+                  }}
+                >
+                  {stg.title}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Real-time Telemetry Terminal Box */}
+      <div
+        style={{
+          padding: "12px 14px",
+          borderRadius: 8,
+          backgroundColor: isLight ? "#111114" : "#050508",
+          color: "#e4e4e7",
+          fontFamily: "var(--mf-mono, monospace)",
+          fontSize: "0.75rem",
+          lineHeight: 1.6,
+          border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.15)" : "rgba(255, 255, 255, 0.08)"}`,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 8,
+            paddingBottom: 6,
+            borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+            fontSize: "0.6875rem",
+            color: "#a1a1aa",
+          }}
+        >
+          <span>GENERATION TELEMETRY</span>
+          <span>LIVE ENGINE STREAM</span>
+        </div>
+
+        {visibleLogs.map((log, idx) => (
+          <div key={idx} style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+            <span style={{ color: isLight ? "#60a5fa" : "#38bdf8", opacity: 0.8 }}>›</span>
+            <span>{log.text}</span>
+          </div>
+        ))}
+
+        <div
+          style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 2, color: "#38bdf8" }}
+        >
+          <span>›</span>
+          <span style={{ animation: "devlens-blink 1s infinite" }}>_</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function OnboardingDocView({
   repoLabel,
   markdownContent,
@@ -127,6 +530,7 @@ export function OnboardingDocView({
   onSelectFile,
   onAskCopilot,
   isLoading = false,
+  isAnalyzingRepo = false,
   error = null,
   onRetry,
   theme = "dark",
@@ -369,6 +773,23 @@ export function OnboardingDocView({
         );
         i++;
         continue;
+      }
+
+      // Skip raw HTML badge sludge leaking from README
+      if (
+        trimmed.startsWith("<") &&
+        (trimmed.includes("<h1>") ||
+          trimmed.includes("<h2>") ||
+          trimmed.includes("<h3>") ||
+          trimmed.includes("<a ") ||
+          trimmed.includes("<img") ||
+          trimmed.includes("shields.io"))
+      ) {
+        const cleanText = trimmed.replace(/<[^>]+>/g, " ").trim();
+        if (!cleanText || cleanText.length < 5) {
+          i++;
+          continue;
+        }
       }
 
       // 1. Code Fence Block (```mermaid or ```lang)
@@ -915,10 +1336,49 @@ export function OnboardingDocView({
     () => (markdownContent ? extractHeadings(markdownContent) : []),
     [markdownContent],
   );
-  const heroSplit = useMemo(
-    () => (markdownContent ? extractHeroSplit(markdownContent) : null),
-    [markdownContent],
-  );
+  const clientFallbackMermaid = useMemo(() => buildClientMermaidFallback(graphData), [graphData]);
+
+  const heroSplit = useMemo(() => {
+    if (!markdownContent) return null;
+    const split = extractHeroSplit(markdownContent);
+    if (split) return split;
+    if (clientFallbackMermaid) {
+      const lines = markdownContent.split("\n");
+      let sec1Idx = -1;
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].trim().startsWith("## ")) {
+          sec1Idx = i;
+          break;
+        }
+      }
+      if (sec1Idx !== -1) {
+        let nextSecIdx = lines.length;
+        for (let i = sec1Idx + 1; i < lines.length; i++) {
+          if (lines[i].trim().startsWith("## ")) {
+            nextSecIdx = i;
+            break;
+          }
+        }
+        const headingTitle = lines[sec1Idx]
+          .trim()
+          .replace(/^##\s+/, "")
+          .trim();
+        const proseMarkdown = lines
+          .slice(sec1Idx + 1, nextSecIdx)
+          .join("\n")
+          .trim();
+        const restMarkdown = lines.slice(nextSecIdx).join("\n");
+        return {
+          headingTitle,
+          headingId: slugifyHeading(headingTitle, 0),
+          mermaidCode: clientFallbackMermaid,
+          proseMarkdown,
+          restMarkdown,
+        };
+      }
+    }
+    return null;
+  }, [markdownContent, clientFallbackMermaid]);
 
   // Extract top H1 title if present
   const docTitle = useMemo(() => {
@@ -1043,36 +1503,17 @@ export function OnboardingDocView({
           )}
         </div>
 
-        {/* State 1: Loading */}
+        {/* State 1: Real-time Live AI Generation Loader */}
         {isLoading && !hasContent && (
-          <div
-            role="status"
-            aria-live="polite"
-            style={{
-              padding: "48px 24px",
-              borderRadius: 10,
-              border: `1px solid ${borderLine}`,
-              backgroundColor: bgCard,
-              margin: "24px 0",
-            }}
-          >
-            <div
-              style={{
-                fontFamily: "var(--mf-mono, monospace)",
-                fontSize: "0.75rem",
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                color: textMuted,
-                marginBottom: 10,
-              }}
-            >
-              Building Code Wiki
-            </div>
-            <p style={{ margin: 0, fontSize: "0.9375rem", lineHeight: 1.6, color: textBody }}>
-              Synthesizing the architecture diagram, subsystem walkthroughs, and verified file links
-              from the indexed AST graph for {repoLabel}.
-            </p>
-          </div>
+          <RealtimeDocGenerationLoader
+            repoLabel={repoLabel}
+            isLight={isLight}
+            borderLine={borderLine}
+            bgCard={bgCard}
+            textPrimary={textPrimary}
+            textBody={textBody}
+            textMuted={textMuted}
+          />
         )}
 
         {/* State 2: Error */}
@@ -1080,8 +1521,8 @@ export function OnboardingDocView({
           <div
             role="alert"
             style={{
-              padding: "36px 24px",
-              borderRadius: 10,
+              padding: "36px 28px",
+              borderRadius: 12,
               border: `1px solid ${isLight ? "rgba(220, 38, 38, 0.35)" : "rgba(248, 113, 113, 0.35)"}`,
               backgroundColor: isLight ? "rgba(220, 38, 38, 0.05)" : "rgba(239, 68, 68, 0.07)",
               margin: "24px 0",
@@ -1098,10 +1539,15 @@ export function OnboardingDocView({
                 marginBottom: 8,
               }}
             >
-              Could Not Load Code Wiki
+              Could Not Generate Code Wiki
             </div>
             <p
-              style={{ margin: "0 0 16px", fontSize: "0.875rem", lineHeight: 1.6, color: textBody }}
+              style={{
+                margin: "0 0 16px",
+                fontSize: "0.875rem",
+                lineHeight: 1.6,
+                color: textBody,
+              }}
             >
               {error}
             </p>
@@ -1110,14 +1556,15 @@ export function OnboardingDocView({
                 type="button"
                 onClick={onRetry}
                 style={{
-                  minHeight: 40,
-                  padding: "8px 16px",
+                  minHeight: 44,
+                  padding: "10px 18px",
                   borderRadius: 6,
                   border: `1px solid ${borderLine}`,
                   backgroundColor: textPrimary,
                   color: bgPage,
                   fontFamily: "var(--mf-mono, monospace)",
-                  fontSize: "0.75rem",
+                  fontSize: "0.8125rem",
+                  fontWeight: 600,
                   cursor: "pointer",
                 }}
               >
@@ -1127,60 +1574,290 @@ export function OnboardingDocView({
           </div>
         )}
 
-        {/* State 3: Empty */}
+        {/* State 3: Empty / Not Generated */}
         {!isLoading && !error && !hasContent && (
-          <div
-            style={{
-              padding: "48px 24px",
-              textAlign: "center",
-              borderRadius: 10,
-              border: `1px dashed ${borderLine}`,
-              background: bgCard,
-              margin: "24px 0",
-            }}
-          >
-            <div
-              style={{
-                fontFamily: "var(--mf-mono, monospace)",
-                fontSize: "0.75rem",
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                color: textMuted,
-                marginBottom: 8,
-              }}
-            >
-              No Code Wiki Generated Yet
-            </div>
-            <p
-              style={{
-                fontSize: "0.875rem",
-                color: textBody,
-                maxWidth: 500,
-                margin: "0 auto 18px",
-                lineHeight: 1.6,
-              }}
-            >
-              Index a repository to generate its architecture diagram, subsystem walkthroughs, and
-              file-linked onboarding guide.
-            </p>
-            {onRetry && (
-              <button
-                type="button"
-                onClick={onRetry}
+          <div>
+            {isAnalyzingRepo ? (
+              <div
+                role="status"
                 style={{
-                  minHeight: 40,
-                  padding: "8px 16px",
-                  borderRadius: 6,
+                  padding: "48px 32px",
+                  borderRadius: 12,
                   border: `1px solid ${borderLine}`,
-                  backgroundColor: textPrimary,
-                  color: bgPage,
-                  fontFamily: "var(--mf-mono, monospace)",
-                  fontSize: "0.75rem",
-                  cursor: "pointer",
+                  backgroundColor: bgCard,
+                  margin: "24px 0",
                 }}
               >
-                Generate Code Wiki
-              </button>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                  <span
+                    style={{
+                      display: "inline-block",
+                      width: 9,
+                      height: 9,
+                      borderRadius: "50%",
+                      backgroundColor: isLight ? "#d97706" : "#f59e0b",
+                      boxShadow: isLight
+                        ? "0 0 0 3px rgba(217, 119, 6, 0.2)"
+                        : "0 0 0 3px rgba(245, 158, 11, 0.25)",
+                      animation: "devlens-pulse 1.8s infinite ease-in-out",
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontFamily: "var(--mf-mono, monospace)",
+                      fontSize: "0.75rem",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.08em",
+                      color: textMuted,
+                    }}
+                  >
+                    Indexing Codebase
+                  </span>
+                </div>
+                <h2
+                  style={{
+                    margin: "0 0 10px",
+                    fontSize: "1.375rem",
+                    fontWeight: 600,
+                    color: textPrimary,
+                    letterSpacing: "-0.01em",
+                  }}
+                >
+                  Analyzing {repoLabel}
+                </h2>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "0.9375rem",
+                    lineHeight: 1.65,
+                    color: textBody,
+                    maxWidth: 620,
+                  }}
+                >
+                  DevLens is indexing repository files, resolving module imports, and compiling the
+                  dependency graph. Code Wiki generation will begin automatically as soon as
+                  indexing finishes.
+                </p>
+              </div>
+            ) : (
+              <div
+                style={{
+                  padding: "44px 36px",
+                  borderRadius: 12,
+                  border: `1px solid ${borderLine}`,
+                  backgroundColor: bgCard,
+                  margin: "24px 0",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                  <span
+                    style={{
+                      fontFamily: "var(--mf-mono, monospace)",
+                      fontSize: "0.75rem",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.08em",
+                      color: textMuted,
+                    }}
+                  >
+                    Architectural Knowledge Engine
+                  </span>
+                  <span aria-hidden="true" style={{ color: textMuted }}>
+                    /
+                  </span>
+                  <span
+                    style={{
+                      fontFamily: "var(--mf-mono, monospace)",
+                      fontSize: "0.75rem",
+                      color: textPrimary,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {repoLabel}
+                  </span>
+                </div>
+
+                <h2
+                  style={{
+                    margin: "0 0 12px",
+                    fontSize: "1.5rem",
+                    fontWeight: 600,
+                    color: textPrimary,
+                    letterSpacing: "-0.02em",
+                  }}
+                >
+                  Architecture Wiki for {repoLabel}
+                </h2>
+
+                <p
+                  style={{
+                    margin: "0 0 28px",
+                    fontSize: "0.9375rem",
+                    lineHeight: 1.65,
+                    color: textBody,
+                    maxWidth: 680,
+                  }}
+                >
+                  Understand how this codebase is structured before touching code. Generate a
+                  verified architectural guide with interactive entity-relationship diagrams,
+                  subsystem deep dives, and direct links to source files.
+                </p>
+
+                {/* 3 Value Pillars */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                    gap: 16,
+                    marginBottom: 32,
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: "16px 18px",
+                      borderRadius: 8,
+                      background: isLight ? "#ffffff" : "rgba(255, 255, 255, 0.03)",
+                      border: `1px solid ${borderLine}`,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontFamily: "var(--mf-mono, monospace)",
+                        fontSize: "0.75rem",
+                        fontWeight: 600,
+                        color: textPrimary,
+                        marginBottom: 6,
+                      }}
+                    >
+                      Interactive Topologies
+                    </div>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: "0.8125rem",
+                        lineHeight: 1.5,
+                        color: textMuted,
+                      }}
+                    >
+                      Mermaid entity-relationship diagrams and request flows with zoom, pan, and SVG
+                      export.
+                    </p>
+                  </div>
+
+                  <div
+                    style={{
+                      padding: "16px 18px",
+                      borderRadius: 8,
+                      background: isLight ? "#ffffff" : "rgba(255, 255, 255, 0.03)",
+                      border: `1px solid ${borderLine}`,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontFamily: "var(--mf-mono, monospace)",
+                        fontSize: "0.75rem",
+                        fontWeight: 600,
+                        color: textPrimary,
+                        marginBottom: 6,
+                      }}
+                    >
+                      Verified File Links
+                    </div>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: "0.8125rem",
+                        lineHeight: 1.5,
+                        color: textMuted,
+                      }}
+                    >
+                      Every file, router, and database schema citation links directly into the
+                      studio code inspector.
+                    </p>
+                  </div>
+
+                  <div
+                    style={{
+                      padding: "16px 18px",
+                      borderRadius: 8,
+                      background: isLight ? "#ffffff" : "rgba(255, 255, 255, 0.03)",
+                      border: `1px solid ${borderLine}`,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontFamily: "var(--mf-mono, monospace)",
+                        fontSize: "0.75rem",
+                        fontWeight: 600,
+                        color: textPrimary,
+                        marginBottom: 6,
+                      }}
+                    >
+                      Contextual Copilot
+                    </div>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: "0.8125rem",
+                        lineHeight: 1.5,
+                        color: textMuted,
+                      }}
+                    >
+                      Launch tailored architectural queries into DevLens Copilot with a single
+                      click.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+                  {onRetry && (
+                    <button
+                      type="button"
+                      onClick={onRetry}
+                      style={{
+                        minHeight: 44,
+                        padding: "10px 22px",
+                        borderRadius: 6,
+                        border: "none",
+                        backgroundColor: textPrimary,
+                        color: bgPage,
+                        fontFamily: "var(--mf-mono, monospace)",
+                        fontSize: "0.8125rem",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 8,
+                      }}
+                    >
+                      <span>Generate Architecture Wiki</span>
+                      <span aria-hidden="true">→</span>
+                    </button>
+                  )}
+
+                  {onAskCopilot && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onAskCopilot(`Explain the high-level architecture of ${repoLabel}`)
+                      }
+                      style={{
+                        minHeight: 44,
+                        padding: "10px 18px",
+                        borderRadius: 6,
+                        border: `1px solid ${borderLine}`,
+                        backgroundColor: "transparent",
+                        color: textPrimary,
+                        fontFamily: "var(--mf-mono, monospace)",
+                        fontSize: "0.8125rem",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Ask Copilot About Architecture
+                    </button>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         )}

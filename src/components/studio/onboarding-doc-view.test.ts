@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { extractHeadings, extractHeroSplit } from "./onboarding-doc-view";
+import {
+  extractHeadings,
+  extractHeroSplit,
+  buildClientMermaidFallback,
+} from "./onboarding-doc-view";
 
 describe("Code Wiki OnboardingDocView helpers", () => {
   const sampleWiki = `# acme/sdk: Onboarding Guide
@@ -51,5 +55,24 @@ Clients manage OAuth2 refresh and caching in [[src/client.py]].
   it("returns null for Hero Split when Section 1 has no mermaid diagram", () => {
     const noDiagram = `# acme/plain\n\n## 1. Overview\nJust prose here.\n\n## 2. Quick Start\nRun tests.`;
     expect(extractHeroSplit(noDiagram)).toBeNull();
+  });
+
+  it("builds client-side fallback mermaid diagram when graphData has nodes and edges", () => {
+    const fallback = buildClientMermaidFallback({
+      nodes: [
+        { id: "1", label: "App.tsx", path: "src/App.tsx" },
+        { id: "2", label: "client.ts", path: "src/client.ts" },
+      ],
+      edges: [["1", "2"]],
+    });
+    expect(fallback).not.toBeNull();
+    expect(fallback).toContain("graph TD");
+    expect(fallback).toContain("App.tsx");
+    expect(fallback).toContain("-->|\"imports\"|");
+  });
+
+  it("returns null fallback diagram when graphData is null or empty", () => {
+    expect(buildClientMermaidFallback(null)).toBeNull();
+    expect(buildClientMermaidFallback({ nodes: [], edges: [] })).toBeNull();
   });
 });

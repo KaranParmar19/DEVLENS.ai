@@ -122,6 +122,9 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
     }, 2800);
   }, []);
 
+  // Repository is considered ready once WebSocket signals complete or pre-indexed props were provided
+  const isRepoReady = Boolean(analysisState.isComplete || (jobId && sessionId && isProcessingDone));
+
   const fetchOnboardingDoc = useCallback(() => {
     const sid = analysisState.sessionId ?? sessionId;
     if (!sid) return;
@@ -148,15 +151,19 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
       });
   }, [analysisState.sessionId, sessionId]);
 
-  // Fetch AI-generated onboarding doc when sessionId is available
+  // Auto-fetch onboarding doc as soon as repository indexing is ready
   useEffect(() => {
     const sid = analysisState.sessionId ?? sessionId;
-    if (sid && !onboardingDoc && !onboardingLoading && !onboardingError) {
-      fetchOnboardingDoc();
+    if (sid && isRepoReady && !onboardingDoc && !onboardingLoading) {
+      if (!onboardingError || onboardingError.toLowerCase().includes("not yet indexed")) {
+        setOnboardingError(null);
+        fetchOnboardingDoc();
+      }
     }
   }, [
     analysisState.sessionId,
     sessionId,
+    isRepoReady,
     onboardingDoc,
     onboardingLoading,
     onboardingError,
@@ -474,7 +481,8 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
                   repoLabel={repoLabel}
                   markdownContent={onboardingDoc}
                   graphData={analysisState.graphData}
-                  isLoading={onboardingLoading || (!isProcessingDone && !onboardingDoc)}
+                  isLoading={onboardingLoading}
+                  isAnalyzingRepo={!isRepoReady}
                   error={onboardingError}
                   onRetry={fetchOnboardingDoc}
                   onSelectFile={(path) => {

@@ -1640,7 +1640,9 @@ class FactsExtractor:
                 if in_md_code:
                     continue
 
-                if stripped.startswith(("[![", "<img", "<div", "</div", "<p", "</p", "[!DOCTYPE", "![")):
+                if stripped.startswith(("[![", "<", "[!DOCTYPE", "![", "<img", "<div", "</div", "<p", "</p")):
+                    continue
+                if "shields.io" in stripped.lower() or "badge.svg" in stripped.lower():
                     continue
 
                 if is_rst:
@@ -1691,8 +1693,15 @@ class FactsExtractor:
 
                 # Strip Markdown links [text](url) -> text
                 b = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", b)
+                # Strip any leftover HTML tags
+                b = re.sub(r"<[^>]+>", " ", b)
+                # Normalize whitespace
+                b = re.sub(r"[ \t]+", " ", b).strip()
                 # Strip excess whitespace before punctuation
                 b = re.sub(r"\s+([.,;:!?])", r"\1", b)
+
+                if len(b) < 15:
+                    continue
 
                 paragraphs.append(b)
                 if len(paragraphs) >= 2:
