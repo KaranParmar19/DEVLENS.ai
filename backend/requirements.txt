@@ -18,7 +18,8 @@ pgvector==0.3.5
 alembic==1.14.0
 
 # --- Cache & Message Broker ---
-redis>=6.1.0
+redis==5.2.0
+kombu==5.3.7
 celery[redis]==5.4.0
 flower==2.0.1                   # Celery monitoring UI (separate package since Celery 5)
 
