@@ -8,8 +8,27 @@
  *   const result = await api.analyze('https://github.com/org/repo');
  */
 
-const API_BASE = (import.meta.env.VITE_API_URL || "http://localhost:8000").replace(/\/+$/, "");
-const API_KEY = import.meta.env.VITE_API_KEY ?? "";
+const DEFAULT_API_URL = "https://devlens-api-f0jm.onrender.com";
+const DEFAULT_API_KEY = "4d9f6a1e8c0b2d4f7e5a3c1b9d8e0f2a4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d";
+
+function resolveApiBase(): string {
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (envUrl && envUrl.trim()) {
+    return envUrl.trim().replace(/\/+$/, "");
+  }
+  if (typeof window !== "undefined") {
+    const isLocal =
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1";
+    if (isLocal) {
+      return "http://localhost:8000";
+    }
+  }
+  return DEFAULT_API_URL;
+}
+
+const API_BASE = resolveApiBase();
+const API_KEY = (import.meta.env.VITE_API_KEY || DEFAULT_API_KEY).trim();
 
 // ── Base fetch wrapper ──────────────────────────────────────────────────
 

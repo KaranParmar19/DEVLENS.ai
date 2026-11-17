@@ -106,9 +106,9 @@ jobs:
 
       - name: Build frontend
         env:
-          VITE_API_URL: ${{ secrets.PRODUCTION_API_URL }}
-          VITE_WS_URL: ${{ secrets.PRODUCTION_WS_URL }}
-          VITE_API_KEY: ${{ secrets.PRODUCTION_API_KEY }}
+          VITE_API_URL: ${{ secrets.PRODUCTION_API_URL || 'https://devlens-api-f0jm.onrender.com' }}
+          VITE_WS_URL: ${{ secrets.PRODUCTION_WS_URL || 'wss://devlens-api-f0jm.onrender.com' }}
+          VITE_API_KEY: ${{ secrets.PRODUCTION_API_KEY || '4d9f6a1e8c0b2d4f7e5a3c1b9d8e0f2a4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d' }}
         run: npm run build
 
       - name: Deploy to Cloudflare Workers
