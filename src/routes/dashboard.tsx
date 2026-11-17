@@ -227,7 +227,8 @@ function DashboardPage() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  const [health, setHealth] = useState<"idle" | "ok" | "down">("idle");
+  const [health, setHealth] = useState<"idle" | "waking" | "ok" | "down">("idle");
+  const retryCountRef = useRef(0);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const history = useMemo(() => repoHistory.getAll(), [version, repo]);
@@ -315,14 +316,28 @@ function DashboardPage() {
     try {
       await api.health();
       setHealth("ok");
+      retryCountRef.current = 0;
     } catch {
-      setHealth("down");
+      retryCountRef.current += 1;
+      // Show waking indicator during cold start for the first ~45 seconds
+      if (retryCountRef.current <= 9) {
+        setHealth("waking");
+      } else {
+        setHealth("down");
+      }
     }
   }, []);
 
   useEffect(() => {
     checkHealth();
-  }, [checkHealth]);
+    const interval = setInterval(
+      () => {
+        checkHealth();
+      },
+      health === "ok" ? 30000 : 5000
+    );
+    return () => clearInterval(interval);
+  }, [checkHealth, health]);
 
   const open = (value: string) => {
     const normalized = normalizeRepoUrl(value);
@@ -418,9 +433,11 @@ function DashboardPage() {
         <span style={{ fontWeight: 500 }}>
           {health === "idle"
             ? "Checking..."
-            : health === "ok"
-              ? "Backend online"
-              : "Backend offline"}
+            : health === "waking"
+              ? "Waking up server..."
+              : health === "ok"
+                ? "Backend online"
+                : "Backend offline"}
         </span>
       </button>
 
@@ -537,9 +554,11 @@ function DashboardPage() {
       <span>
         {health === "ok"
           ? "Backend connected. Ready to index repositories."
-          : health === "down"
-            ? "Backend offline. Start the API server to index new repositories."
-            : "Checking backend connection..."}
+          : health === "waking"
+            ? "Waking up Render web server. This takes ~30 seconds on cold start."
+            : health === "down"
+              ? "Backend offline. Click to retry or verify Render web service."
+              : "Checking backend connection..."}
       </span>
     </div>
   );

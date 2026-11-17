@@ -98,10 +98,11 @@ app = FastAPI(
 # 1. Structured logging (must be outermost so it captures every request)
 app.add_middleware(StructlogMiddleware)
 
-# 2. CORS — allow Cloudflare frontend + local dev origins
+# 2. CORS — allow Cloudflare frontend + local dev origins + dynamic domain regex
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?|https://.*\.workers\.dev|https://.*\.pages\.dev|https://.*\.onrender\.com",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
