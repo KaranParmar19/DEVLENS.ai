@@ -49,13 +49,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     git \
     curl \
+    redis-server \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /install /usr/local
 COPY . .
 
-# Non-root user for security
-RUN useradd -m -u 1001 devlens \
+# Non-root user for security and executable entrypoint
+RUN chmod +x /app/start.sh \
+    && useradd -m -u 1001 devlens \
     && chown -R devlens:devlens /app \
     && mkdir -p /tmp/repos && chown devlens:devlens /tmp/repos
 
@@ -66,4 +68,4 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
     CMD sh -c 'curl -fsS "http://localhost:${PORT:-8000}/api/v1/health" >/dev/null || exit 1'
 
-CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers ${UVICORN_WORKERS:-2} --proxy-headers --forwarded-allow-ips=* --no-access-log"]
+CMD ["/app/start.sh"]
