@@ -271,7 +271,19 @@ function DashboardPage() {
     setVersion((v) => v + 1);
   }, []);
 
+  const { user, isAuthenticated, loginWithGitHub, loginWithToken, logout } = useAuth();
+  const [showTokenModal, setShowTokenModal] = useState(false);
+  const [patInput, setPatInput] = useState("");
+  const [patLoading, setPatLoading] = useState(false);
+  const [patError, setPatError] = useState("");
+
+  const handleLogout = useCallback(() => {
+    logout();
+    setVersion((v) => v + 1);
+  }, [logout]);
+
   const activeShowcaseEntries = useMemo(() => {
+    if (!isAuthenticated) return [];
     const base = history.length > 0 ? history : STARTER_SHOWCASE_ENTRIES;
     const dismissedSet = new Set(dismissedRepos.map((d) => d.toLowerCase()));
     let visible = base.filter((item) => {
@@ -297,13 +309,7 @@ function DashboardPage() {
         item.repoUrl.toLowerCase().includes(q) ||
         Object.keys(item.meta?.languages || {}).some((l) => l.toLowerCase().includes(q))
     );
-  }, [history, dismissedRepos, repoFilter, langFilter]);
-
-  const { user, isAuthenticated, loginWithGitHub, loginWithToken, logout } = useAuth();
-  const [showTokenModal, setShowTokenModal] = useState(false);
-  const [patInput, setPatInput] = useState("");
-  const [patLoading, setPatLoading] = useState(false);
-  const [patError, setPatError] = useState("");
+  }, [isAuthenticated, history, dismissedRepos, repoFilter, langFilter]);
 
   const checkHealth = useCallback(async () => {
     try {
@@ -346,7 +352,7 @@ function DashboardPage() {
         ? [
             {
               label: `Sign out (@${user?.username || "user"})`,
-              onClick: logout,
+              onClick: handleLogout,
             },
           ]
         : [
@@ -360,7 +366,7 @@ function DashboardPage() {
             },
           ]),
     ],
-    [isAuthenticated, user?.username, logout, loginWithGitHub]
+    [isAuthenticated, user?.username, handleLogout, loginWithGitHub]
   );
 
   if (repo) {
@@ -475,7 +481,7 @@ function DashboardPage() {
           </span>
           <button
             type="button"
-            onClick={logout}
+            onClick={handleLogout}
             style={{
               background: "transparent",
               border: "none",
@@ -865,125 +871,127 @@ function DashboardPage() {
           </div>
         </section>
 
-        {/* 02. Sliding Repository Showcase */}
-        <section className="dx-showcase-wrap">
-          <div className="mf-wrap">
-            <div className="dx-showcase-bar">
-              <div className="dx-showcase-title-group">
-                <div className="dx-showcase-heading-row">
-                  <h2 className="mf-h2 dx-showcase-h2">
-                    Recent <span className="dx-muted-word">repositories</span>
-                  </h2>
+        {/* 02. Sliding Repository Showcase (visible only when authenticated with GitHub) */}
+        {isAuthenticated && (
+          <section className="dx-showcase-wrap">
+            <div className="mf-wrap">
+              <div className="dx-showcase-bar">
+                <div className="dx-showcase-title-group">
+                  <div className="dx-showcase-heading-row">
+                    <h2 className="mf-h2 dx-showcase-h2">
+                      Recent <span className="dx-muted-word">repositories</span>
+                    </h2>
+                  </div>
                 </div>
-              </div>
 
-              <div className="dx-showcase-controls">
-                {/* Language Filter Pills */}
-                <div className="dx-lang-pills">
-                  {["ALL", "TypeScript", "Python", "Rust"].map((lang) => (
+                <div className="dx-showcase-controls">
+                  {/* Language Filter Pills */}
+                  <div className="dx-lang-pills">
+                    {["ALL", "TypeScript", "Python", "Rust"].map((lang) => (
+                      <button
+                        key={lang}
+                        type="button"
+                        className={`dx-lang-pill ${langFilter === lang ? "is-active" : ""}`}
+                        onClick={() => setLangFilter(lang)}
+                      >
+                        {lang === "ALL" ? "All" : lang}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Search / Filter Input */}
+                  <div className="dx-filter-box">
+                    <input
+                      type="text"
+                      value={repoFilter}
+                      onChange={(e) => setRepoFilter(e.target.value)}
+                      placeholder="Filter by name or language..."
+                      aria-label="Filter repositories"
+                    />
+                    {repoFilter && (
+                      <button
+                        type="button"
+                        className="dx-filter-clear"
+                        onClick={() => setRepoFilter("")}
+                        aria-label="Clear filter"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  {dismissedRepos.length > 0 && (
                     <button
-                      key={lang}
                       type="button"
-                      className={`dx-lang-pill ${langFilter === lang ? "is-active" : ""}`}
-                      onClick={() => setLangFilter(lang)}
+                      className="mf-btn ghost sm"
+                      onClick={handleRestoreStarters}
                     >
-                      {lang === "ALL" ? "All" : lang}
+                      Reset sample repos
                     </button>
-                  ))}
-                </div>
+                  )}
 
-                {/* Search / Filter Input */}
-                <div className="dx-filter-box">
-                  <input
-                    type="text"
-                    value={repoFilter}
-                    onChange={(e) => setRepoFilter(e.target.value)}
-                    placeholder="Filter by name or language..."
-                    aria-label="Filter repositories"
-                  />
-                  {repoFilter && (
+                  {activeShowcaseEntries.length > 0 && (
                     <button
                       type="button"
-                      className="dx-filter-clear"
-                      onClick={() => setRepoFilter("")}
-                      aria-label="Clear filter"
+                      className="mf-btn ghost sm"
+                      onClick={() => {
+                        history.forEach((h) => repoHistory.remove(h.id, h.repoLabel, h.repoUrl));
+                        const allIds = activeShowcaseEntries.flatMap((e) =>
+                          [e.id, e.repoLabel, e.repoUrl].filter(Boolean)
+                        ) as string[];
+                        setDismissedRepos((prev) => {
+                          const next = Array.from(new Set([...prev, ...allIds]));
+                          try {
+                            localStorage.setItem("devlens_dismissed_repos", JSON.stringify(next));
+                          } catch {
+                            // ignore
+                          }
+                          return next;
+                        });
+                        setVersion((v) => v + 1);
+                      }}
                     >
-                      ✕
+                      Clear list
                     </button>
                   )}
                 </div>
+              </div>
 
-                {dismissedRepos.length > 0 && (
-                  <button
-                    type="button"
-                    className="mf-btn ghost sm"
-                    onClick={handleRestoreStarters}
-                  >
+              {activeShowcaseEntries.length > 0 ? (
+                <CurvyShowcase
+                  entries={activeShowcaseEntries}
+                  onOpen={(entry) => {
+                    const target = entry.repoUrl || entry.repoLabel;
+                    const normalized = normalizeRepoUrl(target);
+                    if (!normalized) return;
+                    navigate({
+                      search: {
+                        repo: normalized,
+                        sessionId:
+                          entry.id && !entry.id.startsWith("starter-") ? entry.id : undefined,
+                      },
+                    });
+                  }}
+                  onDelete={handleDeleteRepo}
+                />
+              ) : (
+                <div className="dx-empty">
+                  <div style={{ flex: 1 }}>
+                    <h3 className="mf-h3">No matching repositories</h3>
+                    <p className="mf-body">
+                      {repoFilter || langFilter !== "ALL"
+                        ? "No repositories matched your filter. Clear the filter or reset the sample repositories."
+                        : "You cleared the sample repositories. Paste a GitHub URL above, or bring back the sample list."}
+                    </p>
+                  </div>
+                  <button type="button" className="mf-btn sm" onClick={handleRestoreStarters}>
                     Reset sample repos
                   </button>
-                )}
-
-                {activeShowcaseEntries.length > 0 && (
-                  <button
-                    type="button"
-                    className="mf-btn ghost sm"
-                    onClick={() => {
-                      history.forEach((h) => repoHistory.remove(h.id, h.repoLabel, h.repoUrl));
-                      const allIds = activeShowcaseEntries.flatMap((e) =>
-                        [e.id, e.repoLabel, e.repoUrl].filter(Boolean)
-                      ) as string[];
-                      setDismissedRepos((prev) => {
-                        const next = Array.from(new Set([...prev, ...allIds]));
-                        try {
-                          localStorage.setItem("devlens_dismissed_repos", JSON.stringify(next));
-                        } catch {
-                          // ignore
-                        }
-                        return next;
-                      });
-                      setVersion((v) => v + 1);
-                    }}
-                  >
-                    Clear list
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {activeShowcaseEntries.length > 0 ? (
-              <CurvyShowcase
-                entries={activeShowcaseEntries}
-                onOpen={(entry) => {
-                  const target = entry.repoUrl || entry.repoLabel;
-                  const normalized = normalizeRepoUrl(target);
-                  if (!normalized) return;
-                  navigate({
-                    search: {
-                      repo: normalized,
-                      sessionId:
-                        entry.id && !entry.id.startsWith("starter-") ? entry.id : undefined,
-                    },
-                  });
-                }}
-                onDelete={handleDeleteRepo}
-              />
-            ) : (
-              <div className="dx-empty">
-                <div style={{ flex: 1 }}>
-                  <h3 className="mf-h3">No matching repositories</h3>
-                  <p className="mf-body">
-                    {repoFilter || langFilter !== "ALL"
-                      ? "No repositories matched your filter. Clear the filter or reset the sample repositories."
-                      : "You cleared the sample repositories. Paste a GitHub URL above, or bring back the sample list."}
-                  </p>
                 </div>
-                <button type="button" className="mf-btn sm" onClick={handleRestoreStarters}>
-                  Reset sample repos
-                </button>
-              </div>
-            )}
-          </div>
-        </section>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* 03. Workflow Cards */}
         <section className="dx-bento-wrap">

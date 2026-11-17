@@ -95,6 +95,8 @@ export function useAuth() {
   const logout = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY_TOKEN);
     localStorage.removeItem(STORAGE_KEY_USER);
+    localStorage.removeItem("devlens_repo_history");
+    localStorage.removeItem("devlens_dismissed_repos");
     setUser(null);
   }, []);
 
