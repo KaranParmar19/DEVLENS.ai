@@ -117,6 +117,18 @@ app.add_middleware(
 )
 
 
+# ── Root Welcome / Ping Endpoint ───────────────────────────────────────────
+@app.get("/", tags=["Root"])
+async def root():
+    return {
+        "name": settings.app_name,
+        "version": settings.app_version,
+        "status": "online",
+        "health": f"{settings.api_v1_prefix}/health",
+        "docs": "/docs",
+    }
+
+
 # ── REST API Routers ───────────────────────────────────────────────────────
 prefix = settings.api_v1_prefix
 
