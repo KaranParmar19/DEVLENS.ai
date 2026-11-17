@@ -198,7 +198,9 @@ export const api = {
 
   // Onboarding doc
   getOnboardingDoc: (sessionId: string) =>
-    apiFetch<{ markdown: string; repo: string }>(`/api/v1/sessions/${sessionId}/onboarding`),
+    apiFetch<{ markdown: string; structured?: Record<string, unknown> | null; repo: string }>(
+      `/api/v1/sessions/${sessionId}/onboarding`,
+    ),
 
   // Commits & Architectural Drift
   getCommits: (sessionId: string) =>

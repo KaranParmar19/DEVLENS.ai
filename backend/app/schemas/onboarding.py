@@ -68,13 +68,56 @@ class GlossaryItem(BaseModel):
     evidence_quote: str | None = Field(default=None, description="Exact verbatim substring from seen_in where this term appears")
 
 
+class DiagramBlock(BaseModel):
+    title: str = Field(description="Short descriptive diagram title, e.g. Core Data Model ER Diagram or Ingestion Sequence")
+    mermaid_code: str = Field(
+        description="Valid Mermaid diagram source (erDiagram, sequenceDiagram, graph TD, flowchart TD, classDiagram, or stateDiagram-v2) with no ```mermaid fences"
+    )
+
+
+class SubsystemSection(BaseModel):
+    title: str = Field(description="Subsystem or architectural layer heading, e.g. Client-Side Development, Server Lifecycle, Database Schema")
+    paragraphs: list[str] = Field(
+        default_factory=list,
+        description="2-3 cohesive engineering prose paragraphs explaining how this subsystem works, key classes, data flow, and extensibility",
+    )
+    diagrams: list[DiagramBlock] = Field(
+        default_factory=list,
+        description="Zero or more Mermaid diagrams (erDiagram, sequenceDiagram, stateDiagram-v2, graph TD) needed to clarify data models or execution flow in this subsystem",
+    )
+    bullet_points: list[str] = Field(
+        default_factory=list,
+        description="Optional concrete behavioral details, supported transports, or lifecycle capabilities",
+    )
+    key_files: list[str] = Field(
+        default_factory=list,
+        description="Verified repository file paths implementing this subsystem",
+    )
+
+
 class OnboardingDocSchema(BaseModel):
     repo_name: str = Field(description="Full repository name owner/repo")
-    summary: str = Field(description="1-2 paragraphs describing what this project is and its high-level architecture")
+    architecture_diagram: str | None = Field(
+        default=None,
+        description="Valid Mermaid flowchart (graph TD) representing core subsystems, layers, and labeled relationships",
+    )
+    summary: str = Field(description="2-3 clear paragraphs explaining what this project does, its design approach, and high-level architecture")
+    overview_highlights: list[str] = Field(
+        default_factory=list,
+        description="3-5 concise bullet points summarizing key architectural capabilities",
+    )
     tech_stack: list[str] = Field(default_factory=list, description="Runtime and dev dependencies")
     quick_start: QuickStartInfo = Field(description="Verified setup and execution commands")
     folder_map: list[FolderMapItem] = Field(default_factory=list, description="High-level directory map")
-    how_it_works: str = Field(description="Step-by-step description of data and control flow through entry points")
+    how_it_works: str = Field(description="Step-by-step explanation of end-to-end execution, data flow, and control paths through verified entry points")
+    subsystems: list[SubsystemSection] = Field(
+        default_factory=list,
+        description="Deep-dive architectural walkthrough sections covering major layers (client, server, workers, database ER models, protocols)",
+    )
+    extra_diagrams: list[DiagramBlock] = Field(
+        default_factory=list,
+        description="Additional standalone ER diagrams, sequence diagrams, or state diagrams when multiple domain models or flows warrant separate visuals",
+    )
     careful_files: list[CarefulFileItem] = Field(default_factory=list, description="High-blast-radius junction files")
     gotchas: list[GotchaItem] = Field(default_factory=list, description="Repository-specific invariants and traps")
     first_task: FirstTaskSection = Field(description="Recommended first task for a new contributor")

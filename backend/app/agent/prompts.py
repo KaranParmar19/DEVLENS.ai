@@ -84,20 +84,30 @@ Define key codebase terms and symbols grounded in real files.
 """
 
 ONBOARDING_DOC_JSON_PROMPT = """\
-You are a senior engineer writing a clear, production-grade onboarding dossier for engineers joining the repository: {repo_full_name}.
+You are a staff software engineer writing a clear, deep, production-grade Code Wiki onboarding guide for engineers joining the repository: {repo_full_name}.
 
-Your goal is to explain the system architecture, quick start commands, directory map, high-risk junction files, gotchas, safe starter tasks, and glossary terms.
+Your goal is to help a developer new to this codebase form an accurate mental model fast: visual architecture first, cohesive narrative paragraphs explaining how components actually work, and verified file-level references throughout.
 
 CRITICAL GROUNDING RULES (NON-NEGOTIABLE):
-- Ground every statement strictly in the VERIFIED FACTS block and CODE CONTEXT CHUNKS below.
-- Do NOT add numbers, percentages, metrics, or file paths that do not appear in VERIFIED FACTS.
+- Ground every statement, class/function name, protocol, and behavior strictly in the VERIFIED FACTS block and CODE CONTEXT CHUNKS below.
+- Do NOT add numbers, percentages, metrics, or file paths that do not appear in VERIFIED FACTS or CODE CONTEXT CHUNKS.
 - For candidate starter files: purpose is verified ONLY if the snippet starts with a docstring or leading comment (use its first sentence), OR you provide an evidence_quote that is an exact verbatim substring of the snippet along with a plain prose verified_purpose. Otherwise you MUST write "purpose not verified". You must NEVER guess or infer a file's purpose from its filename or path, and never output a raw code line as verified_purpose.
 - Risk levels and dependents: an entry file with 0 dependents must NOT be labeled High risk. Use the exact risk level and dependents given in VERIFIED FACTS. Count test importers separately from source importers.
-- Every file reference must use double brackets, e.g. [[path/to/file.ts]].
-- Audience is a beginner in their first month of programming. Explain terms clearly and simply.
-- No buzzwords (delve, elevate, unlock, robust, seamless, groundbreaking, revolutionize, game-changer, journey, landscape).
-- Do not use em dashes anywhere in your output.
-- Output MUST be a valid JSON object matching the schema below. Do not include markdown code fence formatting if possible, or use standard ```json ... ``` formatting.
+- Every file reference in prose MUST use double brackets, e.g. [[path/to/file.ts]]. Inline symbol names (classes, functions, types) should use single backticks, e.g. `DevLensAgent` ([[backend/app/agent/devlens_agent.py]]).
+- Audience: an engineer reading this codebase for the first time. Write crisp, authoritative technical prose in cohesive paragraphs (like a high-craft SDK wiki) explaining how things work: lifecycle, request flow, transports, state/caching, and extensibility. Define domain acronyms when introduced.
+- ANTI-SLOP WRITING RULES (STRICT):
+  - Never use em dashes or en dashes anywhere in prose or diagrams. Use commas, colons, periods, or parentheses.
+  - Never use empty marketing buzzwords (delve, elevate, unlock, robust, seamless, groundbreaking, revolutionize, game-changer, journey, landscape, cutting-edge, next-level, testament).
+  - Never use signposting filler ("Let's dive in", "At its core", "Here's what you need to know", "In order to", "It is important to note"). State the technical mechanism directly.
+  - Never write inline-header bullet lists like "- **Performance:** Faster loads." Write normal, direct sentences without bolded bullet prefixes.
+  - Avoid boldface overuse in paragraphs. Use `backticks` for code symbols and [[path]] for files instead of bolding terms.
+  - Vary sentence length naturally. Write like an engineer explaining the code to a new teammate, not like a marketing brochure or textbook.
+  - Name the real actor (class, module, or function) in active voice rather than passive constructions.
+- DIAGRAM FREEDOM (NO RESTRICTION ON COUNT OR TYPE):
+  - Generate as many Mermaid diagrams as necessary to make the repository clear without artificial limits.
+  - Whenever database models, ORM tables, Prisma/Drizzle schemas, or entity structs appear in the facts or code chunks, include one or more `erDiagram` blocks (split by domain if there are multiple distinct data domains) showing real table names, columns, types, and foreign-key relationships.
+  - Include `sequenceDiagram`, `stateDiagram-v2`, `classDiagram`, or focused `graph TD` diagrams inside `subsystems` or `extra_diagrams` whenever request lifecycles, background workers, auth handshakes, or state transitions benefit from visual separation.
+  - Output MUST be a valid JSON object matching the schema below. Do not wrap the JSON in markdown commentary outside the JSON object.
 
 VERIFIED FACTS (GROUND TRUTH FROM CODE & GRAPH):
 {facts_block}
@@ -108,7 +118,11 @@ CODE CONTEXT CHUNKS:
 REQUIRED JSON SCHEMA:
 {{
   "repo_name": "{repo_full_name}",
-  "summary": "1-2 paragraphs in plain language explaining what this project does and its core architecture.",
+  "architecture_diagram": "Valid Mermaid 'graph TD' diagram (plain string with \\n newlines, no ```mermaid fences) mapping the repository's real architectural layers/subsystems (e.g. Client, API/Server, Workers, Transports, Storage) using verified folder/module names and labeled directed edges like -->|uses| or -->|persists to|.",
+  "summary": "2 clear, cohesive prose paragraphs explaining what this repository builds, its structural separation (e.g. client vs server, frontend vs worker, CLI vs core), and how data or requests move across the main layers, citing real files with [[path]].",
+  "overview_highlights": [
+    "3 to 5 concise, technical bullet points summarizing concrete capabilities verified in the code and manifest (e.g. supported transports, storage backends, auth flows, extension hooks)."
+  ],
   "tech_stack": ["runtime dependencies only from manifest without (dev) entries"],
   "quick_start": {{
     "install_command": "Command to install dependencies from manifest, or empty string if none",
@@ -125,7 +139,32 @@ REQUIRED JSON SCHEMA:
       "sample_files": "file1.ts, file2.ts"
     }}
   ],
-  "how_it_works": "Clear step-by-step explanation of how control/data flows through verified entry points and components.",
+  "how_it_works": "2-3 connected paragraphs tracing an end-to-end execution flow from verified entry point(s) through routing, business logic, and persistence/output, citing real classes and [[path]] files.",
+  "subsystems": [
+    {{
+      "title": "Subsystem name grounded in repo structure (e.g. Client Interface & Session Flow, Server Lifecycle, Database & Persistence Models)",
+      "paragraphs": [
+        "Detailed paragraph explaining the internal mechanics, lifecycle, key classes/functions in backticks, and [[path]] citations grounded in the context chunks.",
+        "Second paragraph explaining state management, error/auth handling, protocols, or extension points observed in the code."
+      ],
+      "diagrams": [
+        {{
+          "title": "Descriptive diagram title (e.g. Core Schema ER Diagram, Worker Lifecycle Sequence)",
+          "mermaid_code": "Valid Mermaid syntax (erDiagram, sequenceDiagram, stateDiagram-v2, classDiagram, or graph TD) with \\n newlines and no ```mermaid fences. Include as many diagrams as needed here, or leave empty [] if none needed for this subsystem."
+        }}
+      ],
+      "bullet_points": [
+        "Concrete behavioral detail or supported capability observed in this subsystem"
+      ],
+      "key_files": ["verified/path/one.py", "verified/path/two.py"]
+    }}
+  ],
+  "extra_diagrams": [
+    {{
+      "title": "Additional ER Diagram, Sequence Diagram, or State Diagram title",
+      "mermaid_code": "Valid Mermaid diagram source (erDiagram, sequenceDiagram, etc.) for any extra domain schemas or cross-cutting flows not covered above. Omit or leave [] if already covered."
+    }}
+  ],
   "careful_files": [
     {{
       "path": "file path from high risk files",

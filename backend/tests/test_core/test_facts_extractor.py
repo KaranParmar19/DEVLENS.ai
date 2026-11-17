@@ -1188,6 +1188,149 @@ def test_nearby_test_exact_stem_and_docstring_header_stopping():
     )
 
 
+def test_code_wiki_schema_subsystems_and_mermaid_rendering():
+    from app.agent.devlens_agent import DevLensAgent
+    from app.schemas.onboarding import (
+        OnboardingDocSchema,
+        QuickStartInfo,
+        FirstTaskSection,
+        SubsystemSection,
+    )
+
+    doc = OnboardingDocSchema(
+        repo_name="acme/code-wiki-sdk",
+        architecture_diagram="graph TD\n    Client --> Transports\n    Transports --> Server",
+        summary=(
+            "The SDK splits client session orchestration from server request handling. "
+            "Both layers validate wire messages against shared schema definitions in [[src/schemas.py]]."
+        ),
+        overview_highlights=[
+            "Supports stdio and HTTP/SSE transports.",
+            "Validates JSON payloads with typed schemas.",
+        ],
+        quick_start=QuickStartInfo(
+            install_command="pip install -e .",
+            run_command="python -m sdk",
+            test_command="pytest",
+            env_variables=[],
+        ),
+        how_it_works=(
+            "Calls enter through `ClientSession` in [[src/client.py]], serialize into JSON-RPC frames, "
+            "and dispatch to handlers registered on `ServerApp` in [[src/server.py]]."
+        ),
+        subsystems=[
+            SubsystemSection(
+                title="Client-Side Development",
+                paragraphs=[
+                    "The `ClientSession` class in [[src/client.py]] manages transport lifetimes and request correlation IDs.",
+                    "Authentication tokens are refreshed automatically before retrying failed requests.",
+                ],
+                bullet_points=["Supports in-memory transport for unit tests."],
+                key_files=["src/client.py", "src/schemas.py"],
+            )
+        ],
+        first_task=FirstTaskSection(title="Add transport test"),
+    )
+
+    facts = {
+        "file_metrics": {
+            "src/client.py": {"source_dependents_count": 1},
+            "src/server.py": {"source_dependents_count": 2},
+            "src/schemas.py": {"source_dependents_count": 4},
+        }
+    }
+
+    agent = DevLensAgent(db=None, repo_id=None, repo_full_name="acme/code-wiki-sdk")  # type: ignore
+    rendered = agent._render_schema_to_markdown(doc, facts=facts)
+
+    assert "```mermaid\ngraph TD\n    Client --> Transports" in rendered
+    assert "Supports stdio and HTTP/SSE transports." in rendered
+    assert "### Client-Side Development" in rendered
+    assert "The `ClientSession` class in [[src/client.py]]" in rendered
+    assert "Key modules: [[src/client.py]], [[src/schemas.py]]" in rendered
+    assert "\u2014" not in rendered
+
+
+def test_sanitize_mermaid_diagram_validation_and_fallback():
+    from app.agent.devlens_agent import DevLensAgent
+
+    facts = {
+        "repo_full_name": "acme/demo",
+        "entry_points": [{"path": "src/main.py", "dependents_count": 0, "dependencies_count": 1}],
+        "high_risk_files": [{"path": "src/core.py", "dependents_count": 5}],
+        "folder_breakdown": [{"path": "src", "file_count": 2, "sample_files": "main.py"}],
+    }
+    graph_cache = {"edges": [["src/main.py", "src/core.py"]]}
+
+    agent = DevLensAgent(
+        db=None,  # type: ignore
+        repo_id=None,  # type: ignore
+        repo_full_name="acme/demo",
+        graph_cache=graph_cache,
+    )
+
+    fenced = "```mermaid\ngraph TD\n    A --> B\n    B --> C\n```"
+    assert agent._sanitize_mermaid_diagram(fenced, facts) == "graph TD\n    A --> B\n    B --> C"
+
+    fallback = agent._sanitize_mermaid_diagram("not a valid diagram", facts)
+    assert fallback.startswith("graph TD")
+    assert 'EP_0["Entry: main.py"]' in fallback
+    assert 'CORE_0["Core: core.py (5 deps)"]' in fallback
+    assert 'EP_0 -->|"imports"| CORE_0' in fallback
+
+
+def test_multiple_er_and_sequence_diagrams_render_without_limit():
+    from app.agent.devlens_agent import DevLensAgent
+    from app.schemas.onboarding import (
+        OnboardingDocSchema,
+        QuickStartInfo,
+        FirstTaskSection,
+        SubsystemSection,
+        DiagramBlock,
+    )
+
+    doc = OnboardingDocSchema(
+        repo_name="acme/multi-er",
+        architecture_diagram="graph TD\n    API --> Worker\n    Worker --> DB",
+        summary="Service backed by relational models and vector chunks.",
+        quick_start=QuickStartInfo(install_command="pip install -e ."),
+        how_it_works="Requests queue jobs and persist chunks.",
+        subsystems=[
+            SubsystemSection(
+                title="Database & Persistence",
+                paragraphs=["Stores users, repositories, and embedded code chunks."],
+                diagrams=[
+                    DiagramBlock(
+                        title="Core Entities ER Diagram",
+                        mermaid_code="erDiagram\n    USERS ||--o{ SESSIONS : starts\n    REPOSITORIES ||--o{ SESSIONS : tracks",
+                    ),
+                    DiagramBlock(
+                        title="Vector Chunks ER Diagram",
+                        mermaid_code="erDiagram\n    REPOSITORIES ||--o{ CODE_CHUNKS : owns\n    REPOSITORIES ||--o{ ANALYSIS_JOBS : runs",
+                    ),
+                ],
+            )
+        ],
+        extra_diagrams=[
+            DiagramBlock(
+                title="Ingestion Sequence",
+                mermaid_code="sequenceDiagram\n    Client->>API: POST /analyze\n    API->>Worker: enqueue",
+            )
+        ],
+        first_task=FirstTaskSection(title="Add model test"),
+    )
+
+    agent = DevLensAgent(db=None, repo_id=None, repo_full_name="acme/multi-er")  # type: ignore
+    rendered = agent._render_schema_to_markdown(doc, facts={})
+
+    assert rendered.count("```mermaid") == 4
+    assert "#### Core Entities ER Diagram" in rendered
+    assert "#### Vector Chunks ER Diagram" in rendered
+    assert "### Ingestion Sequence" in rendered
+    assert "erDiagram" in rendered
+    assert "sequenceDiagram" in rendered
+
+
 
 
 

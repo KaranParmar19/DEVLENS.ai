@@ -686,15 +686,62 @@ class DevLensAgent:
 
     # ── Onboarding Document Generator ─────────────────────────────────────────
 
+    def _clean_mermaid_block(self, raw: str | None) -> str | None:
+        """Strip optional markdown fences and normalize newlines/dashes in any Mermaid block."""
+        if not raw or not raw.strip():
+            return None
+        cleaned = raw.strip()
+        if cleaned.startswith("```"):
+            fence_lines = cleaned.splitlines()
+            if fence_lines and fence_lines[0].startswith("```"):
+                fence_lines = fence_lines[1:]
+            if fence_lines and fence_lines[-1].strip().startswith("```"):
+                fence_lines = fence_lines[:-1]
+            cleaned = "\n".join(fence_lines).strip()
+        if "\\n" in cleaned and "\n" not in cleaned:
+            cleaned = cleaned.replace("\\n", "\n")
+        cleaned = cleaned.replace("\u2014", "-").replace("\u2013", "-")
+        valid_headers = (
+            "graph ",
+            "flowchart ",
+            "sequencediagram",
+            "classdiagram",
+            "statediagram",
+            "erdiagram",
+        )
+        first_line = cleaned.splitlines()[0].strip().lower() if cleaned.splitlines() else ""
+        if any(first_line.startswith(h) for h in valid_headers) and len(cleaned.splitlines()) >= 2:
+            return cleaned
+        return None
+
+    def _sanitize_mermaid_diagram(self, raw: str | None, facts: dict[str, Any]) -> str:
+        """Validate model-generated Mermaid syntax or fall back to deterministic graph topology."""
+        from app.core.facts_extractor import build_architecture_mermaid
+
+        cleaned = self._clean_mermaid_block(raw)
+        if cleaned and len(cleaned.splitlines()) >= 3:
+            return cleaned
+        return build_architecture_mermaid(facts, self.graph_cache)
+
     def _render_schema_to_markdown(self, doc: Any, facts: dict[str, Any]) -> str:
         """Render a validated OnboardingDocSchema into clean, structured Markdown with sequential section numbering."""
         lines = [f"# {doc.repo_name}: Onboarding Guide\n"]
         sec_idx = 1
 
         # Section: Project Overview & Architecture
-        if doc.summary and doc.summary.strip():
+        arch_diagram = getattr(doc, "architecture_diagram", None)
+        overview_highlights = getattr(doc, "overview_highlights", None) or []
+        if (doc.summary and doc.summary.strip()) or arch_diagram:
             lines.append(f"## {sec_idx}. Project Overview & Architecture")
-            lines.append(doc.summary.strip())
+            if arch_diagram and arch_diagram.strip():
+                lines.append(f"```mermaid\n{arch_diagram.strip()}\n```\n")
+            if doc.summary and doc.summary.strip():
+                lines.append(doc.summary.strip())
+            if overview_highlights:
+                lines.append("")
+                for item in overview_highlights:
+                    if str(item).strip():
+                        lines.append(f"- {str(item).strip()}")
             sec_idx += 1
 
         # Section: Quick Start
@@ -813,10 +860,54 @@ class DevLensAgent:
             lines.extend(folder_entries)
             sec_idx += 1
 
-        # Section: How It Works
-        if doc.how_it_works and doc.how_it_works.strip():
+        # Section: How It Works & Subsystem Deep Dives
+        subsystems = getattr(doc, "subsystems", None) or []
+        if (doc.how_it_works and doc.how_it_works.strip()) or subsystems:
             lines.append(f"\n## {sec_idx}. How It Works")
-            lines.append(doc.how_it_works.strip())
+            if doc.how_it_works and doc.how_it_works.strip():
+                lines.append(doc.how_it_works.strip())
+            for sub in subsystems:
+                sub_title = (getattr(sub, "title", "") or "").strip()
+                sub_paras = [p.strip() for p in (getattr(sub, "paragraphs", None) or []) if p and p.strip()]
+                sub_bullets = [b.strip() for b in (getattr(sub, "bullet_points", None) or []) if b and b.strip()]
+                sub_files = [f.strip() for f in (getattr(sub, "key_files", None) or []) if f and f.strip()]
+                sub_diags = getattr(sub, "diagrams", None) or []
+                if not sub_title or (not sub_paras and not sub_bullets and not sub_diags):
+                    continue
+                lines.append(f"\n### {sub_title}")
+                if sub_paras:
+                    lines.append("\n\n".join(sub_paras))
+                for diag in sub_diags:
+                    d_code = (getattr(diag, "mermaid_code", "") or "").strip()
+                    d_title = (getattr(diag, "title", "") or "").strip()
+                    if not d_code:
+                        continue
+                    if d_title:
+                        lines.append(f"\n#### {d_title}")
+                    lines.append(f"```mermaid\n{d_code}\n```")
+                if sub_bullets:
+                    lines.append("")
+                    for b in sub_bullets:
+                        lines.append(f"- {b}")
+                if sub_files:
+                    refs = ", ".join(f"[[{fp}]]" for fp in sub_files[:6])
+                    lines.append(f"\nKey modules: {refs}")
+            sec_idx += 1
+
+        # Section: Extra Data Model (ER) & Execution Diagrams (omit if empty)
+        extra_diagrams = getattr(doc, "extra_diagrams", None) or []
+        valid_extra_diags = [
+            d for d in extra_diagrams
+            if (getattr(d, "mermaid_code", "") or "").strip()
+        ]
+        if valid_extra_diags:
+            lines.append(f"\n## {sec_idx}. Data Models & Flow Diagrams")
+            for diag in valid_extra_diags:
+                d_title = (getattr(diag, "title", "") or "").strip()
+                d_code = (getattr(diag, "mermaid_code", "") or "").strip()
+                if d_title:
+                    lines.append(f"\n### {d_title}")
+                lines.append(f"```mermaid\n{d_code}\n```")
             sec_idx += 1
 
         # Section: Files to Handle Carefully (High Blast Radius)
@@ -906,26 +997,64 @@ class DevLensAgent:
         facts = await extractor.assemble_verified_facts()
         facts_block = extractor.format_facts_text(facts)
 
-        # Pull real code chunks for key entry points, starter candidates, and high-risk junctions
+        # Pull rich code context for entry points, high-risk hubs, folder representatives, and starters
         context_parts = []
-        key_files = (
-            [ep["path"] for ep in facts["entry_points"][:2]]
-            + [cs["path"] for cs in facts["candidate_starters"][:3]]
-            + [hr["path"] for hr in facts["high_risk_files"][:2]]
-        )
-        for path in key_files:
+        seen_ctx_paths: set[str] = set()
+        candidate_paths: list[str] = []
+        for ep in facts.get("entry_points", [])[:3]:
+            if ep.get("path"):
+                candidate_paths.append(ep["path"])
+        for hr in facts.get("high_risk_files", [])[:4]:
+            if hr.get("path"):
+                candidate_paths.append(hr["path"])
+        for cs in facts.get("candidate_starters", [])[:3]:
+            if cs.get("path"):
+                candidate_paths.append(cs["path"])
+        for fb in facts.get("folder_breakdown", [])[:5]:
+            sample_str = fb.get("sample_files") or ""
+            folder_p = str(fb.get("path", "")).strip().rstrip("/")
+            first_sample = sample_str.split(",")[0].strip() if sample_str else ""
+            if first_sample:
+                full_sample = first_sample if "/" in first_sample else (f"{folder_p}/{first_sample}" if folder_p and folder_p != "." else first_sample)
+                candidate_paths.append(full_sample)
+
+        # Also include database model / schema / entity files so ER diagrams are grounded in real schemas
+        schema_keywords = ("/models/", "/schema", "/entities/", "prisma/schema", "models.py", "schema.ts", "schema.py")
+        schema_files = [
+            p for p in sorted(facts.get("file_metrics", {}).keys())
+            if any(kw in p.lower().replace("\\", "/") for kw in schema_keywords)
+        ]
+        for sp in schema_files[:6]:
+            candidate_paths.append(sp)
+
+        for path in candidate_paths:
+            if path in seen_ctx_paths or len(context_parts) >= 16:
+                continue
+            seen_ctx_paths.add(path)
             try:
                 chunks = await self.vector_store.get_chunks_by_file(path)
                 if chunks:
-                    c = chunks[0]
-                    loc = f"lines {c['start_line']}-{c['end_line']}" if c.get("start_line") else ""
+                    combined = "\n".join(c["content"] for c in chunks[:2])[:1600]
+                    first_c = chunks[0]
+                    loc = f"lines {first_c['start_line']}-{first_c['end_line']}" if first_c.get("start_line") else ""
                     context_parts.append(
-                        f"### [[{c['file_path']}]] {loc}\n```{c.get('language', '').lower()}\n{c['content'][:600]}\n```"
+                        f"### [[{first_c['file_path']}]] {loc}\n```{first_c.get('language', '').lower()}\n{combined}\n```"
                     )
             except Exception as e:
                 logger.warning("onboarding_context_fetch_failed", path=path, error=str(e))
 
-        context = "\n\n".join(context_parts[:6]) or "Topological graph and manifest indexed."
+        # Include verified dependency edges so the model traces real call/import paths
+        raw_edges = (self.graph_cache or {}).get("edges", []) if isinstance(self.graph_cache, dict) else []
+        edge_lines: list[str] = []
+        for edge in raw_edges[:24]:
+            if isinstance(edge, (list, tuple)) and len(edge) >= 2:
+                edge_lines.append(f"- [[{edge[0]}]] -> [[{edge[1]}]]")
+            elif isinstance(edge, dict) and edge.get("source") and edge.get("target"):
+                edge_lines.append(f"- [[{edge['source']}]] -> [[{edge['target']}]]")
+        if edge_lines:
+            context_parts.append("### Verified Import Topology Sample\n" + "\n".join(edge_lines))
+
+        context = "\n\n".join(context_parts) or "Topological graph and manifest indexed."
         prompt = ONBOARDING_DOC_JSON_PROMPT.format(
             repo_full_name=self.repo_full_name,
             facts_block=facts_block,
@@ -993,17 +1122,95 @@ class DevLensAgent:
         except Exception:
             self.last_raw_structured_doc = {}
 
-        # Clean prose citations in summary and how_it_works to log any ungrounded model citations
-        if parsed_schema.summary:
-            _clean_markdown_citations(
-                parsed_schema.summary, all_known_paths, drops, drops_by_section
-            )
-        if parsed_schema.how_it_works:
-            _clean_markdown_citations(
-                parsed_schema.how_it_works, all_known_paths, drops, drops_by_section
-            )
+        # Validate Mermaid architecture diagram (fall back to deterministic graph topology if invalid)
+        parsed_schema.architecture_diagram = self._sanitize_mermaid_diagram(
+            getattr(parsed_schema, "architecture_diagram", None),
+            facts,
+        )
 
-        # Build summary strictly from README (when present) and computed repository counts
+        # Clean prose citations and antislop in summary, highlights, how_it_works, and subsystems
+        cleaned_summary = ""
+        if parsed_schema.summary:
+            cleaned_summary = _clean_antislop(
+                _clean_markdown_citations(
+                    parsed_schema.summary, all_known_paths, drops, drops_by_section
+                )
+            ).strip()
+
+        cleaned_highlights: list[str] = []
+        for hl in (getattr(parsed_schema, "overview_highlights", None) or []):
+            ch = _clean_antislop(
+                _clean_markdown_citations(str(hl), all_known_paths, drops, drops_by_section)
+            ).strip()
+            if ch:
+                cleaned_highlights.append(ch)
+        parsed_schema.overview_highlights = cleaned_highlights[:6]
+
+        cleaned_how_prose = ""
+        if parsed_schema.how_it_works:
+            cleaned_how_prose = _clean_antislop(
+                _clean_markdown_citations(
+                    parsed_schema.how_it_works, all_known_paths, drops, drops_by_section
+                )
+            ).strip()
+
+        # Clean subsystem deep-dive narratives and their diagrams
+        from app.schemas.onboarding import SubsystemSection, DiagramBlock
+
+        valid_subsystems: list[SubsystemSection] = []
+        for sub in (getattr(parsed_schema, "subsystems", None) or []):
+            c_title = _clean_antislop(sub.title or "").strip()
+            if not c_title:
+                continue
+            c_paras = [
+                _clean_antislop(
+                    _clean_markdown_citations(p, all_known_paths, drops, drops_by_section)
+                ).strip()
+                for p in (sub.paragraphs or [])
+                if p and p.strip()
+            ]
+            c_paras = [p for p in c_paras if p]
+            c_diags: list[DiagramBlock] = []
+            for diag in (getattr(sub, "diagrams", None) or []):
+                cleaned_code = self._clean_mermaid_block(getattr(diag, "mermaid_code", None))
+                if cleaned_code:
+                    d_title = _clean_antislop(getattr(diag, "title", "") or "Diagram").strip()
+                    c_diags.append(DiagramBlock(title=d_title, mermaid_code=cleaned_code))
+            c_bullets = [
+                _clean_antislop(
+                    _clean_markdown_citations(b, all_known_paths, drops, drops_by_section)
+                ).strip()
+                for b in (sub.bullet_points or [])
+                if b and b.strip()
+            ]
+            c_bullets = [b for b in c_bullets if b]
+            c_files: list[str] = []
+            for kf in (sub.key_files or []):
+                resolved_kf = _resolve_graph_path(kf, all_known_paths)
+                if resolved_kf and resolved_kf not in c_files:
+                    c_files.append(resolved_kf)
+            if c_paras or c_bullets or c_diags:
+                valid_subsystems.append(
+                    SubsystemSection(
+                        title=c_title,
+                        paragraphs=c_paras,
+                        diagrams=c_diags,
+                        bullet_points=c_bullets,
+                        key_files=c_files,
+                    )
+                )
+        parsed_schema.subsystems = valid_subsystems
+
+        # Clean top-level extra diagrams (ER diagrams, sequence diagrams, state diagrams)
+        valid_extra_diagrams: list[DiagramBlock] = []
+        for diag in (getattr(parsed_schema, "extra_diagrams", None) or []):
+            cleaned_code = self._clean_mermaid_block(getattr(diag, "mermaid_code", None))
+            if cleaned_code:
+                d_title = _clean_antislop(getattr(diag, "title", "") or "Diagram").strip()
+                valid_extra_diagrams.append(DiagramBlock(title=d_title, mermaid_code=cleaned_code))
+        parsed_schema.extra_diagrams = valid_extra_diagrams
+
+        # Build verified repository metrics summary and combine with grounded summary prose
         langs = [
             f"{lang} ({cnt})"
             for lang, cnt in sorted(facts.get("language_breakdown", {}).items(), key=lambda x: x[1], reverse=True)
@@ -1018,12 +1225,14 @@ class DevLensAgent:
             f"and {facts.get('total_edges', 0)} dependency edges "
             f"({facts.get('cycles_count', 0)} circular import cycles).{lang_summary}"
         )
-        if facts.get("readme_summary"):
+        if cleaned_summary:
+            parsed_schema.summary = f"{cleaned_summary}\n\n{metrics_summary}"
+        elif facts.get("readme_summary"):
             parsed_schema.summary = f"{facts['readme_summary']}\n\n{metrics_summary}"
         else:
             parsed_schema.summary = f"No README is declared in this repository.\n\n{metrics_summary}"
 
-        # Build how_it_works strictly from computed entry points, outgoing edges, and high-risk modules
+        # Build deterministic entry-point & shared-hub topology bullets to pair with narrative prose
         how_lines: list[str] = []
         if facts.get("entry_points"):
             for ep in facts["entry_points"]:
@@ -1062,7 +1271,11 @@ class DevLensAgent:
                 f"- Repository index contains {facts.get('source_modules_count', 0)} source modules "
                 f"and {facts.get('total_edges', 0)} resolved import edges."
             )
-        parsed_schema.how_it_works = "\n".join(how_lines)
+
+        if cleaned_how_prose:
+            parsed_schema.how_it_works = f"{cleaned_how_prose}\n\n" + "\n".join(how_lines)
+        else:
+            parsed_schema.how_it_works = "\n".join(how_lines)
 
         # 1. Overwrite quick start with ground truth from manifest
         test_cmd = manifest.get("test_command")

@@ -111,6 +111,8 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
   const [copilotCollapsed, setCopilotCollapsed] = useState(false);
   const [isProcessingDone, setIsProcessingDone] = useState(!!(jobId && sessionId));
   const [onboardingDoc, setOnboardingDoc] = useState<string | undefined>(undefined);
+  const [onboardingLoading, setOnboardingLoading] = useState(false);
+  const [onboardingError, setOnboardingError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = useCallback((msg: string) => {
@@ -120,22 +122,46 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
     }, 2800);
   }, []);
 
+  const fetchOnboardingDoc = useCallback(() => {
+    const sid = analysisState.sessionId ?? sessionId;
+    if (!sid) return;
+    setOnboardingLoading(true);
+    setOnboardingError(null);
+    api
+      .getOnboardingDoc(sid)
+      .then((res) => {
+        if (res?.markdown) {
+          setOnboardingDoc(res.markdown);
+        } else {
+          setOnboardingError("The onboarding generator returned an empty document.");
+        }
+      })
+      .catch((err) => {
+        setOnboardingError(
+          err instanceof Error
+            ? err.message
+            : "Failed to generate the Code Wiki for this repository.",
+        );
+      })
+      .finally(() => {
+        setOnboardingLoading(false);
+      });
+  }, [analysisState.sessionId, sessionId]);
+
   // Fetch AI-generated onboarding doc when sessionId is available
   useEffect(() => {
     const sid = analysisState.sessionId ?? sessionId;
-    if (sid && !onboardingDoc) {
-      api
-        .getOnboardingDoc(sid)
-        .then((res) => {
-          if (res?.markdown) {
-            setOnboardingDoc(res.markdown);
-          }
-        })
-        .catch(() => {
-          // Fallback to rich built-in guide
-        });
+    if (sid && !onboardingDoc && !onboardingLoading && !onboardingError) {
+      fetchOnboardingDoc();
     }
-  }, [analysisState.sessionId, sessionId, onboardingDoc]);
+  }, [
+    analysisState.sessionId,
+    sessionId,
+    onboardingDoc,
+    onboardingLoading,
+    onboardingError,
+    fetchOnboardingDoc,
+  ]);
 
   // Responsive panel auto-collapse on tablet / mobile screens
   useEffect(() => {
@@ -151,7 +177,6 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
-
 
   // Kick off real analysis on mount
   useEffect(() => {
@@ -449,9 +474,16 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
                   repoLabel={repoLabel}
                   markdownContent={onboardingDoc}
                   graphData={analysisState.graphData}
+                  isLoading={onboardingLoading || (!isProcessingDone && !onboardingDoc)}
+                  error={onboardingError}
+                  onRetry={fetchOnboardingDoc}
                   onSelectFile={(path) => {
                     setActiveFile(path);
                     setActiveTab("architecture");
+                  }}
+                  onAskCopilot={(prompt) => {
+                    setCopilotCollapsed(false);
+                    chat.sendMessage(prompt);
                   }}
                   theme={theme}
                 />
@@ -495,7 +527,9 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
       <footer
         style={{
           height: 32,
-          borderTop: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.1)",
+          borderTop: isLight
+            ? "1px solid rgba(0, 0, 0, 0.08)"
+            : "1px solid rgba(255, 255, 255, 0.1)",
           backgroundColor: isLight ? "#f4f4f7" : "#09090b",
           display: "flex",
           alignItems: "center",
@@ -537,8 +571,12 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
               style={{
                 color:
                   analysisState.graphData?.meta?.search_mode === "semantic"
-                    ? (isLight ? "#09090b" : "#ffffff")
-                    : (isLight ? "#b45309" : "#eab308"),
+                    ? isLight
+                      ? "#09090b"
+                      : "#ffffff"
+                    : isLight
+                      ? "#b45309"
+                      : "#eab308",
               }}
             >
               {analysisState.graphData?.meta?.search_mode === "semantic"
@@ -551,7 +589,9 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
             INDEX: {graphStats.nodeCount} MODULES ({graphStats.edgeCount} EDGES)
           </span>
           <span style={{ color: isLight ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.2)" }}>/</span>
-          <span style={{ color: isLight ? "rgba(0,0,0,0.85)" : "rgba(255,255,255,0.7)" }}>FASTAPI + AST</span>
+          <span style={{ color: isLight ? "rgba(0,0,0,0.85)" : "rgba(255,255,255,0.7)" }}>
+            FASTAPI + AST
+          </span>
         </div>
       </footer>
 
