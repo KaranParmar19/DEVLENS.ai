@@ -4,10 +4,10 @@ import { api, wsUrls } from "./api";
 describe("api client unit tests", () => {
   it("constructs correct WebSocket URLs", () => {
     const jobWs = wsUrls.jobProgress("test-job-123");
-    expect(jobWs).toMatch(/^ws:\/\/.*\/ws\/jobs\/test-job-123$/);
+    expect(jobWs).toMatch(/^wss?:\/\/.*\/ws\/jobs\/test-job-123$/);
 
     const chatWs = wsUrls.chat("test-session-456");
-    expect(chatWs).toMatch(/^ws:\/\/.*\/ws\/chat\/test-session-456$/);
+    expect(chatWs).toMatch(/^wss?:\/\/.*\/ws\/chat\/test-session-456$/);
   });
 
   it("exposes core API methods", () => {

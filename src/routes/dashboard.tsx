@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { StudioWorkspace } from "@/components/studio/studio-workspace";
+import { GitHubAuthGate } from "@/components/studio/github-auth-gate";
 import { CurvyShowcase } from "@/components/ui/curvy-showcase";
 import { ActivityBadge } from "@/components/ui/activity-badge";
 import {
@@ -283,6 +284,24 @@ function DashboardPage() {
     setVersion((v) => v + 1);
   }, [logout]);
 
+  // If user completed GitHub login and had a pending repository, resume analysis immediately
+  useEffect(() => {
+    if (isAuthenticated) {
+      try {
+        const pending = localStorage.getItem("devlens_pending_repo");
+        if (pending) {
+          localStorage.removeItem("devlens_pending_repo");
+          const normalized = normalizeRepoUrl(pending);
+          if (normalized && normalized !== repo) {
+            navigate({ search: { repo: normalized } });
+          }
+        }
+      } catch {
+        // ignore storage errors
+      }
+    }
+  }, [isAuthenticated, repo, navigate]);
+
   const activeShowcaseEntries = useMemo(() => {
     if (!isAuthenticated) return [];
     const base = history.length > 0 ? history : STARTER_SHOWCASE_ENTRIES;
@@ -385,6 +404,19 @@ function DashboardPage() {
   );
 
   if (repo) {
+    if (!isAuthenticated) {
+      return (
+        <GitHubAuthGate
+          repoUrl={repo}
+          onClose={() =>
+            navigate({
+              search: { repo: undefined, jobId: undefined, sessionId: undefined },
+            })
+          }
+        />
+      );
+    }
+
     return (
       <StudioWorkspace
         repoUrl={repo}

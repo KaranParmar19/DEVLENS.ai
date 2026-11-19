@@ -2,11 +2,13 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useAnalysis } from "@/hooks/useAnalysis";
 import { useChat } from "@/hooks/useChat";
+import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import { repoHistory } from "@/lib/repo-history";
 
 import type { StudioTab } from "./studio-types";
 import { TelemetryModal } from "./telemetry-modal";
+import { GitHubAuthGate } from "./github-auth-gate";
 import { StudioTopbar } from "./studio-topbar";
 import { ExplorerRail } from "./explorer-rail";
 import { PanelResizer } from "./panel-resizer";
@@ -30,6 +32,7 @@ interface StudioWorkspaceProps {
 
 export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWorkspaceProps) {
   const repoLabel = repoUrl.replace(/^https?:\/\/(www\.)?github\.com\//, "").replace(/\.git$/, "");
+  const { isAuthenticated } = useAuth();
   const { state: analysisState, startAnalysis } = useAnalysis();
   const chat = useChat(analysisState.sessionId ?? sessionId ?? null);
 
@@ -185,15 +188,16 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Kick off real analysis on mount
+  // Kick off real analysis on mount (only when authenticated)
   useEffect(() => {
+    if (!isAuthenticated) return;
     if (jobId && sessionId) {
       startAnalysis(repoUrl, { jobId, sessionId });
       setIsProcessingDone(true);
     } else {
       startAnalysis(repoUrl);
     }
-  }, [repoUrl, jobId, sessionId, startAnalysis]);
+  }, [isAuthenticated, repoUrl, jobId, sessionId, startAnalysis]);
 
   // When analysis completes, persist to repo history and open the studio
   useEffect(() => {
@@ -348,6 +352,11 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
       cycleDetails: cyclesList,
     };
   }, [analysisState.graphData]);
+
+  // Guard unauthenticated access — show GitHub Auth Gate
+  if (!isAuthenticated) {
+    return <GitHubAuthGate repoUrl={repoUrl} onClose={onClose} />;
+  }
 
   // Show Ingest Telemetry Modal while analyzing
   if (!isProcessingDone && !analysisState.isComplete) {
