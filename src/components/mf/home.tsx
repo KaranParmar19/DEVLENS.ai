@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import {
   Terminal,
@@ -11,14 +11,6 @@ import { PolaroidLineCarousel } from "@/components/ui/polaroid-carousel";
 import { FAQSection } from "@/components/ui/faq-section";
 import { MorphText } from "@/components/ui/morph-text";
 import { PlumblinePipeline } from "@/components/ui/plumbline";
-import { normalizeRepoUrl } from "@/lib/utils";
-
-const TRY = [
-  { label: "facebook/react", tag: "TS / Core" },
-  { label: "vercel/next.js", tag: "Monorepo" },
-  { label: "fastapi/fastapi", tag: "Python" },
-  { label: "tailwindlabs/tailwindcss", tag: "CSS Engine" },
-];
 
 const FEATURES = [
   {
@@ -875,10 +867,20 @@ const DRIFT_PREVIEW_COMMITS = [
   },
 ];
 
-function ProductFrame() {
-  const [frameTab, setFrameTab] = useState<"architecture" | "flow" | "drift" | "doc">(
+interface ProductFrameProps {
+  externalTab?: "architecture" | "flow" | "drift" | "doc";
+  onTabChange?: (tab: "architecture" | "flow" | "drift" | "doc") => void;
+}
+
+function ProductFrame({ externalTab, onTabChange }: ProductFrameProps = {}) {
+  const [internalTab, setInternalTab] = useState<"architecture" | "flow" | "drift" | "doc">(
     "architecture",
   );
+  const frameTab = externalTab ?? internalTab;
+  const setFrameTab = (t: "architecture" | "flow" | "drift" | "doc") => {
+    setInternalTab(t);
+    onTabChange?.(t);
+  };
   const [selectedNodeId, setSelectedNodeId] = useState(1);
   const [blastMode, setBlastMode] = useState(false);
   const [selectedCommitSha, setSelectedCommitSha] = useState("e4f82a1");
@@ -1770,17 +1772,7 @@ function ProductFrame() {
 }
 
 export function HomePage() {
-  const navigate = useNavigate();
-  const [repo, setRepo] = useState("");
-
-  const go = (value: string) => {
-    const normalized = normalizeRepoUrl(value);
-    if (!normalized) {
-      navigate({ to: "/dashboard" });
-      return;
-    }
-    navigate({ to: "/dashboard", search: { repo: normalized } });
-  };
+  const [activeHeroNode, setActiveHeroNode] = useState<string | null>(null);
 
   return (
     <SiteLayout>
@@ -1793,7 +1785,24 @@ export function HomePage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
           >
-            <Pill live>Tree-sitter AST Graph + Verified Code Search</Pill>
+            <Link
+              to="/"
+              className="mf-hero-brand-logo"
+              style={{
+                display: "inline-flex",
+                alignItems: "baseline",
+                gap: 2,
+                fontSize: "clamp(1.3rem, 2.6vw, 1.6rem)",
+                fontWeight: 600,
+                letterSpacing: "-0.035em",
+                color: "#0a0a0a",
+                textDecoration: "none",
+                userSelect: "none",
+              }}
+            >
+              <span>DevLens</span>
+              <span style={{ fontWeight: 400, opacity: 0.55, fontSize: "0.85em" }}>.ai</span>
+            </Link>
           </motion.div>
 
           <motion.h1
@@ -1814,70 +1823,213 @@ export function HomePage() {
           </motion.h1>
 
           <div className="mf-hero-foot">
+            {/* Left: Editorial Mission & Action Controls */}
             <motion.div
-              style={{ flex: "1 1 540px" }}
+              className="mf-hero-editorial"
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.16, ease: [0.16, 1, 0.3, 1] }}
             >
-              <p className="mf-lead" style={{ marginBottom: 28 }}>
-                Paste a GitHub URL to see how its files connect and how requests move through the
-                code. Every answer links back to the exact file and line number.
+              <p className="mf-hero-lead-text">
+                Instant architectural comprehension for complex codebases. Navigate AST dependency trees,
+                trace runtime execution flows, and audit structural drift with verified source anchors.
               </p>
 
-              <form
-                className="mf-ingest"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  go(repo);
-                }}
-              >
-                <span className="mf-mono mf-muted">github.com/</span>
-                <input
-                  value={repo}
-                  onChange={(e) => setRepo(e.target.value)}
-                  placeholder="owner/repo or full URL"
-                  aria-label="Repository"
-                  spellCheck={false}
-                />
-                <motion.button
-                  className="mf-btn"
-                  type="submit"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.97 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                >
-                  Open repo
-                </motion.button>
-              </form>
-
-              <div className="mf-chips">
-                {TRY.map((t) => (
-                  <motion.button
-                    key={t.label}
-                    type="button"
-                    className="mf-pill mf-chip"
-                    whileHover={{ y: -2, scale: 1.03 }}
-                    whileTap={{ scale: 0.96 }}
-                    transition={{ type: "spring", stiffness: 450, damping: 28 }}
-                    onClick={() => go(t.label)}
+              <div className="mf-hero-cta-deck">
+                <Link to="/dashboard" className="mf-hero-btn-launch">
+                  <span>Launch Studio</span>
+                  <svg
+                    className="mf-hero-btn-arrow"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
                   >
-                    <span>{t.label}</span>
-                    <span style={{ opacity: 0.5, fontSize: "0.625rem" }}>({t.tag})</span>
-                  </motion.button>
-                ))}
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                    <polyline points="12 5 19 12 12 19" />
+                  </svg>
+                </Link>
+
+                <a
+                  href="#interactive-preview"
+                  className="mf-hero-link-demo"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    document.getElementById("interactive-preview")?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                >
+                  <span>See interactive preview</span>
+                  <span className="mf-hero-arrow-down">↓</span>
+                </a>
+              </div>
+
+              <div className="mf-hero-specs">
+                <div className="mf-spec-item">
+                  <span className="mf-spec-dot" />
+                  <span>Tree-sitter AST verified</span>
+                </div>
+                <div className="mf-spec-item">
+                  <span className="mf-spec-dot" />
+                  <span>Deterministic call flows</span>
+                </div>
+                <div className="mf-spec-item">
+                  <span className="mf-spec-dot" />
+                  <span>Zero config required</span>
+                </div>
               </div>
             </motion.div>
 
+            {/* Right: Ambient Living AST Circuit + Raw Bold Stat (NO CARDS) */}
             <motion.div
-              style={{ textAlign: "right" }}
-              initial={{ opacity: 0, scale: 0.92 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5, delay: 0.22 }}
+              className="mf-hero-circuit-wrap"
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.22, ease: [0.16, 1, 0.3, 1] }}
             >
-              <div className="mf-big-stat">&lt;8s</div>
-              <div className="mf-mono mf-muted" style={{ marginTop: 10 }}>
-                Median time to full AST graph
+              <div className="mf-hero-circuit" aria-label="AST Execution Graph Circuit">
+                <svg
+                  className="mf-circuit-svg"
+                  viewBox="0 0 420 110"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <defs>
+                    <path
+                      id="mfCircuitMainPath"
+                      d="M 44 35 C 100 35, 100 75, 155 75 C 215 75, 215 35, 270 35 C 325 35, 325 75, 380 75"
+                    />
+                    <path
+                      id="mfCircuitBranchPath"
+                      d="M 155 75 C 155 98, 205 98, 225 98"
+                    />
+                  </defs>
+
+                  {/* Connecting filament wires */}
+                  <path
+                    d="M 44 35 C 100 35, 100 75, 155 75 C 215 75, 215 35, 270 35 C 325 35, 325 75, 380 75"
+                    className="mf-circuit-base-wire"
+                  />
+                  <path
+                    d="M 155 75 C 155 98, 205 98, 225 98"
+                    className="mf-circuit-base-wire"
+                    strokeDasharray="3 3"
+                  />
+
+                  {/* Flowing animated dash lines */}
+                  <path
+                    d="M 44 35 C 100 35, 100 75, 155 75 C 215 75, 215 35, 270 35 C 325 35, 325 75, 380 75"
+                    className="mf-circuit-flow-wire"
+                  />
+
+                  {/* Travelling data packet */}
+                  <circle r="3.5" className="mf-flow-dot">
+                    <animateMotion
+                      path="M 44 35 C 100 35, 100 75, 155 75 C 215 75, 215 35, 270 35 C 325 35, 325 75, 380 75"
+                      dur="3.8s"
+                      repeatCount="indefinite"
+                    />
+                  </circle>
+
+                  {/* Secondary branch node */}
+                  <g className="mf-circuit-node" opacity={0.65}>
+                    <circle cx="225" cy="98" r="3" fill="#0a0a0a" />
+                    <text x="233" y="101" className="mf-circuit-node-sub">
+                      auth.ts:24 · jwt
+                    </text>
+                  </g>
+
+                  {/* Node 1: Ingress */}
+                  <g
+                    className="mf-circuit-node"
+                    onMouseEnter={() => setActiveHeroNode("server.ts:18 · Ingress HTTP · 1.1ms")}
+                    onMouseLeave={() => setActiveHeroNode(null)}
+                  >
+                    <circle cx="44" cy="35" r="7" fill="transparent" stroke="rgba(10,10,10,0.15)" />
+                    <circle cx="44" cy="35" r="3.5" fill="#0a0a0a" />
+                    <text x="44" y="20" textAnchor="middle" className="mf-circuit-node-label">
+                      server.ts:18
+                    </text>
+                    <text x="44" y="52" textAnchor="middle" className="mf-circuit-node-sub">
+                      Ingress
+                    </text>
+                  </g>
+
+                  {/* Node 2: Dispatcher */}
+                  <g
+                    className="mf-circuit-node"
+                    onMouseEnter={() => setActiveHeroNode("router.ts:54 · Radix Dispatch · 0.4ms")}
+                    onMouseLeave={() => setActiveHeroNode(null)}
+                  >
+                    <circle cx="155" cy="75" r="7" fill="transparent" stroke="rgba(10,10,10,0.15)" />
+                    <circle cx="155" cy="75" r="3.5" fill="#0a0a0a" />
+                    <text x="155" y="93" textAnchor="middle" className="mf-circuit-node-label">
+                      router.ts:54
+                    </text>
+                    <text x="155" y="64" textAnchor="middle" className="mf-circuit-node-sub">
+                      Dispatch
+                    </text>
+                  </g>
+
+                  {/* Node 3: View */}
+                  <g
+                    className="mf-circuit-node"
+                    onMouseEnter={() => setActiveHeroNode("app-render.tsx:92 · Suspense Stream · 2.9ms")}
+                    onMouseLeave={() => setActiveHeroNode(null)}
+                  >
+                    <circle cx="270" cy="35" r="7" fill="transparent" stroke="rgba(10,10,10,0.15)" />
+                    <circle cx="270" cy="35" r="3.5" fill="#0a0a0a" />
+                    <text x="270" y="20" textAnchor="middle" className="mf-circuit-node-label">
+                      render.tsx:92
+                    </text>
+                    <text x="270" y="52" textAnchor="middle" className="mf-circuit-node-sub">
+                      Component
+                    </text>
+                  </g>
+
+                  {/* Node 4: Storage */}
+                  <g
+                    className="mf-circuit-node"
+                    onMouseEnter={() => setActiveHeroNode("db.ts:10 · Connection Pool · 1.8ms")}
+                    onMouseLeave={() => setActiveHeroNode(null)}
+                  >
+                    <circle cx="380" cy="75" r="7" fill="transparent" stroke="rgba(10,10,10,0.15)" />
+                    <circle cx="380" cy="75" r="3.5" fill="#0a0a0a" />
+                    <text x="380" y="93" textAnchor="middle" className="mf-circuit-node-label">
+                      db.ts:10
+                    </text>
+                    <text x="380" y="64" textAnchor="middle" className="mf-circuit-node-sub">
+                      Storage
+                    </text>
+                  </g>
+                </svg>
+
+                {/* Ambient Node Detail Tooltip (Freeform, no card) */}
+                <div
+                  className="mf-circuit-node-tooltip"
+                  style={{
+                    minHeight: 18,
+                    fontSize: "0.6875rem",
+                    fontFamily: "var(--mf-mono, monospace)",
+                    color: activeHeroNode ? "#0a0a0a" : "transparent",
+                    transition: "color 0.15s ease",
+                    marginTop: 4,
+                  }}
+                >
+                  {activeHeroNode || "hover any node to inspect execution step"}
+                </div>
+              </div>
+
+              {/* Raw Bold Stat (NO CARDS) */}
+              <div className="mf-hero-raw-stat">
+                <div className="mf-hero-giant-num">&lt;8s</div>
+                <div className="mf-hero-giant-lbl">
+                  Median time to full AST graph · 100% deterministic
+                </div>
               </div>
             </motion.div>
           </div>
@@ -1886,6 +2038,7 @@ export function HomePage() {
 
       {/* Interactive Product Preview Section */}
       <section
+        id="interactive-preview"
         className="mf-section mf-dark mf-preview-section"
         data-theme="dark"
         style={{
