@@ -70,6 +70,13 @@ export interface Hoopshots404Props {
   buttonFont?: { fontFamily?: string; fontSize?: string | number; fontWeight?: string | number; letterSpacing?: string; lineHeight?: string | number; fontStyle?: string };
   counterFont?: { fontFamily?: string; fontSize?: string | number; fontWeight?: string | number; letterSpacing?: string; lineHeight?: string | number; fontStyle?: string };
   numeralFont?: { fontFamily?: string; fontSize?: string | number; fontWeight?: string | number; letterSpacing?: string; lineHeight?: string | number; fontStyle?: string };
+  codeVariant?: "404" | "401";
+  onPrimaryAction?: () => void;
+  primaryIcon?: React.ReactNode;
+  extraActions?: React.ReactNode;
+  belowActionsSlot?: React.ReactNode;
+  topSlot?: React.ReactNode;
+  bottomRightSlot?: React.ReactNode;
   style?: React.CSSProperties;
   className?: string;
 }
@@ -709,6 +716,24 @@ function Numeral4({ scale, color }: { scale: number; color: string }) {
   );
 }
 
+function Numeral1({ scale, color }: { scale: number; color: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      width={150 * scale}
+      height={185 * scale}
+      viewBox="0 0 150 185"
+      style={{ display: "block", flexShrink: 0 }}
+    >
+      <path
+        fill={color}
+        fillRule="evenodd"
+        d="M48 0H108V135H142V185H10V135H48V52H12V16Z"
+      />
+    </svg>
+  );
+}
+
 const ICONS: Record<string, { line: string; solid?: string; solidStroke?: string }> = {
   home: {
     line: "M3 11l9-8 9 8M5 9.5V21h5v-6h4v6h5V9.5",
@@ -873,6 +898,13 @@ export function Hoopshots404(rawProps: Hoopshots404Props = {}) {
     buttonFont,
     counterFont,
     numeralFont,
+    codeVariant = "404",
+    onPrimaryAction,
+    primaryIcon,
+    extraActions,
+    belowActionsSlot,
+    topSlot,
+    bottomRightSlot,
     style,
     className,
   } = props;
@@ -1666,6 +1698,30 @@ export function Hoopshots404(rawProps: Hoopshots404Props = {}) {
     <Numeral4 scale={ns} color={numeralColor} />
   );
 
+  const rightGlyph =
+    codeVariant === "401" ? (
+      customFour ? (
+        <span
+          aria-hidden="true"
+          style={{
+            ...ts(numeralFont, { size: numeralSize, weight: 900 }),
+            fontSize: numeralSize,
+            lineHeight: 0.75,
+            letterSpacing: "normal",
+            display: "block",
+            flexShrink: 0,
+            color: numeralColor,
+          }}
+        >
+          1
+        </span>
+      ) : (
+        <Numeral1 scale={ns} color={numeralColor} />
+      )
+    ) : (
+      fourGlyph
+    );
+
   const counterSize =
     parseFloat(String(counterFont?.fontSize ?? "")) * typeScale;
   const labelSize = Number.isFinite(counterSize)
@@ -1717,7 +1773,9 @@ export function Hoopshots404(rawProps: Hoopshots404Props = {}) {
         <Environment wall={wallColor} />
       )}
 
-      {/* 404 & Content Container */}
+      {topSlot}
+
+      {/* 404 / 401 & Content Container */}
       <div
         style={{
           position: "absolute",
@@ -1735,10 +1793,10 @@ export function Hoopshots404(rawProps: Hoopshots404Props = {}) {
           zIndex: 2,
         }}
       >
-        {/* 4 0 4 Glyphs with Center Hoop */}
+        {/* 4 0 4 or 4 0 1 Glyphs with Center Hoop */}
         <div
           role="img"
-          aria-label="404"
+          aria-label={codeVariant}
           style={{ display: "flex", alignItems: "center", gap: 10 * ns }}
         >
           {fourGlyph}
@@ -1786,7 +1844,7 @@ export function Hoopshots404(rawProps: Hoopshots404Props = {}) {
               </svg>
             )}
           </div>
-          {fourGlyph}
+          {rightGlyph}
         </div>
 
         {/* Heading */}
@@ -1795,9 +1853,9 @@ export function Hoopshots404(rawProps: Hoopshots404Props = {}) {
           tabIndex={-1}
           style={{
             margin: 0,
-            marginTop: 38 * s,
+            marginTop: 32 * s,
             ...ts(headingFont, {
-              size: 46 * s,
+              size: 44 * s,
               weight: 700,
               letterSpacing: "-0.02em",
               lineHeight: 1.1,
@@ -1813,11 +1871,11 @@ export function Hoopshots404(rawProps: Hoopshots404Props = {}) {
         <p
           style={{
             margin: 0,
-            marginTop: 14 * s,
-            maxWidth: 560 * s,
+            marginTop: 12 * s,
+            maxWidth: 580 * s,
             whiteSpace: "pre-line",
             ...ts(bodyFont, {
-              size: Math.max(14, 19 * s),
+              size: Math.max(14, 18 * s),
               weight: 400,
               lineHeight: 1.5,
             }),
@@ -1830,22 +1888,40 @@ export function Hoopshots404(rawProps: Hoopshots404Props = {}) {
         {/* Action Buttons */}
         <div
           style={{
-            marginTop: 30 * s,
+            marginTop: 24 * s,
             display: "flex",
             flexWrap: "wrap",
             gap: 12,
             justifyContent: "center",
+            alignItems: "center",
           }}
         >
-          <Link
-            to={homeLink}
-            style={primaryButton}
-            {...buttonHandlers("home")}
-          >
-            {!iconAtEnd && homeIcon}
-            <span>{homeLabel}</span>
-            {iconAtEnd && homeIcon}
-          </Link>
+          {onPrimaryAction ? (
+            <button
+              type="button"
+              onClick={onPrimaryAction}
+              style={primaryButton}
+              {...buttonHandlers("home")}
+            >
+              {primaryIcon}
+              {!primaryIcon && !iconAtEnd && homeIcon}
+              <span>{homeLabel}</span>
+              {iconAtEnd && homeIcon}
+            </button>
+          ) : (
+            <Link
+              to={homeLink}
+              style={primaryButton}
+              {...buttonHandlers("home")}
+            >
+              {primaryIcon}
+              {!primaryIcon && !iconAtEnd && homeIcon}
+              <span>{homeLabel}</span>
+              {iconAtEnd && homeIcon}
+            </Link>
+          )}
+
+          {extraActions}
 
           {resultVisible && showReplay && retriesLeft > 0 && (
             <button
@@ -1858,6 +1934,8 @@ export function Hoopshots404(rawProps: Hoopshots404Props = {}) {
             </button>
           )}
         </div>
+
+        {belowActionsSlot}
       </div>
 
       {/* Physics Basketball Canvas */}
@@ -1952,9 +2030,9 @@ export function Hoopshots404(rawProps: Hoopshots404Props = {}) {
             padding: `${Math.round(10 * s)}px ${Math.round(18 * s)}px`,
             borderRadius: 22,
             background: glassColor,
-            border: "1px solid rgba(255,255,255,0.55)",
+            border: "1px solid rgba(0,0,0,0.08)",
             boxShadow:
-              "0 8px 32px rgba(40,25,15,0.12), inset 0 1px 0 rgba(255,255,255,0.6)",
+              "0 8px 28px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.6)",
             backdropFilter: `blur(${clamp(glassBlur, 0, 60)}px) saturate(1.6)`,
             WebkitBackdropFilter: `blur(${clamp(glassBlur, 0, 60)}px) saturate(1.6)`,
             pointerEvents: "none",
@@ -2022,6 +2100,8 @@ export function Hoopshots404(rawProps: Hoopshots404Props = {}) {
           {pillLabel}
         </span>
       </div>
+
+      {bottomRightSlot}
 
       {/* Screen Reader Announcer */}
       <div
