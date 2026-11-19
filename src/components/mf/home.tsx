@@ -1808,7 +1808,7 @@ export function HomePage() {
               strength={8}
             />
             <br />
-            of any codebase.
+            <span className="dx-muted-word">of any</span> codebase.
           </motion.h1>
 
           <div className="mf-hero-foot">
@@ -1907,7 +1907,7 @@ export function HomePage() {
           <div className="mf-sec-head">
             <Reveal>
               <h2 className="mf-h1" style={{ maxWidth: "10em" }}>
-                Five views on one repository.
+                Five views <span className="dx-muted-word">on one</span> repository.
               </h2>
             </Reveal>
             <Link to="/features" className="mf-btn ghost">
@@ -1973,7 +1973,7 @@ export function HomePage() {
             <Reveal>
               <h2 className="mf-h1 mf-pipeline-h1">
                 From GitHub URL<br />
-                to interactive map<br />
+                <span className="dx-muted-word">to interactive map</span><br />
                 in three steps.
               </h2>
             </Reveal>

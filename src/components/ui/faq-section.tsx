@@ -8,7 +8,7 @@ export interface FAQItemData {
 }
 
 export interface FAQSectionProps {
-  title?: string;
+  title?: React.ReactNode;
   subtitle?: string;
   items?: FAQItemData[];
   defaultOpenIndex?: number | null;
@@ -43,7 +43,11 @@ export const DEFAULT_DEVLENS_FAQS: FAQItemData[] = [
 ];
 
 export function FAQSection({
-  title = "Questions & Answers",
+  title = (
+    <>
+      Questions <span className="dx-muted-word">&amp;</span> Answers
+    </>
+  ),
   subtitle = "Common questions about how DevLens indexes and maps repositories.",
   items = DEFAULT_DEVLENS_FAQS,
   defaultOpenIndex = 0,
