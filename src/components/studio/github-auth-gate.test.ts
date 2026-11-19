@@ -40,4 +40,20 @@ describe("GitHubAuthGate logic and repo parsing", () => {
     expect(result.owner).toBe("tailwindlabs");
     expect(result.repoName).toBe("tailwindcss/tree/main");
   });
+
+  it("correctly interpolates winTitle and loseTitle placeholders", () => {
+    function fillTemplate(text: string, vars: Record<string, string | number>) {
+      return Object.keys(vars).reduce(
+        (out, key) => out.split(`{${key}}`).join(String(vars[key])),
+        text,
+      );
+    }
+
+    const vars = { made: 3, total: 5, needed: 0, left: 0, threshold: 3 };
+    const winTitle = "Nice shot. {made} of {total} made.";
+    const loseTitle = "{made} of {total} made.";
+
+    expect(fillTemplate(winTitle, vars)).toBe("Nice shot. 3 of 5 made.");
+    expect(fillTemplate(loseTitle, vars)).toBe("3 of 5 made.");
+  });
 });

@@ -947,13 +947,15 @@ function ProductFrame() {
         className="mf-frame-bar"
         style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
           <i />
           <i />
           <i />
-          <span className="mf-mono">devlens · vercel/next.js · main</span>
+          <span className="mf-mono mf-frame-title" style={{ maxWidth: "clamp(120px, 35vw, 360px)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            devlens · vercel/next.js · main
+          </span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
           <span
             className="mf-pill"
             style={{
@@ -970,7 +972,7 @@ function ProductFrame() {
 
       <div className="mf-frame-body">
         {/* Left: Files Pane */}
-        <div>
+        <div className="mf-frame-files-col">
           <div
             className="mf-mono"
             style={{
@@ -1058,7 +1060,7 @@ function ProductFrame() {
         </div>
 
         {/* Center: Interactive Workspace Canvas */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div className="mf-frame-canvas-col" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {/* Studio Tab bar switcher */}
           <div
             className="devlens-tab-scroll"
@@ -1640,7 +1642,7 @@ function ProductFrame() {
         </div>
 
         {/* Right: Cited Copilot Box */}
-        <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", height: "100%" }}>
+        <div className="mf-frame-copilot-col" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", height: "100%" }}>
           <div
             className="devlens-scroll"
             style={{

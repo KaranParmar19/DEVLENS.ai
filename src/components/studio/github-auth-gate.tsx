@@ -80,6 +80,7 @@ export function GitHubAuthGate({ repoUrl, onClose, onSuccess }: GitHubAuthGatePr
 
   const topHeader = (
     <header
+      className="dx-auth-top-header"
       style={{
         position: "absolute",
         top: 0,
@@ -89,7 +90,7 @@ export function GitHubAuthGate({ repoUrl, onClose, onSuccess }: GitHubAuthGatePr
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        padding: "20px clamp(20px, 4.6%, 48px)",
+        padding: "clamp(12px, 2.5vw, 20px) clamp(14px, 4.6%, 48px)",
         pointerEvents: "none",
       }}
     >
@@ -98,7 +99,7 @@ export function GitHubAuthGate({ repoUrl, onClose, onSuccess }: GitHubAuthGatePr
           display: "inline-flex",
           alignItems: "baseline",
           gap: 1,
-          fontSize: "1.25rem",
+          fontSize: "clamp(1.1rem, 2vw, 1.25rem)",
           fontWeight: 600,
           letterSpacing: "-0.03em",
           color: "#0a0a0a",
@@ -111,6 +112,7 @@ export function GitHubAuthGate({ repoUrl, onClose, onSuccess }: GitHubAuthGatePr
 
       <button
         type="button"
+        className="dx-auth-back-btn"
         onClick={onClose}
         style={{
           pointerEvents: "auto",
@@ -127,6 +129,7 @@ export function GitHubAuthGate({ repoUrl, onClose, onSuccess }: GitHubAuthGatePr
           alignItems: "center",
           gap: 6,
           transition: "all 0.15s ease",
+          minHeight: 38,
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.backgroundColor = "#0a0a0a";
@@ -140,7 +143,7 @@ export function GitHubAuthGate({ repoUrl, onClose, onSuccess }: GitHubAuthGatePr
         }}
       >
         <ArrowLeft size={13} />
-        <span>Back to Dashboard</span>
+        <span className="dx-auth-back-label">Back to Dashboard</span>
       </button>
     </header>
   );
@@ -185,7 +188,7 @@ export function GitHubAuthGate({ repoUrl, onClose, onSuccess }: GitHubAuthGatePr
           style={{
             marginTop: 14,
             width: "100%",
-            maxWidth: 480,
+            maxWidth: "min(480px, calc(100vw - 32px))",
             zIndex: 15,
             position: "relative",
           }}
@@ -299,6 +302,7 @@ export function GitHubAuthGate({ repoUrl, onClose, onSuccess }: GitHubAuthGatePr
 
   const bottomRightNote = (
     <div
+      className="dx-auth-bottom-note"
       style={{
         position: "absolute",
         right: "4.6%",

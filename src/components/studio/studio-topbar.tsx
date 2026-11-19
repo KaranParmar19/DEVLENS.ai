@@ -48,26 +48,29 @@ export function StudioTopbar({
 
   return (
     <header
+      className="dx-studio-topbar"
       style={{
-        height: 56,
+        minHeight: 56,
         borderBottom: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.12)"}`,
         backgroundColor: isLight ? "#ffffff" : "#09090b",
         color: isLight ? "#09090b" : "#ffffff",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: "0 16px",
+        padding: "0 clamp(10px, 2vw, 16px)",
         fontFamily: "var(--mf-font, 'Geist', sans-serif)",
         position: "relative",
         zIndex: 40,
         flexShrink: 0,
+        gap: 10,
         transition: "background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease",
       }}
     >
       {/* Left: Brand & Repo Breadcrumb */}
-      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+      <div className="dx-studio-topbar-left" style={{ display: "flex", alignItems: "center", gap: "clamp(8px, 1.5vw, 14px)", minWidth: 0 }}>
         <a
           href="/dashboard"
+          className="dx-studio-brand"
           onClick={(e) => {
             e.preventDefault();
             onClose();
@@ -82,6 +85,7 @@ export function StudioTopbar({
             textTransform: "uppercase",
             color: isLight ? "#09090b" : "#ffffff",
             textDecoration: "none",
+            flexShrink: 0,
           }}
         >
           <span
@@ -93,26 +97,42 @@ export function StudioTopbar({
               display: "inline-block",
             }}
           />
-          DevLens · Studio
+          <span className="dx-studio-brand-main">DevLens</span>
+          <span className="dx-studio-brand-sub" style={{ opacity: 0.65 }}>· Studio</span>
         </a>
 
-        <div style={{ width: 1, height: 16, backgroundColor: isLight ? "rgba(0, 0, 0, 0.12)" : "rgba(255, 255, 255, 0.15)" }} />
+        <div className="dx-studio-divider" style={{ width: 1, height: 16, backgroundColor: isLight ? "rgba(0, 0, 0, 0.12)" : "rgba(255, 255, 255, 0.15)", flexShrink: 0 }} />
 
         {/* Repo Label */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.875rem" }}>
+        <div className="dx-studio-repo-info" style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.875rem", minWidth: 0 }}>
           <span
+            className="dx-studio-repo-tag"
             style={{
               color: isLight ? "rgba(9, 9, 11, 0.5)" : "rgba(255, 255, 255, 0.5)",
               fontFamily: "var(--mf-mono, monospace)",
               fontSize: "0.75rem",
+              flexShrink: 0,
             }}
           >
             repo:
           </span>
-          <span style={{ fontWeight: 500, letterSpacing: "-0.01em" }}>{repoLabel}</span>
+          <span
+            className="dx-studio-repo-name"
+            title={repoLabel}
+            style={{
+              fontWeight: 500,
+              letterSpacing: "-0.01em",
+              maxWidth: "clamp(90px, 16vw, 220px)",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {repoLabel}
+          </span>
 
           {/* Branch Dropdown */}
-          <div style={{ position: "relative" }}>
+          <div className="dx-studio-branch-wrap" style={{ position: "relative", flexShrink: 0 }}>
             <button
               type="button"
               onClick={() => setBranchOpen((v) => !v)}
@@ -192,74 +212,80 @@ export function StudioTopbar({
 
       {/* Center: Monoform Tab Switcher with Framer Motion Sliding Pill */}
       <div
-        style={{
-          display: "flex",
-          gap: 4,
-          padding: 3,
-          borderRadius: 999,
-          border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.09)" : "rgba(255, 255, 255, 0.14)"}`,
-          background: isLight ? "rgba(0, 0, 0, 0.04)" : "rgba(255, 255, 255, 0.03)",
-        }}
+        className="dx-studio-topbar-center"
       >
-        {(
-          [
-            { id: "architecture", label: "Architecture" },
-            { id: "flow", label: "Code Flow" },
-            { id: "drift", label: "Drift Timeline" },
-            { id: "doc", label: "Onboarding Doc" },
-          ] as const
-        ).map((tab) => {
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => onTabChange(tab.id)}
-              style={{
-                position: "relative",
-                padding: "6px 14px",
-                borderRadius: 999,
-                fontFamily: "var(--mf-mono, monospace)",
-                fontSize: "0.6875rem",
-                letterSpacing: "0.04em",
-                textTransform: "uppercase",
-                border: "none",
-                cursor: "pointer",
-                background: "transparent",
-                color: isActive
-                  ? isLight
-                    ? "#ffffff"
-                    : "#000000"
-                  : isLight
-                  ? "rgba(9, 9, 11, 0.65)"
-                  : "rgba(255, 255, 255, 0.65)",
-                fontWeight: isActive ? 600 : 400,
-                outline: "none",
-              }}
-            >
-              {isActive && (
-                <motion.div
-                  layoutId="studio-active-tab-indicator"
-                  transition={{ type: "spring", stiffness: 420, damping: 30 }}
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    borderRadius: 999,
-                    backgroundColor: isLight ? "#09090b" : "#ffffff",
-                    zIndex: 0,
-                  }}
-                />
-              )}
-              <span style={{ position: "relative", zIndex: 1 }}>{tab.label}</span>
-            </button>
-          );
-        })}
+        <div
+          className="dx-studio-tabs-nav"
+          style={{
+            display: "flex",
+            gap: 4,
+            padding: 3,
+            borderRadius: 999,
+            border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.09)" : "rgba(255, 255, 255, 0.14)"}`,
+            background: isLight ? "rgba(0, 0, 0, 0.04)" : "rgba(255, 255, 255, 0.03)",
+          }}
+        >
+          {(
+            [
+              { id: "architecture", label: "Architecture" },
+              { id: "flow", label: "Code Flow" },
+              { id: "drift", label: "Drift Timeline" },
+              { id: "doc", label: "Onboarding Doc" },
+            ] as const
+          ).map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => onTabChange(tab.id)}
+                style={{
+                  position: "relative",
+                  padding: "6px 14px",
+                  borderRadius: 999,
+                  fontFamily: "var(--mf-mono, monospace)",
+                  fontSize: "0.6875rem",
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                  border: "none",
+                  cursor: "pointer",
+                  background: "transparent",
+                  color: isActive
+                    ? isLight
+                      ? "#ffffff"
+                      : "#000000"
+                    : isLight
+                    ? "rgba(9, 9, 11, 0.65)"
+                    : "rgba(255, 255, 255, 0.65)",
+                  fontWeight: isActive ? 600 : 400,
+                  outline: "none",
+                  flexShrink: 0,
+                }}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="studio-active-tab-indicator"
+                    transition={{ type: "spring", stiffness: 420, damping: 30 }}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      borderRadius: 999,
+                      backgroundColor: isLight ? "#09090b" : "#ffffff",
+                      zIndex: 0,
+                    }}
+                  />
+                )}
+                <span style={{ position: "relative", zIndex: 1 }}>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Right: Language filters, Export, ⌘K, Close */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      {/* Right: Language filters, Export, Theme, Close */}
+      <div className="dx-studio-topbar-right" style={{ display: "flex", alignItems: "center", gap: "clamp(6px, 1.2vw, 10px)", flexShrink: 0 }}>
         {/* Language Filter Chips */}
-        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+        <div className="dx-studio-lang-chips" style={{ display: "flex", gap: 6, alignItems: "center" }}>
           {languages.slice(0, 3).map((lang) => {
             const isSelected = selectedLang === lang;
             return (
@@ -274,9 +300,9 @@ export function StudioTopbar({
                   padding: "2px 8px",
                   borderRadius: 999,
                   border: "1px solid",
-                  borderColor: isSelected ? "#ffffff" : "rgba(255,255,255,0.12)",
-                  background: isSelected ? "rgba(255,255,255,0.15)" : "transparent",
-                  color: isSelected ? "#ffffff" : "rgba(255,255,255,0.6)",
+                  borderColor: isSelected ? (isLight ? "#09090b" : "#ffffff") : (isLight ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.12)"),
+                  background: isSelected ? (isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.15)") : "transparent",
+                  color: isSelected ? (isLight ? "#09090b" : "#ffffff") : (isLight ? "rgba(9,9,11,0.6)" : "rgba(255,255,255,0.6)"),
                   fontFamily: "var(--mf-mono, monospace)",
                   fontSize: "0.6875rem",
                   cursor: "pointer",
@@ -288,7 +314,7 @@ export function StudioTopbar({
                     width: 5,
                     height: 5,
                     borderRadius: "50%",
-                    background: isSelected ? "#ffffff" : "rgba(255,255,255,0.4)",
+                    background: isSelected ? (isLight ? "#09090b" : "#ffffff") : (isLight ? "rgba(9,9,11,0.4)" : "rgba(255,255,255,0.4)"),
                   }}
                 />
                 {lang}
@@ -297,40 +323,43 @@ export function StudioTopbar({
           })}
         </div>
 
-        <div style={{ width: 1, height: 16, backgroundColor: "rgba(255, 255, 255, 0.15)" }} />
+        <div className="dx-studio-divider" style={{ width: 1, height: 16, backgroundColor: isLight ? "rgba(0, 0, 0, 0.12)" : "rgba(255, 255, 255, 0.15)" }} />
 
         {/* Share Button */}
         <button
           type="button"
+          className="dx-studio-share-btn"
           onClick={handleShare}
           style={{
             fontFamily: "var(--mf-mono, monospace)",
             fontSize: "0.6875rem",
             textTransform: "uppercase",
-            color: copied ? "#ffffff" : "rgba(255,255,255,0.7)",
-            background: copied ? "rgba(255,255,255,0.15)" : "transparent",
-            border: "1px solid rgba(255,255,255,0.14)",
+            color: copied ? (isLight ? "#09090b" : "#ffffff") : (isLight ? "rgba(9,9,11,0.7)" : "rgba(255,255,255,0.7)"),
+            background: copied ? (isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.15)") : "transparent",
+            border: `1px solid ${isLight ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.14)"}`,
             borderRadius: 999,
             padding: "4px 12px",
             cursor: "pointer",
             transition: "all 0.2s",
+            flexShrink: 0,
           }}
         >
           {copied ? "✓ Copied" : "Share"}
         </button>
 
         {/* Export Dropdown */}
-        <div style={{ position: "relative" }}>
+        <div className="dx-studio-export-wrap" style={{ position: "relative", flexShrink: 0 }}>
           <button
             type="button"
+            className="dx-studio-export-btn"
             onClick={() => setExportOpen((v) => !v)}
             style={{
               fontFamily: "var(--mf-mono, monospace)",
               fontSize: "0.6875rem",
               textTransform: "uppercase",
-              color: "rgba(255,255,255,0.7)",
+              color: isLight ? "rgba(9,9,11,0.7)" : "rgba(255,255,255,0.7)",
               background: "transparent",
-              border: "1px solid rgba(255,255,255,0.14)",
+              border: `1px solid ${isLight ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.14)"}`,
               borderRadius: 999,
               padding: "4px 12px",
               cursor: "pointer",
@@ -402,10 +431,11 @@ export function StudioTopbar({
         {onToggleTheme && (
           <button
             type="button"
+            className="dx-studio-theme-btn"
             onClick={onToggleTheme}
             style={{
-              width: 28,
-              height: 28,
+              width: 32,
+              height: 32,
               borderRadius: "50%",
               border: `1px solid ${isLight ? "rgba(0,0,0,0.14)" : "rgba(255,255,255,0.15)"}`,
               background: isLight ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.06)",
@@ -414,20 +444,22 @@ export function StudioTopbar({
               placeItems: "center",
               cursor: "pointer",
               transition: "all 0.15s ease",
+              flexShrink: 0,
             }}
             title={isLight ? "Switch to Dark Studio" : "Switch to Light Studio"}
           >
-            {isLight ? <Moon size={13} strokeWidth={2} /> : <Sun size={13} strokeWidth={2} />}
+            {isLight ? <Moon size={14} strokeWidth={2} /> : <Sun size={14} strokeWidth={2} />}
           </button>
         )}
 
         {/* Close Studio Button */}
         <button
           type="button"
+          className="dx-studio-close-btn"
           onClick={onClose}
           style={{
-            width: 28,
-            height: 28,
+            width: 32,
+            height: 32,
             borderRadius: "50%",
             border: `1px solid ${isLight ? "rgba(0,0,0,0.14)" : "rgba(255,255,255,0.15)"}`,
             background: "transparent",
@@ -435,8 +467,9 @@ export function StudioTopbar({
             display: "inline-grid",
             placeItems: "center",
             cursor: "pointer",
-            fontSize: "0.8125rem",
+            fontSize: "0.875rem",
             marginLeft: 2,
+            flexShrink: 0,
           }}
           title="Exit to Dashboard Hub"
         >

@@ -1550,12 +1550,10 @@ export function Hoopshots404(rawProps: Hoopshots404Props = {}) {
   /* ------------------------------ derived UI -------------------------- */
   const s = scale;
   const reach = Math.max(geo.baseR * 1.8, 44);
-  const heading = resultVisible ? (won ? winTitle : loseTitle) : playTitle;
-  const bodyText = resultVisible
-    ? won
-      ? fillTemplate(winText, vars)
-      : fillTemplate(loseText, vars)
-    : playText;
+  const rawHeading = (resultVisible ? (won ? winTitle : loseTitle) : playTitle) ?? "";
+  const heading = fillTemplate(rawHeading, vars);
+  const rawBodyText = (resultVisible ? (won ? winText : loseText) : playText) ?? "";
+  const bodyText = fillTemplate(rawBodyText, vars);
 
   const buttonBase: React.CSSProperties = {
     ...ts(buttonFont, { size: Math.max(14, 15 * s), weight: 500 }),

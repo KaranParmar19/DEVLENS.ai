@@ -110,8 +110,18 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
     }
   }, []);
 
-  const [explorerCollapsed, setExplorerCollapsed] = useState(false);
-  const [copilotCollapsed, setCopilotCollapsed] = useState(false);
+  const [explorerCollapsed, setExplorerCollapsed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.innerWidth < 960;
+    }
+    return false;
+  });
+  const [copilotCollapsed, setCopilotCollapsed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.innerWidth < 960;
+    }
+    return false;
+  });
   const [isProcessingDone, setIsProcessingDone] = useState(!!(jobId && sessionId));
   const [onboardingDoc, setOnboardingDoc] = useState<string | undefined>(undefined);
   const [onboardingLoading, setOnboardingLoading] = useState(false);
@@ -407,7 +417,20 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
       />
 
       {/* 3-Pane Studio Workspace Layout */}
-      <div style={{ flex: 1, display: "flex", overflow: "hidden", position: "relative" }}>
+      <div className="dx-studio-workspace-panes" style={{ flex: 1, display: "flex", overflow: "hidden", position: "relative" }}>
+        {/* Mobile Backdrop when side rails are open on small screens */}
+        {(!explorerCollapsed || !copilotCollapsed) && (
+          <div
+            className="dx-mobile-pane-backdrop"
+            onClick={() => {
+              if (typeof window !== "undefined" && window.innerWidth < 768) {
+                setExplorerCollapsed(true);
+                setCopilotCollapsed(true);
+              }
+            }}
+          />
+        )}
+
         {/* Left Explorer Rail */}
         <ExplorerRail
           files={displayFiles}
@@ -426,17 +449,19 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
 
         {/* Panel Resizer: Left (Explorer) */}
         {!explorerCollapsed && (
-          <PanelResizer
-            side="left"
-            currentWidth={explorerWidth}
-            onResize={handleResizeExplorer}
-            onReset={handleResetExplorerWidth}
-            theme={theme}
-          />
+          <div className="dx-studio-resizer">
+            <PanelResizer
+              side="left"
+              currentWidth={explorerWidth}
+              onResize={handleResizeExplorer}
+              onReset={handleResetExplorerWidth}
+              theme={theme}
+            />
+          </div>
         )}
 
         {/* Center Stage: Architecture | Code Flow | Drift Timeline | Onboarding Doc */}
-        <main style={{ flex: 1, position: "relative", overflow: "hidden", minWidth: 320 }}>
+        <main className="dx-workspace-center-stage" style={{ flex: 1, position: "relative", overflow: "hidden", minWidth: 0 }}>
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -511,13 +536,15 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
 
         {/* Panel Resizer: Right (Copilot) */}
         {!copilotCollapsed && (
-          <PanelResizer
-            side="right"
-            currentWidth={copilotWidth}
-            onResize={handleResizeCopilot}
-            onReset={handleResetCopilotWidth}
-            theme={theme}
-          />
+          <div className="dx-studio-resizer">
+            <PanelResizer
+              side="right"
+              currentWidth={copilotWidth}
+              onResize={handleResizeCopilot}
+              onReset={handleResetCopilotWidth}
+              theme={theme}
+            />
+          </div>
         )}
 
         {/* Right Copilot Rail */}
@@ -542,8 +569,9 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
 
       {/* Bottom Architecture Health & Telemetry Strip */}
       <footer
+        className="dx-studio-footer"
         style={{
-          height: 32,
+          minHeight: 32,
           borderTop: isLight
             ? "1px solid rgba(0, 0, 0, 0.08)"
             : "1px solid rgba(255, 255, 255, 0.1)",
@@ -557,10 +585,12 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
           color: isLight ? "rgba(0, 0, 0, 0.65)" : "rgba(255, 255, 255, 0.5)",
           flexShrink: 0,
           zIndex: 30,
+          overflowX: "auto",
+          gap: 12,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <div className="dx-studio-footer-left" style={{ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
+          <span style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
             <span
               style={{
                 width: 6,
@@ -571,42 +601,22 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
             />
             <span>
               {graphStats.cycles === 0
-                ? "0 CIRCULAR CYCLES [DAG STABLE]"
-                : `${graphStats.cycles} CIRCULAR CYCLE${graphStats.cycles > 1 ? "S" : ""} DETECTED`}
+                ? "0 CIRCLES [DAG STABLE]"
+                : `${graphStats.cycles} CYCLE${graphStats.cycles > 1 ? "S" : ""}`}
             </span>
           </span>
-          <span style={{ color: isLight ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.2)" }}>/</span>
-          <span>MAX FAN-OUT: {graphStats.maxFanOut} CALLERS</span>
-          <span style={{ color: isLight ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.2)" }}>/</span>
-          <span>AVG MCCABE COMPLEXITY: {graphStats.avgComp}</span>
+          <span className="dx-footer-secondary" style={{ color: isLight ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.2)" }}>/</span>
+          <span className="dx-footer-secondary">MAX FAN-OUT: {graphStats.maxFanOut}</span>
+          <span className="dx-footer-secondary" style={{ color: isLight ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.2)" }}>/</span>
+          <span className="dx-footer-secondary">AVG MCCABE: {graphStats.avgComp}</span>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <span>
-            SEARCH:{" "}
-            <span
-              style={{
-                color:
-                  analysisState.graphData?.meta?.search_mode === "semantic"
-                    ? isLight
-                      ? "#09090b"
-                      : "#ffffff"
-                    : isLight
-                      ? "#b45309"
-                      : "#eab308",
-              }}
-            >
-              {analysisState.graphData?.meta?.search_mode === "semantic"
-                ? "PGVECTOR SEMANTIC"
-                : "AST KEYWORD/HYBRID"}
-            </span>
-          </span>
-          <span style={{ color: isLight ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.2)" }}>/</span>
+        <div className="dx-studio-footer-right" style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
           <span>
             INDEX: {graphStats.nodeCount} MODULES ({graphStats.edgeCount} EDGES)
           </span>
-          <span style={{ color: isLight ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.2)" }}>/</span>
-          <span style={{ color: isLight ? "rgba(0,0,0,0.85)" : "rgba(255,255,255,0.7)" }}>
+          <span className="dx-footer-secondary" style={{ color: isLight ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.2)" }}>/</span>
+          <span className="dx-footer-secondary" style={{ color: isLight ? "rgba(0,0,0,0.85)" : "rgba(255,255,255,0.7)" }}>
             FASTAPI + AST
           </span>
         </div>

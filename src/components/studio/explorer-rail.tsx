@@ -49,6 +49,7 @@ export function ExplorerRail({
   if (collapsed) {
     return (
       <aside
+        className="dx-explorer-rail is-collapsed"
         style={{
           width: 44,
           borderRight: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.1)"}`,
@@ -83,6 +84,7 @@ export function ExplorerRail({
 
   return (
     <aside
+      className="dx-explorer-rail"
       style={{
         width,
         borderRight: `1px solid ${isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.1)"}`,
