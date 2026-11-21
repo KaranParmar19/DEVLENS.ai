@@ -829,38 +829,51 @@ button.mf-btn.sm {
   transform: translateY(2px);
 }
 
+/* ── Hero Architectural Spec Strip (Antislop: Borderless, Content-Driven) ──── */
 .mf-hero-ledger {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  border-top: 1px solid var(--mf-line, #d9d9d9);
-  border-bottom: 1px solid var(--mf-line, #d9d9d9);
-  max-width: 680px;
+  display: flex;
+  align-items: flex-start;
+  gap: clamp(24px, 4vw, 40px);
+  max-width: 100%;
+  margin-top: 4px;
+  flex-wrap: wrap;
 }
 
 .mf-hero-ledger-cell {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  padding: 14px 18px 14px 0;
+  gap: 3px;
+  flex: 1 1 180px;
+  min-width: 170px;
 }
 
 .mf-hero-ledger-cell + .mf-hero-ledger-cell {
-  border-left: 1px solid var(--mf-line, #d9d9d9);
-  padding-left: 18px;
+  border-left: none;
+  padding-left: 0;
 }
 
 .mf-hero-ledger-idx {
-  font-size: 0.65rem;
-  letter-spacing: 0.08em;
+  font-family: var(--mf-mono, monospace);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--mf-ink-3, #6e6e6e);
+  color: var(--mf-ink-3, #71717a);
 }
 
 .mf-hero-ledger-val {
-  font-size: 0.875rem;
-  font-weight: 500;
-  letter-spacing: -0.01em;
+  font-family: var(--mf-font, 'Geist', sans-serif);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
   color: var(--mf-ink, #0a0a0a);
+}
+
+.mf-hero-ledger-sub {
+  font-size: 0.8125rem;
+  color: #52525b;
+  line-height: 1.42;
+  margin-top: 1px;
 }
 
 @media (max-width: 900px) {
@@ -894,17 +907,16 @@ button.mf-btn.sm {
     margin: -44px -44px -44px -48px;
   }
   .mf-hero-ledger {
-    grid-template-columns: 1fr;
+    gap: 18px;
   }
   .mf-hero-ledger-cell {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    padding: 11px 0;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0;
   }
   .mf-hero-ledger-cell + .mf-hero-ledger-cell {
     border-left: 0;
-    border-top: 1px solid var(--mf-line, #d9d9d9);
+    border-top: none;
     padding-left: 0;
   }
 }

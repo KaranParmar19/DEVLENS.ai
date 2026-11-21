@@ -1842,19 +1842,22 @@ export function HomePage() {
                 </button>
               </div>
 
-              {/* Swiss Architectural Spec Ledger */}
+              {/* Architectural Technical Specifications (Antislop: Borderless, Content-Driven) */}
               <div className="mf-hero-ledger" role="list" aria-label="Architecture specifications">
                 <div className="mf-hero-ledger-cell" role="listitem">
-                  <span className="mf-hero-ledger-idx mf-mono">01 / PARSER</span>
-                  <span className="mf-hero-ledger-val">8 AST Languages</span>
+                  <span className="mf-hero-ledger-idx">Parser engine</span>
+                  <span className="mf-hero-ledger-val">Tree-sitter WASM</span>
+                  <span className="mf-hero-ledger-sub">TypeScript, Python, Go, Rust, Java, C++</span>
                 </div>
                 <div className="mf-hero-ledger-cell" role="listitem">
-                  <span className="mf-hero-ledger-idx mf-mono">02 / ISOLATION</span>
-                  <span className="mf-hero-ledger-val">Ephemeral Clone · 0 B Stored</span>
+                  <span className="mf-hero-ledger-idx">Security model</span>
+                  <span className="mf-hero-ledger-val">Ephemeral sandbox</span>
+                  <span className="mf-hero-ledger-sub">In-memory clone · Zero code stored on disk</span>
                 </div>
                 <div className="mf-hero-ledger-cell" role="listitem">
-                  <span className="mf-hero-ledger-idx mf-mono">03 / PRECISION</span>
-                  <span className="mf-hero-ledger-val">Exact file:line Citations</span>
+                  <span className="mf-hero-ledger-idx">Code grounding</span>
+                  <span className="mf-hero-ledger-val">Deterministic AST</span>
+                  <span className="mf-hero-ledger-sub">Exact file and line citations for every node</span>
                 </div>
               </div>
             </motion.div>
