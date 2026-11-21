@@ -1803,11 +1803,84 @@ html[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
   height: auto;
   min-height: 520px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   width: 100%;
   padding: 16px 0 24px 0;
   box-sizing: border-box;
+}
+
+.plumbline-bottom-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: clamp(24px, 3.5vw, 36px);
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.plumbline-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: #ffffff;
+  font-family: var(--mf-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.plumbline-nav-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.plumbline-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.plumbline-nav-dots {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.plumbline-dot-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.plumbline-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.plumbline-dot.active {
+  width: 18px;
+  background: #ffffff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
+}
+
+.plumbline-hint {
+  font-size: 0.68rem;
+  color: #71717a;
+  letter-spacing: 0.04em;
 }
 
 .plumbline-grid {

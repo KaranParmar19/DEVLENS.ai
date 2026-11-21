@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
 /* ───────────────────────── Plumbline Math & Swell ───────────────────────── */
@@ -42,6 +42,7 @@ export function PlumblinePipeline() {
   const [activeIdx, setActiveIdx] = useState(0);
   const activeIdxRef = useRef(0);
   const lastStepTimeRef = useRef(0);
+  const lockUntilRef = useRef(0);
   const touchStartYRef = useRef<number | null>(null);
   const touchStartXRef = useRef<number | null>(null);
 
@@ -91,56 +92,50 @@ export function PlumblinePipeline() {
 
       const isDown = e.deltaY > 0;
       const now = performance.now();
-      const timeSinceLast = now - lastStepTimeRef.current;
       const currentIdx = activeIdxRef.current;
       const maxIdx = n - 1;
 
-      const rect = el.getBoundingClientRect();
-      const windowH = window.innerHeight;
-
       if (isDown) {
-        // If at first step and container has not yet reached viewing position,
-        // let the page scroll naturally until it's centered in viewport
-        if (currentIdx === 0 && rect.top > 120) {
-          return;
-        }
-
         if (currentIdx < maxIdx) {
-          // Prevent window scroll while scrubbing steps
+          // Prevent window scroll completely while stepping through
           e.preventDefault();
-          if (timeSinceLast > 350) {
+          if (now - lastStepTimeRef.current > 320) {
             lastStepTimeRef.current = now;
-            setActiveIdx((prev) => Math.min(maxIdx, prev + 1));
+            const nextIdx = currentIdx + 1;
+            setActiveIdx(nextIdx);
+            if (nextIdx === maxIdx) {
+              // Reached final step: lock out window scroll for 700ms so gesture inertia is absorbed
+              lockUntilRef.current = now + 700;
+            }
           }
         } else {
           // At final step (03 Inspect and ask questions)
-          // Absorb immediate momentum for 250ms
-          if (timeSinceLast < 250) {
+          if (now < lockUntilRef.current) {
+            // Still in cooldown from reaching last step - absorb remaining inertia
             e.preventDefault();
           }
-          // After 250ms, natural page scroll resumes down to FAQ
+          // After cooldown expires, a deliberate new downward scroll will pass through naturally to FAQ!
         }
       } else {
         // Scrolling UP
-        // If at last step and bottom of container is scrolled past bottom of viewport,
-        // let page scroll naturally so container comes into view
-        if (currentIdx === maxIdx && rect.bottom < windowH - 120) {
-          return;
-        }
-
         if (currentIdx > 0) {
-          // Prevent window scroll while scrubbing steps
+          // Prevent window scroll completely while stepping back
           e.preventDefault();
-          if (timeSinceLast > 350) {
+          if (now - lastStepTimeRef.current > 320) {
             lastStepTimeRef.current = now;
-            setActiveIdx((prev) => Math.max(0, prev - 1));
+            const prevIdx = currentIdx - 1;
+            setActiveIdx(prevIdx);
+            if (prevIdx === 0) {
+              // Reached first step: lock out window scroll for 700ms
+              lockUntilRef.current = now + 700;
+            }
           }
         } else {
-          // At first step
-          if (timeSinceLast < 250) {
+          // At first step (01 Paste a repo)
+          if (now < lockUntilRef.current) {
             e.preventDefault();
           }
-          // After 250ms, natural page scroll resumes upwards
+          // After cooldown expires, deliberate upward scroll passes through naturally
         }
       }
     };
@@ -486,6 +481,53 @@ export function PlumblinePipeline() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* Sleek Bottom Navigation Controls */}
+        <div className="plumbline-bottom-nav">
+          <button
+            type="button"
+            onClick={() => handleStepClick(Math.max(0, activeIdx - 1))}
+            disabled={activeIdx === 0}
+            className="plumbline-nav-btn"
+            aria-label="Previous step"
+          >
+            <ChevronLeft size={14} />
+            <span>Back</span>
+          </button>
+
+          <div className="plumbline-nav-dots">
+            <div className="plumbline-dot-row">
+              {PLUMBLINE_STEPS.map((_, dotIdx) => (
+                <span
+                  key={dotIdx}
+                  onClick={() => handleStepClick(dotIdx)}
+                  className={`plumbline-dot ${dotIdx === activeIdx ? "active" : ""}`}
+                  aria-label={`Step ${dotIdx + 1}`}
+                />
+              ))}
+            </div>
+            <span className="plumbline-hint mf-mono">
+              Scroll or click to advance · Step {activeIdx + 1} of {n}
+            </span>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button
+              type="button"
+              onClick={() => handleStepClick(Math.min(n - 1, activeIdx + 1))}
+              disabled={activeIdx === n - 1}
+              className="plumbline-nav-btn"
+              aria-label="Next step"
+            >
+              <span>Next</span>
+              <ChevronRight size={14} />
+            </button>
+
+            <Link to="/how-it-works" className="mf-btn inv" style={{ padding: "6px 14px", fontSize: "0.8rem" }}>
+              Full tour <ArrowUpRight size={13} style={{ marginLeft: 4 }} />
+            </Link>
           </div>
         </div>
       </div>

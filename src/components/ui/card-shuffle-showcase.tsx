@@ -113,6 +113,7 @@ export function CardShuffleShowcase({
   const containerRef = useRef<HTMLDivElement>(null);
   const activeCardIdxRef = useRef(0);
   const lastStepTimeRef = useRef(0);
+  const lockUntilRef = useRef(0);
   const touchStartYRef = useRef<number | null>(null);
   const touchStartXRef = useRef<number | null>(null);
 
@@ -142,55 +143,47 @@ export function CardShuffleShowcase({
 
       const isDown = e.deltaY > 0;
       const now = performance.now();
-      const timeSinceLast = now - lastStepTimeRef.current;
       const currentIdx = activeCardIdxRef.current;
       const maxIdx = nodes.length - 1;
 
-      const rect = el.getBoundingClientRect();
-      const windowH = window.innerHeight;
-
       if (isDown) {
-        // If at first card and container top hasn't reached comfortable viewing zone,
-        // allow page to scroll naturally until framed
-        if (currentIdx === 0 && rect.top > 120) {
-          return;
-        }
-
         if (currentIdx < maxIdx) {
           // Lock document scroll while scrubbing cards
           e.preventDefault();
-          if (timeSinceLast > 350) {
+          if (now - lastStepTimeRef.current > 320) {
             lastStepTimeRef.current = now;
-            setActiveCardIdx((prev) => Math.min(maxIdx, prev + 1));
+            const next = currentIdx + 1;
+            setActiveCardIdx(next);
+            if (next === maxIdx) {
+              lockUntilRef.current = now + 700;
+            }
           }
         } else {
           // At final card (Step 04)
-          // Absorb residual gesture momentum for 250ms
-          if (timeSinceLast < 250) {
+          if (now < lockUntilRef.current) {
             e.preventDefault();
           }
-          // Afterwards, natural page scroll resumes down
+          // Deliberate scroll down afterwards continues page scroll naturally
         }
       } else {
         // Scrolling UP
-        // If at last card and bottom is scrolled off screen, allow page scroll until in view
-        if (currentIdx === maxIdx && rect.bottom < windowH - 120) {
-          return;
-        }
-
         if (currentIdx > 0) {
           // Lock document scroll while scrubbing cards
           e.preventDefault();
-          if (timeSinceLast > 350) {
+          if (now - lastStepTimeRef.current > 320) {
             lastStepTimeRef.current = now;
-            setActiveCardIdx((prev) => Math.max(0, prev - 1));
+            const prev = currentIdx - 1;
+            setActiveCardIdx(prev);
+            if (prev === 0) {
+              lockUntilRef.current = now + 700;
+            }
           }
         } else {
           // At first card
-          if (timeSinceLast < 250) {
+          if (now < lockUntilRef.current) {
             e.preventDefault();
           }
-          // Afterwards, natural page scroll resumes up
+          // Deliberate scroll up afterwards continues page scroll naturally
         }
       }
     };
