@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Pill, Reveal, SiteLayout } from "./site-layout";
 import { MorphText } from "@/components/ui/morph-text";
 import { AnimatedPath } from "@/components/ui/animated-path";
+import { TestimonialFanDeck } from "@/components/ui/testimonial-fandeck";
 
 /* ═══ INTERACTIVE DATA FOR FEATURES SHOWCASE ════════════════════════ */
 
@@ -1091,44 +1092,7 @@ export function FeaturesPage() {
                 <span className="mf-mono mf-muted">How AST parsing compares to text search and generic chat</span>
               </div>
 
-              <div style={{ overflowX: "auto" }}>
-                <table className="feat-matrix">
-                  <thead>
-                    <tr>
-                      <th>Task</th>
-                      <th>IDE search / grep</th>
-                      <th>Generic LLM chat</th>
-                      <th>DevLens</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>Cross-file call hierarchy</td>
-                      <td className="mf-muted">Manual file-by-file jumping</td>
-                      <td className="mf-muted">Guesses unindexed imports</td>
-                      <td><strong>Resolved Tree-sitter import graph</strong></td>
-                    </tr>
-                    <tr>
-                      <td>Commit impact check</td>
-                      <td className="mf-muted">Raw line diff only</td>
-                      <td className="mf-muted">No cross-file dependency graph</td>
-                      <td><strong>Direct and indirect dependent check</strong></td>
-                    </tr>
-                    <tr>
-                      <td>Source code citations</td>
-                      <td className="mf-muted">String match only</td>
-                      <td className="mf-muted">Unverified snippets</td>
-                      <td><strong>Clickable file and line links</strong></td>
-                    </tr>
-                    <tr>
-                      <td>New engineer onboarding</td>
-                      <td className="mf-muted">Reading folders by hand</td>
-                      <td className="mf-muted">Outdated README summaries</td>
-                      <td><strong>Generated Markdown overview</strong></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+              <TestimonialFanDeck />
             </div>
           </Reveal>
         </div>

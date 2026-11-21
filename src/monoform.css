@@ -3627,6 +3627,36 @@ html[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
   color: var(--mf-ink);
 }
 
+/* ── Testimonial & Comparison Fan Deck ──────────────────────────────── */
+.fandeck-root {
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.fandeck-track {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  flex-direction: row;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 720px) {
+  .fandeck-track {
+    justify-content: flex-start !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scroll-snap-type: x mandatory !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    gap: 16px !important;
+  }
+}
+
 @media (max-width: 1024px) {
   .feat-hero-grid,
   .feat-split-01,
