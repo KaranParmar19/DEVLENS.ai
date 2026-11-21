@@ -749,8 +749,7 @@ export function Volvelle(props: VolvelleProps) {
   const isDesktop = size.w >= 920;
 
   const stageHeight = isPhone ? 550 : isTablet ? 640 : 610;
-  const responsiveEdge =
-    props.edge ?? (isPhone ? clamp(Math.round(size.w * 0.045), 14, 20) : isTablet ? 24 : 32);
+  const responsiveEdge = props.edge ?? 0;
 
   // Fluid scale factor for the wheel & cards across any viewport width
   const scaleFactor = isPhone
@@ -789,7 +788,7 @@ export function Volvelle(props: VolvelleProps) {
   const ink = isDark ? "#FFFFFF" : "#0A0A0A";
   const mutedInk = isDark ? "#A1A1AA" : "#525252";
   const borderLine = isDark ? "rgba(255,255,255,0.14)" : "#E5E5E5";
-  const ground = isDark ? "#0A0A0D" : "#FFFFFF";
+  const ground = isDark ? "var(--mf-bg, #0A0A0A)" : "var(--mf-base, #FFFFFF)";
   const scaleColor = isDark ? "rgba(255,255,255,0.28)" : "rgba(10,10,10,0.24)";
   const showScale = props.showScale ?? true;
   const showSteppers = props.showSteppers ?? true;
@@ -918,16 +917,15 @@ export function Volvelle(props: VolvelleProps) {
   const ticks = showScale ? tickSet(step) : [];
   const notchTop = `calc(${dialConfig.top}% + ${reach - ringR}px)`;
 
-  // Responsive slot for the architectural diagram inside each iris-bloom layer
+  // Responsive slot for the architectural diagram inside each iris-bloom layer (borderless)
   const diagramSlotStyle: React.CSSProperties = isDesktop
     ? {
         position: "absolute",
         left: "44%",
         right: responsiveEdge,
-        top: responsiveEdge,
+        top: 0,
         height: "48%",
-        paddingLeft: 20,
-        borderLeft: `1px solid ${borderLine}`,
+        paddingLeft: 0,
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "flex-end",
@@ -941,7 +939,6 @@ export function Volvelle(props: VolvelleProps) {
           top: 205,
           height: 158,
           paddingTop: 10,
-          borderTop: `1px solid ${borderLine}`,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -954,7 +951,6 @@ export function Volvelle(props: VolvelleProps) {
           top: 192,
           height: 122,
           paddingTop: 8,
-          borderTop: `1px solid ${borderLine}`,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -1037,20 +1033,16 @@ export function Volvelle(props: VolvelleProps) {
         width: "100%",
         height: stageHeight,
         overflow: "hidden",
-        background: ground,
-        borderRadius: isPhone ? 16 : 20,
-        border: isDark
-          ? "1px solid rgba(255,255,255,0.16)"
-          : "1px solid var(--mf-line, #d9d9d9)",
-        boxShadow: isDark
-          ? "0 32px 80px -28px rgba(0,0,0,0.65)"
-          : "0 20px 56px -28px rgba(0,0,0,0.08)",
+        background: "transparent",
+        borderRadius: 0,
+        border: "none",
+        boxShadow: "none",
         outline: "none",
         userSelect: "none",
         WebkitUserSelect: "none",
         touchAction: "pan-y",
         cursor: "grab",
-        transition: "background-color 0.3s ease, border-color 0.3s ease, height 0.25s ease",
+        transition: "height 0.25s ease",
         ...props.style,
       }}
     >
