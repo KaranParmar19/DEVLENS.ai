@@ -791,7 +791,6 @@ export function Volvelle(props: VolvelleProps) {
   const ground = isDark ? "var(--mf-bg, #0A0A0A)" : "var(--mf-base, #FFFFFF)";
   const scaleColor = isDark ? "rgba(255,255,255,0.28)" : "rgba(10,10,10,0.24)";
   const showScale = props.showScale ?? true;
-  const showSteppers = props.showSteppers ?? true;
   const linkLabel = props.linkLabel || "Open in Studio";
 
   const { w, h, reach, step, ringR } = dialShape(dialConfig, scaleFactor);
@@ -1445,95 +1444,6 @@ export function Volvelle(props: VolvelleProps) {
           />
         ))}
       </div>
-
-      {/* 6. Bottom Left/Right Stepper Controls (44x44px accessible touch targets) */}
-      {showSteppers && (
-        <div
-          style={{
-            position: "absolute",
-            left: responsiveEdge,
-            right: responsiveEdge,
-            bottom: isPhone ? 14 : 22,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            zIndex: 7,
-            pointerEvents: "none",
-          }}
-        >
-          <motion.button
-            type="button"
-            aria-label="Previous inspection lens"
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={() => choose(pickRef.current - 1)}
-            initial={false}
-            whileHover={still ? undefined : { scale: 1.06 }}
-            whileTap={still ? undefined : { scale: 0.95 }}
-            transition={{ type: "spring", stiffness: 300, damping: 22 }}
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 10,
-              border: isDark
-                ? "1px solid rgba(255,255,255,0.24)"
-                : "1px solid #D4D4D4",
-              background: isDark ? "#141419" : "#FFFFFF",
-              color: ink,
-              display: "grid",
-              placeItems: "center",
-              cursor: "pointer",
-              padding: 0,
-              pointerEvents: "auto",
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-              <path
-                d="M8.5 2.5 4 7l4.5 4.5"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </motion.button>
-
-          <motion.button
-            type="button"
-            aria-label="Next inspection lens"
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={() => choose(pickRef.current + 1)}
-            initial={false}
-            whileHover={still ? undefined : { scale: 1.06 }}
-            whileTap={still ? undefined : { scale: 0.95 }}
-            transition={{ type: "spring", stiffness: 300, damping: 22 }}
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 10,
-              border: isDark
-                ? "1px solid rgba(255,255,255,0.24)"
-                : "1px solid #D4D4D4",
-              background: isDark ? "#141419" : "#FFFFFF",
-              color: ink,
-              display: "grid",
-              placeItems: "center",
-              cursor: "pointer",
-              padding: 0,
-              pointerEvents: "auto",
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-              <path
-                d="M5.5 2.5 10 7l-4.5 4.5"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </motion.button>
-        </div>
-      )}
     </div>
   );
 }
