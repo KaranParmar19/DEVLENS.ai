@@ -1,6 +1,5 @@
 import React, { useRef, useState, useEffect } from "react";
-import { motion, AnimatePresence } from "motion/react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { motion, useScroll, useTransform, useSpring, AnimatePresence } from "motion/react";
 
 export interface StoryNode {
   step: string;
@@ -22,85 +21,6 @@ export interface CardShuffleShowcaseProps {
   className?: string;
 }
 
-function getCardTransform(idx: number, activeIdx: number, isMobile: boolean) {
-  const diff = idx - activeIdx;
-
-  if (diff === 0) {
-    // Current active hero card: front and center
-    return {
-      x: 0,
-      y: 0,
-      scale: isMobile ? 1.0 : 1.05,
-      rotate: 0,
-      opacity: 1,
-      zIndex: 35,
-    };
-  }
-
-  // Cards behind in upcoming sequence (diff > 0)
-  if (diff === 1) {
-    return {
-      x: isMobile ? 20 : 38,
-      y: isMobile ? 14 : 22,
-      scale: isMobile ? 0.94 : 0.95,
-      rotate: 2.5,
-      opacity: 0.9,
-      zIndex: 25,
-    };
-  }
-  if (diff === 2) {
-    return {
-      x: isMobile ? 36 : 72,
-      y: isMobile ? 26 : 40,
-      scale: isMobile ? 0.88 : 0.90,
-      rotate: 5,
-      opacity: 0.65,
-      zIndex: 18,
-    };
-  }
-  if (diff >= 3) {
-    return {
-      x: isMobile ? 50 : 100,
-      y: isMobile ? 36 : 56,
-      scale: isMobile ? 0.82 : 0.84,
-      rotate: 7.5,
-      opacity: 0.4,
-      zIndex: 12,
-    };
-  }
-
-  // Cards tucked behind that were already inspected (diff < 0)
-  if (diff === -1) {
-    return {
-      x: isMobile ? -22 : -42,
-      y: isMobile ? -14 : -20,
-      scale: isMobile ? 0.94 : 0.95,
-      rotate: -3,
-      opacity: 0.85,
-      zIndex: 24,
-    };
-  }
-  if (diff === -2) {
-    return {
-      x: isMobile ? -38 : -76,
-      y: isMobile ? -26 : -36,
-      scale: isMobile ? 0.88 : 0.89,
-      rotate: -5.5,
-      opacity: 0.6,
-      zIndex: 16,
-    };
-  }
-  // diff <= -3
-  return {
-    x: isMobile ? -50 : -102,
-    y: isMobile ? -36 : -48,
-    scale: isMobile ? 0.82 : 0.83,
-    rotate: -7.5,
-    opacity: 0.35,
-    zIndex: 10,
-  };
-}
-
 export function CardShuffleShowcase({
   chains,
   initialChainIndex = 0,
@@ -109,13 +29,6 @@ export function CardShuffleShowcase({
   const [chainIdx] = useState(initialChainIndex);
   const [activeCardIdx, setActiveCardIdx] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
-
-  const containerRef = useRef<HTMLDivElement>(null);
-  const activeCardIdxRef = useRef(0);
-  const lastStepTimeRef = useRef(0);
-  const lockUntilRef = useRef(0);
-  const touchStartYRef = useRef<number | null>(null);
-  const touchStartXRef = useRef<number | null>(null);
 
   useEffect(() => {
     const handleResize = () => {
@@ -126,111 +39,85 @@ export function CardShuffleShowcase({
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Link scroll position through a smooth 280vh track
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start start", "end end"],
+  });
+
+  // Silky smooth spring physics
+  const smoothProgress = useSpring(scrollYProgress, {
+    stiffness: 140,
+    damping: 28,
+    mass: 0.3,
+  });
+
+  // Spatial offsets for the 2x2 grid and shuffles
+  const xSpan = isMobile ? 115 : 270;
+  const ySpan = isMobile ? 95 : 155;
+
+  // Large, highly readable scale factors across all stages
+  const fullCoverScale = isMobile ? 1.05 : 1.15;
+  const gridScale = isMobile ? 0.78 : 0.88;
+  const stackScale = isMobile ? 0.82 : 0.92;
+
+  // 12 Keyframe points:
+  // 0.00 — 0.06 : Initial state: single card covering full screen at native resolution (zero blur)
+  // 0.06 — 0.22 : Trigger 1: scale down & reposition to 2x2 grid
+  // 0.22 — 0.28 : Rest gap in 2x2 grid
+  // 0.28 — 0.44 : Trigger 2: 2 cards slide vertically over 2 static cards (layered shuffle)
+  // 0.44 — 0.50 : Rest gap in vertical shuffle
+  // 0.50 — 0.66 : Trigger 3: move toward center (2 above, 2 below)
+  // 0.66 — 0.72 : Rest gap in center convergence
+  // 0.72 — 0.84 : Trigger 4: collapse into center & stack behind by layer order
+  // 0.84 — 0.90 : Rest gap in stacked deck
+  // 0.90 — 0.96 : Trigger 5: topmost card scales up to full-screen resolution
+  // 0.96 — 1.00 : Smoothly returns to default size as page continues scrolling down
+  const P = [0, 0.06, 0.22, 0.28, 0.44, 0.50, 0.66, 0.72, 0.84, 0.90, 0.96, 1.0];
+
+  /* ── Card 0: Topmost hero -> Top-Left in grid -> Slides DOWN over Card 2 -> Center below -> Stack top -> Scales up -> Settles to default ── */
+  const c0_x = useTransform(smoothProgress, P, [0, 0, -xSpan, -xSpan, -xSpan, -xSpan, -18, -18, 0, 0, 0, 0]);
+  const c0_y = useTransform(smoothProgress, P, [0, 0, -ySpan, -ySpan, ySpan, ySpan, ySpan * 0.42, ySpan * 0.42, -8, -8, 0, 0]);
+  const c0_s = useTransform(smoothProgress, P, [fullCoverScale, fullCoverScale, gridScale, gridScale, 0.90, 0.90, 0.88, 0.88, stackScale, stackScale, fullCoverScale, stackScale]);
+  const c0_r = useTransform(smoothProgress, P, [0, 0, 0, 0, -2, -2, 0, 0, -3, -3, 0, 0]);
+  const c0_o = useTransform(smoothProgress, P, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]);
+  const c0_z = useTransform(smoothProgress, P, [35, 35, 20, 20, 26, 26, 26, 26, 30, 30, 35, 20]);
+
+  /* ── Card 1: Top-Right in grid -> Static in Trigger 2 while Card 3 slides over -> Center above -> Stack middle -> Tucked behind ── */
+  const c1_x = useTransform(smoothProgress, P, [0, 0, xSpan, xSpan, xSpan, xSpan, 18, 18, 0, 0, 0, 0]);
+  const c1_y = useTransform(smoothProgress, P, [0, 0, -ySpan, -ySpan, -ySpan, -ySpan, -ySpan * 0.42, -ySpan * 0.42, -3, -3, 0, 0]);
+  const c1_s = useTransform(smoothProgress, P, [gridScale, gridScale, gridScale, gridScale, 0.82, 0.82, 0.86, 0.86, stackScale - 0.02, stackScale - 0.02, 0.88, 0.88]);
+  const c1_r = useTransform(smoothProgress, P, [0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 0, 0]);
+  const c1_o = useTransform(smoothProgress, P, [0, 0, 1, 1, 0.65, 0.65, 0.85, 0.85, 1, 1, 0, 0]);
+  const c1_z = useTransform(smoothProgress, P, [10, 10, 15, 15, 10, 10, 15, 15, 25, 25, 10, 10]);
+
+  /* ── Card 2: Bottom-Left in grid -> Static in Trigger 2 while Card 0 slides over -> Center below -> Stack middle -> Tucked behind ── */
+  const c2_x = useTransform(smoothProgress, P, [0, 0, -xSpan, -xSpan, -xSpan, -xSpan, -18, -18, 0, 0, 0, 0]);
+  const c2_y = useTransform(smoothProgress, P, [0, 0, ySpan, ySpan, ySpan, ySpan, ySpan * 0.42, ySpan * 0.42, 3, 3, 0, 0]);
+  const c2_s = useTransform(smoothProgress, P, [gridScale, gridScale, gridScale, gridScale, 0.82, 0.82, 0.84, 0.84, stackScale - 0.04, stackScale - 0.04, 0.88, 0.88]);
+  const c2_r = useTransform(smoothProgress, P, [0, 0, 0, 0, 0, 0, -1, -1, -1, -1, 0, 0]);
+  const c2_o = useTransform(smoothProgress, P, [0, 0, 1, 1, 0.65, 0.65, 0.85, 0.85, 1, 1, 0, 0]);
+  const c2_z = useTransform(smoothProgress, P, [10, 10, 15, 15, 10, 10, 15, 15, 20, 20, 10, 10]);
+
+  /* ── Card 3: Bottom-Right in grid -> Slides UP over Card 1 -> Center above -> Stack base -> Tucked behind ── */
+  const c3_x = useTransform(smoothProgress, P, [0, 0, xSpan, xSpan, xSpan, xSpan, 18, 18, 0, 0, 0, 0]);
+  const c3_y = useTransform(smoothProgress, P, [0, 0, ySpan, ySpan, -ySpan, -ySpan, -ySpan * 0.42, -ySpan * 0.42, 8, 8, 0, 0]);
+  const c3_s = useTransform(smoothProgress, P, [gridScale, gridScale, gridScale, gridScale, 0.90, 0.90, 0.88, 0.88, stackScale - 0.06, stackScale - 0.06, 0.88, 0.88]);
+  const c3_r = useTransform(smoothProgress, P, [0, 0, 0, 0, 2, 2, 0, 0, 3, 3, 0, 0]);
+  const c3_o = useTransform(smoothProgress, P, [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0]);
+  const c3_z = useTransform(smoothProgress, P, [10, 10, 15, 15, 26, 26, 25, 25, 15, 15, 10, 10]);
+
+  const cardTransforms = [
+    { x: c0_x, y: c0_y, r: c0_r, s: c0_s, o: c0_o, z: c0_z },
+    { x: c1_x, y: c1_y, r: c1_r, s: c1_s, o: c1_o, z: c1_z },
+    { x: c2_x, y: c2_y, r: c2_r, s: c2_s, o: c2_o, z: c2_z },
+    { x: c3_x, y: c3_y, r: c3_r, s: c3_s, o: c3_o, z: c3_z },
+  ];
+
   const currentChain = chains[chainIdx] || chains[0];
   const nodes = currentChain.nodes.slice(0, 4);
-
-  useEffect(() => {
-    activeCardIdxRef.current = activeCardIdx;
-  }, [activeCardIdx]);
-
-  // Contained wheel and touch events: scrubs cards in place without scrolling window simultaneously
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
-    const onWheel = (e: WheelEvent) => {
-      if (Math.abs(e.deltaY) < 14) return;
-
-      const isDown = e.deltaY > 0;
-      const now = performance.now();
-      const currentIdx = activeCardIdxRef.current;
-      const maxIdx = nodes.length - 1;
-
-      if (isDown) {
-        if (currentIdx < maxIdx) {
-          // Lock document scroll while scrubbing cards
-          e.preventDefault();
-          if (now - lastStepTimeRef.current > 320) {
-            lastStepTimeRef.current = now;
-            const next = currentIdx + 1;
-            setActiveCardIdx(next);
-            if (next === maxIdx) {
-              lockUntilRef.current = now + 700;
-            }
-          }
-        } else {
-          // At final card (Step 04)
-          if (now < lockUntilRef.current) {
-            e.preventDefault();
-          }
-          // Deliberate scroll down afterwards continues page scroll naturally
-        }
-      } else {
-        // Scrolling UP
-        if (currentIdx > 0) {
-          // Lock document scroll while scrubbing cards
-          e.preventDefault();
-          if (now - lastStepTimeRef.current > 320) {
-            lastStepTimeRef.current = now;
-            const prev = currentIdx - 1;
-            setActiveCardIdx(prev);
-            if (prev === 0) {
-              lockUntilRef.current = now + 700;
-            }
-          }
-        } else {
-          // At first card
-          if (now < lockUntilRef.current) {
-            e.preventDefault();
-          }
-          // Deliberate scroll up afterwards continues page scroll naturally
-        }
-      }
-    };
-
-    const onTouchStart = (e: TouchEvent) => {
-      if (e.touches.length > 0) {
-        touchStartYRef.current = e.touches[0].clientY;
-        touchStartXRef.current = e.touches[0].clientX;
-      }
-    };
-
-    const onTouchEnd = (e: TouchEvent) => {
-      if (touchStartYRef.current === null || touchStartXRef.current === null) return;
-      const touch = e.changedTouches[0];
-      const deltaY = touchStartYRef.current - touch.clientY;
-      const deltaX = touchStartXRef.current - touch.clientX;
-      touchStartYRef.current = null;
-      touchStartXRef.current = null;
-
-      if (Math.abs(deltaY) > 40 || Math.abs(deltaX) > 40) {
-        const isNext = deltaY > 40 || deltaX > 40;
-        const currentIdx = activeCardIdxRef.current;
-        const maxIdx = nodes.length - 1;
-
-        if (isNext && currentIdx < maxIdx) {
-          setActiveCardIdx(currentIdx + 1);
-        } else if (!isNext && currentIdx > 0) {
-          setActiveCardIdx(currentIdx - 1);
-        }
-      }
-    };
-
-    el.addEventListener("wheel", onWheel, { passive: false });
-    el.addEventListener("touchstart", onTouchStart, { passive: true });
-    el.addEventListener("touchend", onTouchEnd, { passive: true });
-
-    return () => {
-      el.removeEventListener("wheel", onWheel);
-      el.removeEventListener("touchstart", onTouchStart);
-      el.removeEventListener("touchend", onTouchEnd);
-    };
-  }, [nodes.length]);
-
-  const selectCard = (idx: number) => {
-    setActiveCardIdx(idx);
-    lastStepTimeRef.current = performance.now();
-  };
 
   return (
     <div
@@ -238,380 +125,207 @@ export function CardShuffleShowcase({
       className={`card-shuffle-container ${className}`}
       style={{
         position: "relative",
-        height: "clamp(560px, 80vh, 680px)",
+        height: "280vh",
         width: "100%",
-        marginTop: "clamp(24px, 4vw, 40px)",
-        marginBottom: "clamp(24px, 4vw, 40px)",
-        borderRadius: 28,
-        border: "1px solid rgba(10, 10, 10, 0.08)",
-        background: "linear-gradient(180deg, #fafafa 0%, #ffffff 100%)",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: isMobile ? "20px 14px" : "28px 24px",
-        boxSizing: "border-box",
-        overflow: "hidden",
+        marginTop: 0,
+        marginBottom: 0,
+        overflow: "visible",
       }}
-      aria-label="Interactive 4-Card Story Pipeline"
     >
-      {/* Subtle Ambient Radial Backdrop */}
+      {/* Sticky Viewport Stage: Takes over the ENTIRE page for the animation duration */}
       <div
-        aria-hidden="true"
+        className="card-shuffle-sticky"
         style={{
-          position: "absolute",
-          inset: 0,
-          background: "radial-gradient(ellipse 65% 55% at 50% 50%, rgba(10, 10, 10, 0.02), transparent 70%)",
-          pointerEvents: "none",
-        }}
-      />
-
-      {/* ── Top Control Bar: Chain Title & 4-Step Pill Selectors ── */}
-      <div
-        style={{
-          position: "relative",
-          zIndex: 40,
+          position: "sticky",
+          top: 0,
+          left: 0,
           width: "100%",
-          maxWidth: 960,
-          display: "flex",
-          flexDirection: isMobile ? "column" : "row",
-          alignItems: isMobile ? "flex-start" : "center",
-          justifyContent: "space-between",
-          gap: 12,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              backgroundColor: "#10b981",
-              boxShadow: "0 0 10px rgba(16, 185, 129, 0.5)",
-            }}
-          />
-          <span
-            className="mf-mono"
-            style={{
-              fontSize: "0.8rem",
-              fontWeight: 600,
-              letterSpacing: "0.06em",
-              color: "var(--mf-ink-2)",
-              textTransform: "uppercase",
-            }}
-          >
-            {currentChain.trigger}
-          </span>
-        </div>
-
-        {/* 4 Interactive Step Selector Pills */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            flexWrap: "wrap",
-          }}
-        >
-          {nodes.map((hop, idx) => {
-            const isActive = idx === activeCardIdx;
-            return (
-              <button
-                key={hop.step}
-                type="button"
-                onClick={() => selectCard(idx)}
-                style={{
-                  padding: "5px 12px",
-                  borderRadius: 999,
-                  border: isActive ? "1px solid #0a0a0a" : "1px solid rgba(10, 10, 10, 0.08)",
-                  backgroundColor: isActive ? "#0a0a0a" : "#ffffff",
-                  color: isActive ? "#ffffff" : "var(--mf-ink-2)",
-                  fontFamily: "var(--mf-mono)",
-                  fontSize: isMobile ? "0.68rem" : "0.74rem",
-                  fontWeight: isActive ? 600 : 500,
-                  cursor: "pointer",
-                  transition: "all 0.2s ease",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                }}
-              >
-                <span>{hop.step}</span>
-                <span>{hop.role.split(" ")[0]}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ── Central 3D Card Shuffle Arena ── */}
-      <div
-        className="card-shuffle-arena"
-        style={{
-          position: "relative",
-          width: "100%",
-          flex: 1,
+          height: "100vh",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          perspective: 1200,
-          overflow: "visible",
-          margin: "12px 0",
+          overflow: "hidden",
+          backgroundColor: "#ffffff",
+          zIndex: 25,
         }}
       >
-        {/* Subtle Stage Boundary Guide */}
+        {/* Subtle Ambient Radial Backdrop */}
         <div
           aria-hidden="true"
           style={{
             position: "absolute",
-            width: "min(92vw, 920px)",
-            height: isMobile ? "300px" : "340px",
-            borderRadius: 32,
-            border: "1px dashed rgba(10, 10, 10, 0.07)",
-            background: "radial-gradient(ellipse 70% 60% at 50% 50%, rgba(10, 10, 10, 0.012), transparent)",
+            inset: 0,
+            background: "radial-gradient(ellipse 65% 55% at 50% 50%, rgba(255, 255, 255, 0.04), transparent 70%)",
             pointerEvents: "none",
           }}
         />
 
-        {/* 4 Shuffling Story Cards */}
-        <AnimatePresence mode="popLayout">
-          {nodes.map((hop, idx) => {
-            const isSelected = idx === activeCardIdx;
-            const targetTransform = getCardTransform(idx, activeCardIdx, isMobile);
+        {/* ── Central 3D Card Shuffle Arena (Full Page) ────────────────────────── */}
+        <div
+          className="card-shuffle-arena"
+          style={{
+            position: "relative",
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            perspective: 1200,
+            overflow: "visible",
+          }}
+        >
+          {/* Subtle Stage Boundary Guide */}
+          <div
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              width: "min(92vw, 1040px)",
+              height: isMobile ? "380px" : "480px",
+              borderRadius: 36,
+              border: "1px dashed rgba(10, 10, 10, 0.07)",
+              background: "radial-gradient(ellipse 70% 60% at 50% 50%, rgba(10, 10, 10, 0.012), transparent)",
+              pointerEvents: "none",
+            }}
+          />
 
-            return (
-              <motion.div
-                key={`${currentChain.id}-${hop.name}`}
-                className="card-shuffle-item"
-                onClick={() => selectCard(idx)}
-                animate={{
-                  x: targetTransform.x,
-                  y: targetTransform.y,
-                  rotate: targetTransform.rotate,
-                  scale: targetTransform.scale,
-                  opacity: targetTransform.opacity,
-                  zIndex: targetTransform.zIndex,
-                }}
-                transition={{
-                  type: "spring",
-                  stiffness: 280,
-                  damping: 28,
-                  mass: 0.4,
-                }}
-                style={{
-                  position: "absolute",
-                  width: isMobile ? "min(90vw, 360px)" : "min(88vw, 520px)",
-                  height: isMobile ? 260 : 310,
-                  cursor: "pointer",
-                  WebkitFontSmoothing: "antialiased",
-                  MozOsxFontSmoothing: "grayscale",
-                  textRendering: "optimizeLegibility",
-                  transformStyle: "preserve-3d",
-                  backfaceVisibility: "hidden",
-                }}
-                whileHover={{
-                  scale: isSelected ? 1.02 : targetTransform.scale * 1.02,
-                  transition: { duration: 0.16 },
-                }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <div
+          {/* 4 Shuffling Story Cards */}
+          <AnimatePresence mode="popLayout">
+            {nodes.map((hop, idx) => {
+              const transform = cardTransforms[idx];
+              const isSelected = idx === activeCardIdx;
+
+              return (
+                <motion.div
+                  key={`${currentChain.id}-${hop.name}`}
+                  className="card-shuffle-item"
+                  onClick={() => setActiveCardIdx(idx)}
                   style={{
-                    width: "100%",
-                    height: "100%",
-                    borderRadius: 24,
-                    padding: isMobile ? "18px 20px" : "24px 28px",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between",
-                    boxSizing: "border-box",
-                    backgroundColor: isSelected ? "#0a0a0a" : "#ffffff",
-                    color: isSelected ? "#ffffff" : "#0a0a0a",
-                    border: isSelected ? "1.5px solid #0a0a0a" : "1px solid #e5e5e5",
-                    boxShadow: isSelected
-                      ? "0 32px 72px -16px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.12) inset"
-                      : "0 18px 40px -12px rgba(0, 0, 0, 0.10), 0 2px 6px rgba(0, 0, 0, 0.03)",
-                    transition:
-                      "background-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease",
-                    userSelect: "none",
+                    position: "absolute",
+                    width: isMobile ? "min(92vw, 380px)" : "min(90vw, 540px)",
+                    height: isMobile ? 250 : 310,
+                    x: transform.x,
+                    y: transform.y,
+                    rotate: transform.r,
+                    scale: transform.s,
+                    opacity: transform.o,
+                    zIndex: transform.z,
+                    cursor: "pointer",
+                    WebkitFontSmoothing: "antialiased",
+                    MozOsxFontSmoothing: "grayscale",
+                    textRendering: "optimizeLegibility",
+                    transformStyle: "preserve-3d",
+                    backfaceVisibility: "hidden",
                   }}
+                  whileHover={{
+                    scale: 1.025,
+                    transition: { duration: 0.18 },
+                  }}
+                  whileTap={{ scale: 0.98 }}
                 >
-                  {/* Top Row: Step Tag + Role Pill */}
                   <div
                     style={{
+                      width: "100%",
+                      height: "100%",
+                      borderRadius: 24,
+                      padding: isMobile ? "20px 22px" : "26px 30px",
                       display: "flex",
+                      flexDirection: "column",
                       justifyContent: "space-between",
-                      alignItems: "center",
-                      fontFamily: "var(--mf-mono)",
-                      fontSize: isMobile ? "0.72rem" : "0.78rem",
-                      letterSpacing: "0.08em",
-                      color: isSelected ? "#ffffff" : "var(--mf-ink-3)",
+                      boxSizing: "border-box",
+                      backgroundColor: isSelected ? "#0a0a0a" : "#ffffff",
+                      color: isSelected ? "#ffffff" : "#0a0a0a",
+                      border: isSelected ? "1.5px solid #0a0a0a" : "1px solid #e5e5e5",
+                      boxShadow: isSelected
+                        ? "0 36px 80px -16px rgba(0, 0, 0, 0.38), 0 0 0 1px rgba(255, 255, 255, 0.15) inset"
+                        : "0 22px 48px -14px rgba(0, 0, 0, 0.11), 0 2px 8px rgba(0, 0, 0, 0.03)",
+                      transition:
+                        "background-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease",
+                      userSelect: "none",
                     }}
                   >
-                    <span style={{ fontWeight: 600 }}>Step {hop.step}</span>
-                    <span
-                      style={{
-                        padding: "4px 12px",
-                        borderRadius: 999,
-                        backgroundColor: isSelected ? "rgba(255, 255, 255, 0.12)" : "#f5f5f5",
-                        color: isSelected ? "#ffffff" : "var(--mf-ink-2)",
-                        fontWeight: 500,
-                        fontSize: isMobile ? "0.68rem" : "0.75rem",
-                      }}
-                    >
-                      {hop.role}
-                    </span>
-                  </div>
-
-                  {/* Middle: Name & Plain-English Description */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {/* Top Row: Step Tag + Role Pill */}
                     <div
                       style={{
-                        fontSize: isMobile ? "1.15rem" : "1.38rem",
-                        fontWeight: 600,
-                        letterSpacing: "-0.025em",
-                        lineHeight: 1.25,
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        fontFamily: "var(--mf-mono)",
+                        fontSize: isMobile ? "0.72rem" : "0.78rem",
+                        letterSpacing: "0.08em",
+                        color: isSelected ? "#ffffff" : "var(--mf-ink-3)",
                       }}
                     >
-                      {hop.name}
+                      <span style={{ fontWeight: 600 }}>Step {hop.step}</span>
+                      <span
+                        style={{
+                          padding: "4px 12px",
+                          borderRadius: 999,
+                          backgroundColor: isSelected ? "rgba(255, 255, 255, 0.12)" : "#f5f5f5",
+                          color: isSelected ? "#ffffff" : "var(--mf-ink-2)",
+                          fontWeight: 500,
+                          fontSize: isMobile ? "0.68rem" : "0.75rem",
+                        }}
+                      >
+                        {hop.role}
+                      </span>
                     </div>
-                    <p
+
+                    {/* Middle: Name & Plain-English Description */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      <div
+                        style={{
+                          fontSize: isMobile ? "1.2rem" : "1.45rem",
+                          fontWeight: 600,
+                          letterSpacing: "-0.025em",
+                          lineHeight: 1.25,
+                        }}
+                      >
+                        {hop.name}
+                      </div>
+                      <p
+                        style={{
+                          margin: 0,
+                          fontSize: isMobile ? "0.875rem" : "1.0rem",
+                          lineHeight: 1.5,
+                          color: isSelected ? "rgba(255, 255, 255, 0.85)" : "var(--mf-ink-2)",
+                        }}
+                      >
+                        {hop.note}
+                      </p>
+                    </div>
+
+                    {/* Bottom: Verified Code Citation Tag */}
+                    <div
                       style={{
-                        margin: 0,
-                        fontSize: isMobile ? "0.85rem" : "0.96rem",
-                        lineHeight: 1.5,
-                        color: isSelected ? "rgba(255, 255, 255, 0.85)" : "var(--mf-ink-2)",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        fontFamily: "var(--mf-mono)",
+                        fontSize: isMobile ? "0.72rem" : "0.8rem",
+                        paddingTop: 12,
+                        borderTop: isSelected ? "1px solid rgba(255, 255, 255, 0.12)" : "1px solid #f0f0f0",
+                        letterSpacing: "0.04em",
                       }}
                     >
-                      {hop.note}
-                    </p>
+                      <span style={{ color: isSelected ? "rgba(255, 255, 255, 0.5)" : "var(--mf-ink-3)" }}>
+                        Source line
+                      </span>
+                      <strong
+                        style={{
+                          color: isSelected ? "#ffffff" : "var(--mf-ink)",
+                          fontWeight: 600,
+                          fontSize: isMobile ? "0.78rem" : "0.86rem",
+                        }}
+                      >
+                        {hop.line}
+                      </strong>
+                    </div>
                   </div>
-
-                  {/* Bottom: Verified Code Citation Tag */}
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      fontFamily: "var(--mf-mono)",
-                      fontSize: isMobile ? "0.72rem" : "0.8rem",
-                      paddingTop: 12,
-                      borderTop: isSelected ? "1px solid rgba(255, 255, 255, 0.12)" : "1px solid #f0f0f0",
-                      letterSpacing: "0.04em",
-                    }}
-                  >
-                    <span style={{ color: isSelected ? "rgba(255, 255, 255, 0.5)" : "var(--mf-ink-3)" }}>
-                      Source line
-                    </span>
-                    <strong
-                      style={{
-                        color: isSelected ? "#ffffff" : "var(--mf-ink)",
-                        fontWeight: 600,
-                        fontSize: isMobile ? "0.78rem" : "0.86rem",
-                      }}
-                    >
-                      {hop.line}
-                    </strong>
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
-      </div>
-
-      {/* ── Bottom Controls: Prev / Next Buttons & Dot Indicators ── */}
-      <div
-        style={{
-          position: "relative",
-          zIndex: 40,
-          width: "100%",
-          maxWidth: 960,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          paddingTop: 8,
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => selectCard(Math.max(0, activeCardIdx - 1))}
-          disabled={activeCardIdx === 0}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 4,
-            padding: "6px 12px",
-            borderRadius: 999,
-            border: "1px solid rgba(10, 10, 10, 0.1)",
-            backgroundColor: "#ffffff",
-            color: activeCardIdx === 0 ? "rgba(10, 10, 10, 0.25)" : "var(--mf-ink)",
-            cursor: activeCardIdx === 0 ? "not-allowed" : "pointer",
-            fontFamily: "var(--mf-mono)",
-            fontSize: "0.75rem",
-            fontWeight: 500,
-            transition: "all 0.2s ease",
-          }}
-          aria-label="Previous step"
-        >
-          <ChevronLeft size={14} />
-          <span>Back</span>
-        </button>
-
-        {/* Center: Dot Indicators and Micro-Hint */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            {nodes.map((_, dotIdx) => (
-              <span
-                key={dotIdx}
-                onClick={() => selectCard(dotIdx)}
-                style={{
-                  width: dotIdx === activeCardIdx ? 18 : 6,
-                  height: 6,
-                  borderRadius: 999,
-                  backgroundColor: dotIdx === activeCardIdx ? "#0a0a0a" : "rgba(10, 10, 10, 0.2)",
-                  transition: "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
-                  cursor: "pointer",
-                }}
-              />
-            ))}
-          </div>
-          <span
-            className="mf-mono"
-            style={{
-              fontSize: "0.68rem",
-              color: "var(--mf-ink-3)",
-              letterSpacing: "0.04em",
-            }}
-          >
-            Scroll or swipe to advance · Step {activeCardIdx + 1} of {nodes.length}
-          </span>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
         </div>
-
-        <button
-          type="button"
-          onClick={() => selectCard(Math.min(nodes.length - 1, activeCardIdx + 1))}
-          disabled={activeCardIdx === nodes.length - 1}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 4,
-            padding: "6px 12px",
-            borderRadius: 999,
-            border: "1px solid rgba(10, 10, 10, 0.1)",
-            backgroundColor: "#ffffff",
-            color: activeCardIdx === nodes.length - 1 ? "rgba(10, 10, 10, 0.25)" : "var(--mf-ink)",
-            cursor: activeCardIdx === nodes.length - 1 ? "not-allowed" : "pointer",
-            fontFamily: "var(--mf-mono)",
-            fontSize: "0.75rem",
-            fontWeight: 500,
-            transition: "all 0.2s ease",
-          }}
-          aria-label="Next step"
-        >
-          <span>Next</span>
-          <ChevronRight size={14} />
-        </button>
       </div>
     </div>
   );

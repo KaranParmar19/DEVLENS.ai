@@ -1,0 +1,363 @@
+{
+ "generatedAt": "2026-11-21T17:46:36.614Z",
+ "entries": [
+  "routes/__root.tsx",
+  "routes/index.tsx"
+ ],
+ "width": 1000,
+ "height": 620,
+ "stats": {
+  "files": 20,
+  "edges": 22,
+  "loc": 8452
+ },
+ "nodes": [
+  {
+   "id": "components/mf/home.tsx",
+   "label": "home.tsx",
+   "group": "components/mf",
+   "loc": 2029,
+   "importedBy": 1,
+   "imports": 9,
+   "x": 392,
+   "y": 373
+  },
+  {
+   "id": "components/mf/site-layout.tsx",
+   "label": "site-layout.tsx",
+   "group": "components/mf",
+   "loc": 156,
+   "importedBy": 1,
+   "imports": 3,
+   "x": 570,
+   "y": 391
+  },
+  {
+   "id": "components/ui/activity-badge.tsx",
+   "label": "activity-badge.tsx",
+   "group": "components/ui",
+   "loc": 225,
+   "importedBy": 1,
+   "imports": 0,
+   "x": 930,
+   "y": 266
+  },
+  {
+   "id": "components/ui/faq-section.tsx",
+   "label": "faq-section.tsx",
+   "group": "components/ui",
+   "loc": 151,
+   "importedBy": 1,
+   "imports": 0,
+   "x": 650,
+   "y": 510
+  },
+  {
+   "id": "components/ui/floating-dock.tsx",
+   "label": "floating-dock.tsx",
+   "group": "components/ui",
+   "loc": 375,
+   "importedBy": 1,
+   "imports": 4,
+   "x": 699,
+   "y": 205
+  },
+  {
+   "id": "components/ui/footer-field.tsx",
+   "label": "footer-field.tsx",
+   "group": "components/ui",
+   "loc": 456,
+   "importedBy": 1,
+   "imports": 0,
+   "x": 532,
+   "y": 586
+  },
+  {
+   "id": "components/ui/hoopshots-404.tsx",
+   "label": "hoopshots-404.tsx",
+   "group": "components/ui",
+   "loc": 2124,
+   "importedBy": 1,
+   "imports": 0,
+   "x": 522,
+   "y": 148
+  },
+  {
+   "id": "components/ui/lens-mode.tsx",
+   "label": "lens-mode.tsx",
+   "group": "components/ui",
+   "loc": 184,
+   "importedBy": 1,
+   "imports": 1,
+   "x": 416,
+   "y": 471
+  },
+  {
+   "id": "components/ui/morph-text.tsx",
+   "label": "morph-text.tsx",
+   "group": "components/ui",
+   "loc": 200,
+   "importedBy": 1,
+   "imports": 0,
+   "x": 255,
+   "y": 535
+  },
+  {
+   "id": "components/ui/plumbline.tsx",
+   "label": "plumbline.tsx",
+   "group": "components/ui",
+   "loc": 399,
+   "importedBy": 1,
+   "imports": 0,
+   "x": 128,
+   "y": 439
+  },
+  {
+   "id": "components/ui/polaroid-carousel.tsx",
+   "label": "polaroid-carousel.tsx",
+   "group": "components/ui",
+   "loc": 581,
+   "importedBy": 1,
+   "imports": 0,
+   "x": 70,
+   "y": 303
+  },
+  {
+   "id": "components/ui/self-graph.tsx",
+   "label": "self-graph.tsx",
+   "group": "components/ui",
+   "loc": 167,
+   "importedBy": 1,
+   "imports": 1,
+   "x": 239,
+   "y": 315
+  },
+  {
+   "id": "components/ui/smooth-scroll.tsx",
+   "label": "smooth-scroll.tsx",
+   "group": "components/ui",
+   "loc": 449,
+   "importedBy": 1,
+   "imports": 0,
+   "x": 205,
+   "y": 34
+  },
+  {
+   "id": "components/ui/stats-section.tsx",
+   "label": "stats-section.tsx",
+   "group": "components/ui",
+   "loc": 317,
+   "importedBy": 1,
+   "imports": 0,
+   "x": 216,
+   "y": 197
+  },
+  {
+   "id": "hooks/useAuth.ts",
+   "label": "useAuth.ts",
+   "group": "hooks",
+   "loc": 112,
+   "importedBy": 1,
+   "imports": 1,
+   "x": 663,
+   "y": 41
+  },
+  {
+   "id": "lib/api.ts",
+   "label": "api.ts",
+   "group": "lib",
+   "loc": 270,
+   "importedBy": 2,
+   "imports": 0,
+   "x": 844,
+   "y": 96
+  },
+  {
+   "id": "lib/lens-store.ts",
+   "label": "lens-store.ts",
+   "group": "lib",
+   "loc": 44,
+   "importedBy": 4,
+   "imports": 0,
+   "x": 440,
+   "y": 261
+  },
+  {
+   "id": "lib/utils.ts",
+   "label": "utils.ts",
+   "group": "lib",
+   "loc": 61,
+   "importedBy": 1,
+   "imports": 0,
+   "x": 671,
+   "y": 312
+  },
+  {
+   "id": "routes/__root.tsx",
+   "label": "__root.tsx",
+   "group": "routes",
+   "loc": 135,
+   "importedBy": 0,
+   "imports": 2,
+   "x": 393,
+   "y": 53
+  },
+  {
+   "id": "routes/index.tsx",
+   "label": "index.tsx",
+   "group": "routes",
+   "loc": 17,
+   "importedBy": 0,
+   "imports": 1,
+   "x": 753,
+   "y": 417
+  }
+ ],
+ "edges": [
+  [
+   "routes/__root.tsx",
+   "components/ui/smooth-scroll.tsx"
+  ],
+  [
+   "routes/__root.tsx",
+   "components/ui/hoopshots-404.tsx"
+  ],
+  [
+   "routes/index.tsx",
+   "components/mf/home.tsx"
+  ],
+  [
+   "components/mf/home.tsx",
+   "components/mf/site-layout.tsx"
+  ],
+  [
+   "components/mf/home.tsx",
+   "components/ui/stats-section.tsx"
+  ],
+  [
+   "components/mf/home.tsx",
+   "components/ui/polaroid-carousel.tsx"
+  ],
+  [
+   "components/mf/home.tsx",
+   "components/ui/faq-section.tsx"
+  ],
+  [
+   "components/mf/home.tsx",
+   "components/ui/morph-text.tsx"
+  ],
+  [
+   "components/mf/home.tsx",
+   "components/ui/plumbline.tsx"
+  ],
+  [
+   "components/mf/home.tsx",
+   "components/ui/self-graph.tsx"
+  ],
+  [
+   "components/mf/home.tsx",
+   "lib/lens-store.ts"
+  ],
+  [
+   "components/mf/home.tsx",
+   "lib/utils.ts"
+  ],
+  [
+   "components/mf/site-layout.tsx",
+   "components/ui/floating-dock.tsx"
+  ],
+  [
+   "components/mf/site-layout.tsx",
+   "components/ui/footer-field.tsx"
+  ],
+  [
+   "components/mf/site-layout.tsx",
+   "components/ui/lens-mode.tsx"
+  ],
+  [
+   "components/ui/self-graph.tsx",
+   "lib/lens-store.ts"
+  ],
+  [
+   "components/ui/floating-dock.tsx",
+   "hooks/useAuth.ts"
+  ],
+  [
+   "components/ui/floating-dock.tsx",
+   "lib/api.ts"
+  ],
+  [
+   "components/ui/floating-dock.tsx",
+   "components/ui/activity-badge.tsx"
+  ],
+  [
+   "components/ui/floating-dock.tsx",
+   "lib/lens-store.ts"
+  ],
+  [
+   "components/ui/lens-mode.tsx",
+   "lib/lens-store.ts"
+  ],
+  [
+   "hooks/useAuth.ts",
+   "lib/api.ts"
+  ]
+ ],
+ "lens": {
+  "marquee": {
+   "file": "components/mf/home.tsx",
+   "line": 79,
+   "component": "Marquee"
+  },
+  "product-frame": {
+   "file": "components/mf/home.tsx",
+   "line": 948,
+   "component": "ProductFrame"
+  },
+  "hero-heading": {
+   "file": "components/mf/home.tsx",
+   "line": 1807,
+   "component": "HomePage"
+  },
+  "features-index": {
+   "file": "components/mf/home.tsx",
+   "line": 1932,
+   "component": "HomePage"
+  },
+  "polaroid-carousel": {
+   "file": "components/ui/polaroid-carousel.tsx",
+   "line": 440,
+   "component": "PolaroidLineCarousel"
+  },
+  "faq-section": {
+   "file": "components/ui/faq-section.tsx",
+   "line": 64,
+   "component": "FAQSection"
+  },
+  "morph-text": {
+   "file": "components/ui/morph-text.tsx",
+   "line": 129,
+   "component": "MorphText"
+  },
+  "plumbline-pipeline": {
+   "file": "components/ui/plumbline.tsx",
+   "line": 105,
+   "component": "PlumblinePipeline"
+  },
+  "self-graph": {
+   "file": "components/ui/self-graph.tsx",
+   "line": 82,
+   "component": "SelfGraph"
+  },
+  "floating-dock": {
+   "file": "components/ui/floating-dock.tsx",
+   "line": 158,
+   "component": "FloatingDock"
+  },
+  "footer-field": {
+   "file": "components/ui/footer-field.tsx",
+   "line": 334,
+   "component": "FooterField"
+  }
+ }
+}
