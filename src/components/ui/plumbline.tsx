@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { ArrowUpRight } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
@@ -37,70 +37,163 @@ export const PLUMBLINE_STEPS = [
 ];
 
 export function PlumblinePipeline() {
-  const sectionRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState(0);
   const [activeIdx, setActiveIdx] = useState(0);
+  const activeIdxRef = useRef(0);
+  const lastStepTimeRef = useRef(0);
+  const touchStartYRef = useRef<number | null>(null);
+  const touchStartXRef = useRef<number | null>(null);
 
   const n = PLUMBLINE_STEPS.length;
 
-  // Track scroll position of the section to smoothly progress through steps on page scroll
-  const handleScroll = useCallback(() => {
-    if (!sectionRef.current) return;
-    const rect = sectionRef.current.getBoundingClientRect();
-    const windowHeight = window.innerHeight;
-    const stickyTop = 100; // top offset where sticky pins
-    const totalScrollable = rect.height - (windowHeight - stickyTop);
-
-    if (totalScrollable <= 0) return;
-
-    // How far user has scrolled into the pinned section
-    const currentScrolled = stickyTop - rect.top;
-    const rawProgress = currentScrolled / totalScrollable;
-    const clampedProgress = clamp(rawProgress, 0, 1);
-
-    // Continuous floating pos from 0 to n - 1
-    const targetPos = clampedProgress * (n - 1);
-    setPos(targetPos);
-
-    const roundedIdx = clamp(Math.round(targetPos), 0, n - 1);
-    setActiveIdx(roundedIdx);
-  }, [n]);
-
   useEffect(() => {
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("resize", handleScroll, { passive: true });
-    handleScroll();
+    activeIdxRef.current = activeIdx;
+  }, [activeIdx]);
+
+  // Smoothly glide `pos` to `activeIdx` over 260ms for fluid plumb bob and swell
+  useEffect(() => {
+    let animId: number;
+    const start = pos;
+    const end = activeIdx;
+    if (Math.abs(start - end) < 0.005) {
+      setPos(end);
+      return;
+    }
+    const startTime = performance.now();
+    const duration = 260;
+
+    const tick = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(1, elapsed / duration);
+      // easeOutCubic curve
+      const ease = 1 - Math.pow(1 - progress, 3);
+      setPos(start + (end - start) * ease);
+
+      if (progress < 1) {
+        animId = requestAnimationFrame(tick);
+      } else {
+        setPos(end);
+      }
+    };
+
+    animId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(animId);
+  }, [activeIdx]);
+
+  // Contained wheel and touch scroll: scrub steps in place without scrolling window simultaneously
+  useEffect(() => {
+    const el = trackRef.current;
+    if (!el) return;
+
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) < 14) return;
+
+      const isDown = e.deltaY > 0;
+      const now = performance.now();
+      const timeSinceLast = now - lastStepTimeRef.current;
+      const currentIdx = activeIdxRef.current;
+      const maxIdx = n - 1;
+
+      const rect = el.getBoundingClientRect();
+      const windowH = window.innerHeight;
+
+      if (isDown) {
+        // If at first step and container has not yet reached viewing position,
+        // let the page scroll naturally until it's centered in viewport
+        if (currentIdx === 0 && rect.top > 120) {
+          return;
+        }
+
+        if (currentIdx < maxIdx) {
+          // Prevent window scroll while scrubbing steps
+          e.preventDefault();
+          if (timeSinceLast > 350) {
+            lastStepTimeRef.current = now;
+            setActiveIdx((prev) => Math.min(maxIdx, prev + 1));
+          }
+        } else {
+          // At final step (03 Inspect and ask questions)
+          // Absorb immediate momentum for 250ms
+          if (timeSinceLast < 250) {
+            e.preventDefault();
+          }
+          // After 250ms, natural page scroll resumes down to FAQ
+        }
+      } else {
+        // Scrolling UP
+        // If at last step and bottom of container is scrolled past bottom of viewport,
+        // let page scroll naturally so container comes into view
+        if (currentIdx === maxIdx && rect.bottom < windowH - 120) {
+          return;
+        }
+
+        if (currentIdx > 0) {
+          // Prevent window scroll while scrubbing steps
+          e.preventDefault();
+          if (timeSinceLast > 350) {
+            lastStepTimeRef.current = now;
+            setActiveIdx((prev) => Math.max(0, prev - 1));
+          }
+        } else {
+          // At first step
+          if (timeSinceLast < 250) {
+            e.preventDefault();
+          }
+          // After 250ms, natural page scroll resumes upwards
+        }
+      }
+    };
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        touchStartYRef.current = e.touches[0].clientY;
+        touchStartXRef.current = e.touches[0].clientX;
+      }
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      if (touchStartYRef.current === null || touchStartXRef.current === null) return;
+      const touch = e.changedTouches[0];
+      const deltaY = touchStartYRef.current - touch.clientY;
+      const deltaX = touchStartXRef.current - touch.clientX;
+      touchStartYRef.current = null;
+      touchStartXRef.current = null;
+
+      if (Math.abs(deltaY) > 40 || Math.abs(deltaX) > 40) {
+        const isNext = deltaY > 40 || deltaX > 40;
+        const currentIdx = activeIdxRef.current;
+        const maxIdx = n - 1;
+
+        if (isNext && currentIdx < maxIdx) {
+          setActiveIdx(currentIdx + 1);
+        } else if (!isNext && currentIdx > 0) {
+          setActiveIdx(currentIdx - 1);
+        }
+      }
+    };
+
+    el.addEventListener("wheel", onWheel, { passive: false });
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchend", onTouchEnd, { passive: true });
 
     return () => {
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("resize", handleScroll);
+      el.removeEventListener("wheel", onWheel);
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchend", onTouchEnd);
     };
-  }, [handleScroll]);
+  }, [n]);
 
-  // Click on step title smoothly scrolls the page to that step's position
-  const scrollToStep = (stepIdx: number) => {
-    if (!sectionRef.current) return;
-    const rect = sectionRef.current.getBoundingClientRect();
-    const absoluteSectionTop = window.scrollY + rect.top;
-    const stickyTop = 100;
-    const windowHeight = window.innerHeight;
-    const totalScrollable = sectionRef.current.offsetHeight - (windowHeight - stickyTop);
-
-    const targetScrollY =
-      absoluteSectionTop - stickyTop + (stepIdx / (n - 1)) * totalScrollable;
-
-    window.scrollTo({
-      top: Math.max(0, targetScrollY + 2),
-      behavior: "smooth",
-    });
+  const handleStepClick = (stepIdx: number) => {
+    setActiveIdx(stepIdx);
+    lastStepTimeRef.current = performance.now();
   };
 
-  // Rail marker progress (0 to 1)
   const railProgress = n > 1 ? clamp(pos / (n - 1), 0, 1) : 0;
 
   return (
     <div
-      ref={sectionRef}
+      ref={trackRef}
       className="plumbline-scroll-track"
       aria-label="Scroll-driven Plumbline Pipeline"
     >
@@ -116,6 +209,7 @@ export function PlumblinePipeline() {
                   className="plumbline-mono-bob"
                   style={{
                     top: `calc(${railProgress * 100}% - ${railProgress * 14}px)`,
+                    transition: "top 0.15s ease-out",
                   }}
                 >
                   <span className="plumbline-mono-core" />
@@ -139,14 +233,14 @@ export function PlumblinePipeline() {
                     <div
                       key={stepItem.id}
                       className={`plumbline-title-row ${isCurrent ? "is-active" : ""}`}
-                      style={{ opacity }}
-                      onClick={() => scrollToStep(idx)}
+                      style={{ opacity, cursor: "pointer" }}
+                      onClick={() => handleStepClick(idx)}
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          scrollToStep(idx);
+                          handleStepClick(idx);
                         }
                       }}
                       aria-current={isCurrent ? "step" : undefined}
@@ -156,12 +250,14 @@ export function PlumblinePipeline() {
                         style={{
                           transform: `scale(${scale})`,
                           transformOrigin: "left center",
+                          transition: "transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
                         }}
                       >
                         <span
                           className="plumbline-mono-num mf-mono"
                           style={{
                             color: near > 0.5 ? "#ffffff" : "#71717a",
+                            transition: "color 0.2s ease",
                           }}
                         >
                           {stepItem.marker}
@@ -172,6 +268,7 @@ export function PlumblinePipeline() {
                             fontSize: titleSize,
                             fontWeight,
                             color: near > 0.5 ? "#ffffff" : "#71717a",
+                            transition: "color 0.2s ease",
                           }}
                         >
                           {stepItem.title}
