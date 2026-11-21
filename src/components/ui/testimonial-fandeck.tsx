@@ -2,102 +2,65 @@ import React, { useEffect, useMemo, useRef, useState, startTransition } from "re
 import { motion } from "motion/react";
 
 export interface FanDeckCard {
-  id?: string;
-  // Architectural comparison format
-  category?: string;
-  task?: string;
-  grepFlaw?: string;
-  llmFlaw?: string;
-  devlensAdvantage?: string;
-  detail?: string;
-  badge?: string;
-  // Testimonial format (Framer parity)
-  quote?: string;
-  author?: string;
-  role?: string;
-  avatar?: { src: string; alt?: string };
-  // Visual overrides
-  color?: string;
-  rotation?: number;
-}
-
-export interface TestimonialFanDeckProps {
-  cards?: FanDeckCard[];
-  testimonials?: Array<{
-    quote?: string;
-    author?: string;
-    role?: string;
-    avatar?: { src: string; alt?: string };
-    color?: string;
-    rotation?: number;
-  }>;
-  cardWidth?: number;
-  cardHeight?: number;
-  cardRadius?: number;
-  cardPadding?: number;
-  overlap?: number;
-  lift?: number;
-  hoverScale?: number;
-  sectionPadding?: number;
-  className?: string;
-  style?: React.CSSProperties;
-  enableTableViewToggle?: boolean;
+  id: string;
+  category: string;
+  badge: string;
+  headline: string;
+  description: string;
+  footerTag: string;
+  status: string;
+  rotation: number;
 }
 
 export const DEFAULT_COMPARISON_CARDS: FanDeckCard[] = [
   {
     id: "call-hierarchy",
     category: "01 / CALL GRAPH",
-    task: "Cross-file call hierarchy",
-    grepFlaw: "Manual file-by-file text jumping",
-    llmFlaw: "Guesses unindexed imports & hallucinated calls",
-    devlensAdvantage: "Resolved Tree-sitter import graph",
-    detail: "Traverses AST nodes, symbol declarations, and cross-file reference edges deterministically.",
-    badge: "Tree-sitter WASM · 100% Deterministic",
+    badge: "TREE-SITTER",
+    headline: "Grep matches text strings. DevLens traverses the AST.",
+    description: "Resolves cross-file exports, symbol declarations, and call sites into an explicit AST graph instead of manual file jumps.",
+    footerTag: "WASM Call Graph",
+    status: "DETERMINISTIC",
     rotation: -7,
   },
   {
     id: "blast-radius",
     category: "02 / BLAST RADIUS",
-    task: "Commit impact check",
-    grepFlaw: "Raw line diff only with zero dependency awareness",
-    llmFlaw: "Blind single-file edits without cross-file caller checks",
-    devlensAdvantage: "Direct and indirect dependent check",
-    detail: "Traces 1-hop and 2-hop caller graphs across every package before merging changes.",
-    badge: "Impact Analysis · Call Graph Traversal",
+    badge: "DEPENDENCY",
+    headline: "Line diffs show what changed. DevLens traces who breaks.",
+    description: "Traces direct and indirect callers across 1-hop and 2-hop dependencies before you merge changes to production.",
+    footerTag: "2-Hop Blast Radius",
+    status: "VERIFIED",
     rotation: -3.5,
   },
   {
     id: "citations",
     category: "03 / CITATIONS",
-    task: "Source code citations",
-    grepFlaw: "String match only with noisy false positives",
-    llmFlaw: "Unverified markdown snippets with fabricated line numbers",
-    devlensAdvantage: "Clickable file and line links",
-    detail: "Every node and citation anchors to verified file and line byte offsets in the syntax tree.",
-    badge: "Verified Anchors · file:line Links",
+    badge: "BYTE OFFSET",
+    headline: "Chat guesses line numbers. DevLens cites syntax nodes.",
+    description: "Every citation links to exact file and line coordinates verified against live Tree-sitter parser byte offsets.",
+    footerTag: "Exact file:line Links",
+    status: "VERIFIED",
     rotation: 0,
   },
   {
     id: "onboarding",
     category: "04 / ONBOARDING",
-    task: "New engineer onboarding",
-    grepFlaw: "Reading folders by hand without entry point guidance",
-    llmFlaw: "Outdated README summaries drifted months ago",
-    devlensAdvantage: "Generated architecture blueprint",
-    detail: "Live structural map of routes, stores, controllers, and event loops computed from source.",
-    badge: "Live Blueprint · Generated from Source",
+    badge: "LIVE SOURCE",
+    headline: "READMEs drift in silence. DevLens maps live code.",
+    description: "Generates structural architecture blueprints of routes, state stores, and controllers directly from active code.",
+    footerTag: "Source-Derived Map",
+    status: "LIVE BLUEPRINT",
     rotation: 3.5,
   },
   {
     id: "sandbox",
     category: "05 / ISOLATION",
-    task: "Code privacy & memory",
-    grepFlaw: "Local only, zero structural intelligence",
-    llmFlaw: "Cloud code ingestion & training leak risks",
-    devlensAdvantage: "Ephemeral in-memory sandbox",
-    detail: "Zero code bytes stored on disk or server. In-memory Tree-sitter index discarded on close.",
-    badge: "Ephemeral Clone · 0 Bytes Retained",
+    badge: "IN-MEMORY",
+    headline: "Cloud models store code. DevLens stays ephemeral.",
+    description: "In-memory ephemeral clone. Zero code bytes written to disk or stored on remote servers after your session closes.",
+    footerTag: "0 Bytes Retained",
+    status: "EPHEMERAL",
     rotation: 7,
   },
 ];
@@ -119,20 +82,30 @@ export function calculateFandeckOverlap(
   return overlap;
 }
 
+export interface TestimonialFanDeckProps {
+  cards?: FanDeckCard[];
+  cardWidth?: number;
+  cardHeight?: number;
+  cardRadius?: number;
+  cardPadding?: number;
+  overlap?: number;
+  lift?: number;
+  hoverScale?: number;
+  className?: string;
+  style?: React.CSSProperties;
+}
+
 export function TestimonialFanDeck({
-  cards,
-  testimonials,
-  cardWidth = 280,
-  cardHeight = 390,
+  cards = DEFAULT_COMPARISON_CARDS,
+  cardWidth = 285,
+  cardHeight = 370,
   cardRadius = 20,
-  cardPadding = 24,
-  overlap = 48,
-  lift = 28,
-  hoverScale = 1.04,
-  sectionPadding = 24,
+  cardPadding = 26,
+  overlap = 46,
+  lift = 24,
+  hoverScale = 1.03,
   className = "",
   style,
-  enableTableViewToggle = true,
 }: TestimonialFanDeckProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const scrollTrackRef = useRef<HTMLDivElement>(null);
@@ -140,7 +113,6 @@ export function TestimonialFanDeck({
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [activeScrollIdx, setActiveScrollIdx] = useState<number>(0);
-  const [viewMode, setViewMode] = useState<"deck" | "table">("deck");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -163,28 +135,8 @@ export function TestimonialFanDeck({
   }, []);
 
   const isMobile = containerWidth > 0 ? containerWidth <= 720 : false;
+  const count = cards.length;
 
-  const safeCards = useMemo<FanDeckCard[]>(() => {
-    if (cards && Array.isArray(cards) && cards.length > 0) {
-      return cards;
-    }
-    if (testimonials && Array.isArray(testimonials) && testimonials.length > 0) {
-      return testimonials.map((t, idx) => ({
-        id: `t-${idx}`,
-        quote: t.quote ?? "",
-        author: t.author ?? "",
-        role: t.role ?? "",
-        avatar: t.avatar,
-        color: t.color,
-        rotation: typeof t.rotation === "number" ? t.rotation : (idx - Math.floor(testimonials.length / 2)) * 3.5,
-      }));
-    }
-    return DEFAULT_COMPARISON_CARDS;
-  }, [cards, testimonials]);
-
-  const count = safeCards.length;
-
-  // Responsive overlap calculation so deck never overflows container on desktop
   const effectiveOverlap = useMemo(() => {
     return calculateFandeckOverlap(count, cardWidth, overlap, containerWidth, isMobile);
   }, [isMobile, count, containerWidth, cardWidth, overlap]);
@@ -194,7 +146,6 @@ export function TestimonialFanDeck({
     return cardWidth * count - effectiveOverlap * (count - 1);
   }, [count, cardWidth, effectiveOverlap]);
 
-  // Framer hover spring physics
   const hoverSpring = useMemo(
     () => ({
       type: "spring" as const,
@@ -204,7 +155,6 @@ export function TestimonialFanDeck({
     []
   );
 
-  // Mobile scroll tracking
   const handleScroll = () => {
     if (!scrollTrackRef.current) return;
     const el = scrollTrackRef.current;
@@ -236,517 +186,265 @@ export function TestimonialFanDeck({
         position: "relative",
         width: "100%",
         boxSizing: "border-box",
+        padding: "16px 0 28px 0",
         ...style,
       }}
     >
-      {/* Switcher Header (Deck View vs Table View) */}
-      {enableTableViewToggle && (
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            alignItems: "center",
-            marginBottom: 24,
-            gap: 8,
-          }}
-        >
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              padding: "3px",
-              borderRadius: "8px",
-              background: "var(--mf-soft, #f5f5f5)",
-              border: "1px solid var(--mf-line, #d9d9d9)",
-              fontSize: "11px",
-              fontFamily: "var(--mf-mono, monospace)",
-              letterSpacing: "0.04em",
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => setViewMode("deck")}
+      {/* Deck Container */}
+      <div
+        ref={scrollTrackRef}
+        onScroll={isMobile ? handleScroll : undefined}
+        role="list"
+        aria-label="Architectural comparison fandeck"
+        className="fandeck-track"
+        style={{
+          position: "relative",
+          display: "flex",
+          alignItems: "stretch",
+          justifyContent: isMobile ? "flex-start" : "center",
+          flexDirection: "row",
+          width: isMobile ? "100%" : desktopStackWidth || undefined,
+          maxWidth: "100%",
+          overflowX: isMobile ? "auto" : "visible",
+          overflowY: isMobile ? "hidden" : "visible",
+          paddingTop: isMobile ? 12 : 32,
+          paddingBottom: isMobile ? 16 : 32,
+          paddingLeft: isMobile ? 16 : 0,
+          paddingRight: isMobile ? 16 : 0,
+          marginLeft: isMobile ? 0 : "auto",
+          marginRight: isMobile ? 0 : "auto",
+          gap: isMobile ? 16 : 0,
+          scrollSnapType: isMobile ? "x mandatory" : undefined,
+          WebkitOverflowScrolling: isMobile ? "touch" : undefined,
+          touchAction: isMobile ? "pan-x" : undefined,
+        }}
+      >
+        {cards.map((card, idx) => {
+          const marginLeft = isMobile ? 0 : idx === 0 ? 0 : -Math.abs(effectiveOverlap);
+          const baseRotate = isMobile ? 0 : card.rotation;
+          const isHovered = hoveredIndex === idx;
+          const isSelected = selectedIndex === idx;
+          const isTargeted = isHovered || isSelected;
+
+          return (
+            <motion.div
+              key={card.id}
+              role="listitem"
+              tabIndex={0}
+              aria-label={card.headline}
+              initial={{ opacity: 0, y: 20, rotate: baseRotate }}
+              animate={{
+                opacity: 1,
+                y: isTargeted ? -Math.abs(lift) : 0,
+                rotate: isTargeted ? 0 : baseRotate,
+                scale: isTargeted ? Math.max(1, hoverScale) : 1,
+              }}
+              transition={hoverSpring}
+              onHoverStart={() => startTransition(() => setHoveredIndex(idx))}
+              onHoverEnd={() => startTransition(() => setHoveredIndex(null))}
+              onClick={() => {
+                startTransition(() => {
+                  setSelectedIndex((prev) => (prev === idx ? null : idx));
+                });
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setSelectedIndex((prev) => (prev === idx ? null : idx));
+                }
+                if (e.key === "Escape") {
+                  setSelectedIndex(null);
+                  (e.currentTarget as HTMLElement).blur();
+                }
+              }}
               style={{
-                padding: "5px 12px",
-                borderRadius: "6px",
-                border: "none",
+                position: "relative",
+                width: isMobile ? "clamp(260px, 80vw, 310px)" : cardWidth,
+                minHeight: cardHeight,
+                flexShrink: 0,
+                marginLeft,
+                padding: cardPadding,
+                boxSizing: "border-box",
+                borderRadius: cardRadius,
+                background: "#0D0E12",
+                color: "#FFFFFF",
+                border: isTargeted
+                  ? "1px solid rgba(255, 255, 255, 0.45)"
+                  : "1px solid rgba(255, 255, 255, 0.12)",
+                boxShadow: isTargeted
+                  ? "0 28px 56px -12px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.2)"
+                  : "0 12px 28px -8px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.06)",
                 cursor: "pointer",
-                background: viewMode === "deck" ? "var(--mf-ink, #0a0a0a)" : "transparent",
-                color: viewMode === "deck" ? "var(--mf-bg, #ffffff)" : "var(--mf-ink-2, #595959)",
-                fontWeight: viewMode === "deck" ? 600 : 400,
-                transition: "all 0.15s ease",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                outline: "none",
+                zIndex: isTargeted ? 50 : idx + 1,
+                userSelect: "none",
+                scrollSnapAlign: isMobile ? "center" : undefined,
+                willChange: "transform, z-index, box-shadow",
+                transformOrigin: "bottom center",
+                transition: "border-color 0.2s ease",
               }}
             >
-              Fandeck
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("table")}
-              style={{
-                padding: "5px 12px",
-                borderRadius: "6px",
-                border: "none",
-                cursor: "pointer",
-                background: viewMode === "table" ? "var(--mf-ink, #0a0a0a)" : "transparent",
-                color: viewMode === "table" ? "var(--mf-bg, #ffffff)" : "var(--mf-ink-2, #595959)",
-                fontWeight: viewMode === "table" ? 600 : 400,
-                transition: "all 0.15s ease",
-              }}
-            >
-              Table View
-            </button>
-          </div>
-        </div>
-      )}
-
-      {viewMode === "table" ? (
-        /* Accessible Table Fallback */
-        <div style={{ overflowX: "auto", width: "100%" }}>
-          <table className="feat-matrix">
-            <thead>
-              <tr>
-                <th>Task</th>
-                <th>IDE search / grep</th>
-                <th>Generic LLM chat</th>
-                <th>DevLens AST Engine</th>
-              </tr>
-            </thead>
-            <tbody>
-              {safeCards.map((card, idx) => (
-                <tr key={card.id ?? idx}>
-                  <td>{card.task ?? card.author}</td>
-                  <td className="mf-muted">{card.grepFlaw ?? "Manual text search"}</td>
-                  <td className="mf-muted">{card.llmFlaw ?? "Unindexed inference"}</td>
-                  <td>
-                    <strong>{card.devlensAdvantage ?? card.quote}</strong>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        /* Interactive Fan Deck Experience */
-        <div
-          style={{
-            position: "relative",
-            width: "100%",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: `${sectionPadding}px 0`,
-            boxSizing: "border-box",
-            overflow: "visible",
-          }}
-        >
-          {/* Deck Container */}
-          <div
-            ref={scrollTrackRef}
-            onScroll={isMobile ? handleScroll : undefined}
-            role="list"
-            aria-label="Architectural comparison fandeck"
-            className="fandeck-track"
-            style={{
-              position: "relative",
-              display: "flex",
-              alignItems: "stretch",
-              justifyContent: isMobile ? "flex-start" : "center",
-              flexDirection: "row",
-              width: isMobile ? "100%" : desktopStackWidth || undefined,
-              maxWidth: "100%",
-              overflowX: isMobile ? "auto" : "visible",
-              overflowY: isMobile ? "hidden" : "visible",
-              paddingTop: isMobile ? 16 : 40,
-              paddingBottom: isMobile ? 24 : 40,
-              paddingLeft: isMobile ? 16 : 0,
-              paddingRight: isMobile ? 16 : 0,
-              marginLeft: isMobile ? 0 : "auto",
-              marginRight: isMobile ? 0 : "auto",
-              gap: isMobile ? 16 : 0,
-              scrollSnapType: isMobile ? "x mandatory" : undefined,
-              WebkitOverflowScrolling: isMobile ? "touch" : undefined,
-              touchAction: isMobile ? "pan-x" : undefined,
-            }}
-          >
-            {safeCards.map((card, idx) => {
-              const marginLeft = isMobile ? 0 : idx === 0 ? 0 : -Math.abs(effectiveOverlap);
-              const baseRotate = isMobile ? 0 : card.rotation ?? 0;
-              const isHovered = hoveredIndex === idx;
-              const isSelected = selectedIndex === idx;
-              const isTargeted = isHovered || isSelected;
-
-              return (
-                <motion.div
-                  key={card.id ?? `card-${idx}`}
-                  role="listitem"
-                  tabIndex={0}
-                  aria-label={card.task ?? card.author ?? `Card ${idx + 1}`}
-                  initial={{ opacity: 0, y: 24, rotate: baseRotate }}
-                  animate={{
-                    opacity: 1,
-                    y: isTargeted ? -Math.abs(lift) : 0,
-                    rotate: isTargeted ? 0 : baseRotate,
-                    scale: isTargeted ? Math.max(1, hoverScale) : 1,
-                  }}
-                  transition={hoverSpring}
-                  onHoverStart={() => startTransition(() => setHoveredIndex(idx))}
-                  onHoverEnd={() => startTransition(() => setHoveredIndex(null))}
-                  onClick={() => {
-                    startTransition(() => {
-                      setSelectedIndex((prev) => (prev === idx ? null : idx));
-                    });
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      setSelectedIndex((prev) => (prev === idx ? null : idx));
-                    }
-                    if (e.key === "Escape") {
-                      setSelectedIndex(null);
-                      (e.currentTarget as HTMLElement).blur();
-                    }
-                  }}
+              {/* Card Header & Body */}
+              <div>
+                {/* Meta Row: Clean Category on Left, Non-overlapping Badge on Right */}
+                <div
                   style={{
-                    position: "relative",
-                    width: isMobile ? "clamp(260px, 80vw, 320px)" : cardWidth,
-                    minHeight: cardHeight,
-                    flexShrink: 0,
-                    marginLeft,
-                    padding: cardPadding,
-                    boxSizing: "border-box",
-                    borderRadius: cardRadius,
-                    background: card.color ?? "var(--mf-soft, #f5f5f5)",
-                    color: "var(--mf-ink, #0a0a0a)",
-                    border: isTargeted
-                      ? "1px solid var(--mf-ink, #0a0a0a)"
-                      : "1px solid var(--mf-line, #d9d9d9)",
-                    boxShadow: isTargeted
-                      ? "0 28px 56px -12px rgba(0, 0, 0, 0.16), 0 0 0 1px var(--mf-ink, #0a0a0a)"
-                      : "0 10px 24px -8px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--mf-line, #d9d9d9)",
-                    cursor: "pointer",
                     display: "flex",
-                    flexDirection: "column",
+                    alignItems: "center",
                     justifyContent: "space-between",
-                    outline: "none",
-                    zIndex: isTargeted ? 50 : idx + 1,
-                    userSelect: "none",
-                    scrollSnapAlign: isMobile ? "center" : undefined,
-                    willChange: "transform, z-index, box-shadow",
-                    transformOrigin: "bottom center",
+                    gap: 12,
+                    marginBottom: 16,
                   }}
                 >
-                  {/* Card Top: Index, Category, and Pill */}
-                  <div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        marginBottom: 16,
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontFamily: "var(--mf-mono, monospace)",
-                          fontSize: "11px",
-                          letterSpacing: "0.08em",
-                          textTransform: "uppercase",
-                          color: isTargeted ? "var(--mf-ink, #0a0a0a)" : "var(--mf-ink-2, #595959)",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {card.category ?? `0${idx + 1} / CAPABILITY`}
-                      </span>
-
-                      <span
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          padding: "2px 8px",
-                          borderRadius: "999px",
-                          fontSize: "10px",
-                          fontFamily: "var(--mf-mono, monospace)",
-                          letterSpacing: "0.04em",
-                          background: isTargeted
-                            ? "var(--mf-ink, #0a0a0a)"
-                            : "var(--mf-soft-2, #ebebeb)",
-                          color: isTargeted ? "var(--mf-bg, #ffffff)" : "var(--mf-ink, #0a0a0a)",
-                          fontWeight: 600,
-                          transition: "all 0.15s ease",
-                        }}
-                      >
-                        AST
-                      </span>
-                    </div>
-
-                    {/* Task Title */}
-                    <h3
-                      style={{
-                        margin: "0 0 16px 0",
-                        fontSize: "18px",
-                        lineHeight: 1.28,
-                        fontWeight: 600,
-                        letterSpacing: "-0.02em",
-                        color: "var(--mf-ink, #0a0a0a)",
-                      }}
-                    >
-                      {card.task ?? card.quote}
-                    </h3>
-
-                    {/* Contrast Breakdown: Legacy Grep & LLM Flaws */}
-                    {card.grepFlaw && (
-                      <div
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: 10,
-                          marginBottom: 16,
-                        }}
-                      >
-                        {/* IDE Grep Flaw */}
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "flex-start",
-                            gap: 8,
-                            fontSize: "12px",
-                            lineHeight: 1.4,
-                            color: "var(--mf-ink-2, #595959)",
-                          }}
-                        >
-                          <span
-                            style={{
-                              fontFamily: "var(--mf-mono, monospace)",
-                              fontSize: "10px",
-                              padding: "1px 5px",
-                              borderRadius: "4px",
-                              background: "rgba(220, 38, 38, 0.1)",
-                              color: "#dc2626",
-                              fontWeight: 600,
-                              flexShrink: 0,
-                            }}
-                          >
-                            GREP
-                          </span>
-                          <span>{card.grepFlaw}</span>
-                        </div>
-
-                        {/* Generic LLM Flaw */}
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "flex-start",
-                            gap: 8,
-                            fontSize: "12px",
-                            lineHeight: 1.4,
-                            color: "var(--mf-ink-2, #595959)",
-                          }}
-                        >
-                          <span
-                            style={{
-                              fontFamily: "var(--mf-mono, monospace)",
-                              fontSize: "10px",
-                              padding: "1px 5px",
-                              borderRadius: "4px",
-                              background: "rgba(220, 38, 38, 0.1)",
-                              color: "#dc2626",
-                              fontWeight: 600,
-                              flexShrink: 0,
-                            }}
-                          >
-                            LLM
-                          </span>
-                          <span>{card.llmFlaw}</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* DevLens AST Resolution Pill Box */}
-                    {card.devlensAdvantage && (
-                      <div
-                        style={{
-                          padding: "12px 14px",
-                          borderRadius: "12px",
-                          background: "var(--mf-bg, #ffffff)",
-                          border: isTargeted
-                            ? "1px solid var(--mf-ink, #0a0a0a)"
-                            : "1px solid var(--mf-line, #d9d9d9)",
-                          marginTop: 8,
-                          transition: "border-color 0.15s ease",
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 6,
-                            fontFamily: "var(--mf-mono, monospace)",
-                            fontSize: "10px",
-                            letterSpacing: "0.06em",
-                            textTransform: "uppercase",
-                            color: "var(--mf-ink, #0a0a0a)",
-                            fontWeight: 700,
-                            marginBottom: 4,
-                          }}
-                        >
-                          <span style={{ color: "#059669", fontWeight: 700 }}>✓</span>
-                          DEVLENS AST
-                        </div>
-                        <div
-                          style={{
-                            fontSize: "13px",
-                            fontWeight: 600,
-                            color: "var(--mf-ink, #0a0a0a)",
-                            lineHeight: 1.35,
-                          }}
-                        >
-                          {card.devlensAdvantage}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Detailed explanation */}
-                    {card.detail && (
-                      <p
-                        style={{
-                          margin: "12px 0 0 0",
-                          fontSize: "12px",
-                          lineHeight: 1.45,
-                          color: "var(--mf-ink-2, #595959)",
-                        }}
-                      >
-                        {card.detail}
-                      </p>
-                    )}
-
-                    {/* Testimonial Author & Role (Framer Mode) */}
-                    {card.author && (
-                      <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 10 }}>
-                        {card.avatar?.src && (
-                          <img
-                            src={card.avatar.src}
-                            alt={card.avatar.alt ?? card.author}
-                            style={{
-                              width: 36,
-                              height: 36,
-                              borderRadius: "999px",
-                              objectFit: "cover",
-                              flexShrink: 0,
-                            }}
-                          />
-                        )}
-                        <div>
-                          <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--mf-ink, #0a0a0a)" }}>
-                            {card.author}
-                          </div>
-                          {card.role && (
-                            <div
-                              style={{
-                                fontSize: "11px",
-                                color: "var(--mf-ink-2, #595959)",
-                                marginTop: 2,
-                              }}
-                            >
-                              {card.role}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Card Bottom: Technical Tag Badge */}
-                  <div
+                  <span
                     style={{
-                      borderTop: "1px solid var(--mf-line, #d9d9d9)",
-                      paddingTop: 14,
-                      marginTop: 16,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
+                      fontFamily: "var(--mf-mono, monospace)",
+                      fontSize: "10px",
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                      color: isTargeted ? "#FFFFFF" : "rgba(255, 255, 255, 0.55)",
+                      fontWeight: 600,
+                      whiteSpace: "nowrap",
+                      transition: "color 0.15s ease",
                     }}
                   >
-                    <span
-                      style={{
-                        fontFamily: "var(--mf-mono, monospace)",
-                        fontSize: "11px",
-                        letterSpacing: "0.04em",
-                        color: "var(--mf-ink-2, #595959)",
-                      }}
-                    >
-                      {card.badge ?? "Exact AST Precision"}
-                    </span>
+                    {card.category}
+                  </span>
 
-                    <span
-                      style={{
-                        fontSize: "11px",
-                        fontFamily: "var(--mf-mono, monospace)",
-                        color: isTargeted
-                          ? "var(--mf-ink, #0a0a0a)"
-                          : "var(--mf-ink-3, #7a7a7a)",
-                        transition: "color 0.15s ease",
-                      }}
-                    >
-                      {isTargeted ? "Pinned" : "Hover / Tap"}
-                    </span>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      padding: "2px 7px",
+                      borderRadius: "6px",
+                      fontSize: "9px",
+                      fontFamily: "var(--mf-mono, monospace)",
+                      letterSpacing: "0.06em",
+                      background: "rgba(255, 255, 255, 0.08)",
+                      color: "rgba(255, 255, 255, 0.8)",
+                      border: "1px solid rgba(255, 255, 255, 0.12)",
+                      fontWeight: 500,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {card.badge}
+                  </span>
+                </div>
 
-          {/* Mobile Reel Pagination Dots */}
-          {isMobile && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                marginTop: 16,
-              }}
-            >
-              {safeCards.map((_, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => scrollToCard(i)}
-                  aria-label={`Jump to comparison card ${i + 1}`}
+                {/* Primary Headline */}
+                <h3
                   style={{
-                    width: activeScrollIdx === i ? 20 : 6,
-                    height: 6,
-                    borderRadius: "999px",
-                    background:
-                      activeScrollIdx === i
-                        ? "var(--mf-ink, #0a0a0a)"
-                        : "var(--mf-line, #d9d9d9)",
-                    border: "none",
-                    padding: 0,
-                    cursor: "pointer",
-                    transition: "all 0.2s ease",
+                    margin: "0 0 14px 0",
+                    fontSize: "17px",
+                    lineHeight: 1.32,
+                    fontWeight: 600,
+                    letterSpacing: "-0.02em",
+                    color: "#FFFFFF",
                   }}
-                />
-              ))}
-            </div>
-          )}
+                >
+                  {card.headline}
+                </h3>
 
-          {/* Interactive Hint for Desktop */}
-          {!isMobile && (
-            <div
+                {/* Body Prose with Generous Breathing Room */}
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "13px",
+                    lineHeight: 1.5,
+                    color: "rgba(255, 255, 255, 0.65)",
+                  }}
+                >
+                  {card.description}
+                </p>
+              </div>
+
+              {/* Card Footer: Clean Metric Tag on Left, Status Pill on Right */}
+              <div
+                style={{
+                  borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+                  paddingTop: 14,
+                  marginTop: 18,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 8,
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: "var(--mf-mono, monospace)",
+                    fontSize: "11px",
+                    letterSpacing: "0.02em",
+                    color: "rgba(255, 255, 255, 0.6)",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {card.footerTag}
+                </span>
+
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 5,
+                    fontSize: "10px",
+                    fontFamily: "var(--mf-mono, monospace)",
+                    letterSpacing: "0.04em",
+                    color: "#34D399",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 5,
+                      height: 5,
+                      borderRadius: "999px",
+                      background: "#34D399",
+                    }}
+                  />
+                  {card.status}
+                </span>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {/* Mobile Swipe Pagination Dots */}
+      {isMobile && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            marginTop: 12,
+          }}
+        >
+          {cards.map((_, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => scrollToCard(i)}
+              aria-label={`Go to card ${i + 1}`}
               style={{
-                marginTop: 20,
-                fontFamily: "var(--mf-mono, monospace)",
-                fontSize: "11px",
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-                color: "var(--mf-ink-3, #7a7a7a)",
-                textAlign: "center",
+                width: activeScrollIdx === i ? 18 : 6,
+                height: 6,
+                borderRadius: "999px",
+                background:
+                  activeScrollIdx === i
+                    ? "var(--mf-ink, #0a0a0a)"
+                    : "var(--mf-line, #d9d9d9)",
+                border: "none",
+                padding: 0,
+                cursor: "pointer",
+                transition: "all 0.2s ease",
               }}
-            >
-              Hover card to inspect · Click to lock in focus
-            </div>
-          )}
+            />
+          ))}
         </div>
       )}
     </div>

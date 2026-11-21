@@ -8,22 +8,23 @@ describe("TestimonialFanDeck data & calculations", () => {
   it("provides 5 complete comparison cards covering key AST capabilities", () => {
     expect(DEFAULT_COMPARISON_CARDS).toHaveLength(5);
 
-    const tasks = DEFAULT_COMPARISON_CARDS.map((c) => c.task);
-    expect(tasks).toContain("Cross-file call hierarchy");
-    expect(tasks).toContain("Commit impact check");
-    expect(tasks).toContain("Source code citations");
-    expect(tasks).toContain("New engineer onboarding");
-    expect(tasks).toContain("Code privacy & memory");
+    const categories = DEFAULT_COMPARISON_CARDS.map((c) => c.category);
+    expect(categories).toContain("01 / CALL GRAPH");
+    expect(categories).toContain("02 / BLAST RADIUS");
+    expect(categories).toContain("03 / CITATIONS");
+    expect(categories).toContain("04 / ONBOARDING");
+    expect(categories).toContain("05 / ISOLATION");
   });
 
-  it("ensures each card defines verified AST advantages and failure modes", () => {
+  it("ensures each card defines verified headlines, descriptions, and status", () => {
     DEFAULT_COMPARISON_CARDS.forEach((card) => {
+      expect(card.id).toBeDefined();
       expect(card.category).toBeDefined();
-      expect(card.task).toBeDefined();
-      expect(card.grepFlaw).toBeDefined();
-      expect(card.llmFlaw).toBeDefined();
-      expect(card.devlensAdvantage).toBeDefined();
       expect(card.badge).toBeDefined();
+      expect(card.headline).toBeDefined();
+      expect(card.description).toBeDefined();
+      expect(card.footerTag).toBeDefined();
+      expect(card.status).toBeDefined();
       expect(typeof card.rotation).toBe("number");
     });
   });
@@ -36,20 +37,17 @@ describe("TestimonialFanDeck data & calculations", () => {
   });
 
   it("computes default overlap when container has ample width", () => {
-    const overlap = calculateFandeckOverlap(5, 280, 48, 1400, false);
-    expect(overlap).toBe(48);
+    const overlap = calculateFandeckOverlap(5, 285, 46, 1400, false);
+    expect(overlap).toBe(46);
   });
 
   it("increases overlap responsively when container width is constrained", () => {
-    // 5 cards of 280px = 1400px. With 48px overlap, width is 1400 - 192 = 1208px.
-    // If container is 900px, max allowed width is 860px.
-    // Needed overlap increases to pack cards nicely without overflow.
-    const overlap = calculateFandeckOverlap(5, 280, 48, 900, false);
-    expect(overlap).toBeGreaterThan(48);
+    const overlap = calculateFandeckOverlap(5, 285, 46, 900, false);
+    expect(overlap).toBeGreaterThan(46);
   });
 
   it("preserves natural spacing on mobile mode", () => {
-    const overlap = calculateFandeckOverlap(5, 280, 48, 375, true);
-    expect(overlap).toBe(48);
+    const overlap = calculateFandeckOverlap(5, 285, 46, 375, true);
+    expect(overlap).toBe(46);
   });
 });
