@@ -1937,7 +1937,7 @@ export function HomePage() {
 
                   {/* Secondary branch node */}
                   <g className="mf-circuit-node" opacity={0.65}>
-                    <circle cx="225" cy="98" r="3" className="mf-circuit-node-dot" />
+                    <circle cx="225" cy="98" r="3" fill="#0a0a0a" />
                     <text x="233" y="101" className="mf-circuit-node-sub">
                       auth.ts:24 · jwt
                     </text>
@@ -1949,8 +1949,8 @@ export function HomePage() {
                     onMouseEnter={() => setActiveHeroNode("server.ts:18 · Ingress HTTP · 1.1ms")}
                     onMouseLeave={() => setActiveHeroNode(null)}
                   >
-                    <circle cx="44" cy="35" r="7" className="mf-circuit-node-ring" />
-                    <circle cx="44" cy="35" r="3.5" className="mf-circuit-node-dot" />
+                    <circle cx="44" cy="35" r="7" fill="transparent" stroke="rgba(10,10,10,0.15)" />
+                    <circle cx="44" cy="35" r="3.5" fill="#0a0a0a" />
                     <text x="44" y="20" textAnchor="middle" className="mf-circuit-node-label">
                       server.ts:18
                     </text>
@@ -1965,8 +1965,8 @@ export function HomePage() {
                     onMouseEnter={() => setActiveHeroNode("router.ts:54 · Radix Dispatch · 0.4ms")}
                     onMouseLeave={() => setActiveHeroNode(null)}
                   >
-                    <circle cx="155" cy="75" r="7" className="mf-circuit-node-ring" />
-                    <circle cx="155" cy="75" r="3.5" className="mf-circuit-node-dot" />
+                    <circle cx="155" cy="75" r="7" fill="transparent" stroke="rgba(10,10,10,0.15)" />
+                    <circle cx="155" cy="75" r="3.5" fill="#0a0a0a" />
                     <text x="155" y="93" textAnchor="middle" className="mf-circuit-node-label">
                       router.ts:54
                     </text>
@@ -1981,8 +1981,8 @@ export function HomePage() {
                     onMouseEnter={() => setActiveHeroNode("app-render.tsx:92 · Suspense Stream · 2.9ms")}
                     onMouseLeave={() => setActiveHeroNode(null)}
                   >
-                    <circle cx="270" cy="35" r="7" className="mf-circuit-node-ring" />
-                    <circle cx="270" cy="35" r="3.5" className="mf-circuit-node-dot" />
+                    <circle cx="270" cy="35" r="7" fill="transparent" stroke="rgba(10,10,10,0.15)" />
+                    <circle cx="270" cy="35" r="3.5" fill="#0a0a0a" />
                     <text x="270" y="20" textAnchor="middle" className="mf-circuit-node-label">
                       render.tsx:92
                     </text>
@@ -1997,8 +1997,8 @@ export function HomePage() {
                     onMouseEnter={() => setActiveHeroNode("db.ts:10 · Connection Pool · 1.8ms")}
                     onMouseLeave={() => setActiveHeroNode(null)}
                   >
-                    <circle cx="380" cy="75" r="7" className="mf-circuit-node-ring" />
-                    <circle cx="380" cy="75" r="3.5" className="mf-circuit-node-dot" />
+                    <circle cx="380" cy="75" r="7" fill="transparent" stroke="rgba(10,10,10,0.15)" />
+                    <circle cx="380" cy="75" r="3.5" fill="#0a0a0a" />
                     <text x="380" y="93" textAnchor="middle" className="mf-circuit-node-label">
                       db.ts:10
                     </text>
@@ -2015,8 +2015,8 @@ export function HomePage() {
                     minHeight: 18,
                     fontSize: "0.6875rem",
                     fontFamily: "var(--mf-mono, monospace)",
-                    opacity: activeHeroNode ? 1 : 0.45,
-                    transition: "opacity 0.15s ease",
+                    color: activeHeroNode ? "#0a0a0a" : "transparent",
+                    transition: "color 0.15s ease",
                     marginTop: 4,
                   }}
                 >
