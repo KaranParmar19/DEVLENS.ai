@@ -950,6 +950,21 @@ button.mf-btn.sm {
   transition: all 0.2s ease;
 }
 
+.mf-circuit-node-dot {
+  fill: #0a0a0a;
+  transition: fill 0.2s ease;
+}
+
+.mf-circuit-node-ring {
+  fill: transparent;
+  stroke: rgba(10, 10, 10, 0.15);
+  transition: stroke 0.2s ease;
+}
+
+.mf-circuit-node:hover .mf-circuit-node-ring {
+  stroke: rgba(10, 10, 10, 0.35);
+}
+
 .mf-circuit-node-label {
   font-family: var(--mf-mono, monospace);
   font-size: 10px;
@@ -1041,6 +1056,22 @@ button.mf-btn.sm {
 .mf-root[data-theme='dark'] .mf-circuit-flow-wire {
   stroke: #ffffff;
   opacity: 0.55;
+}
+
+.mf-root[data-theme='dark'] .mf-circuit-node-dot {
+  fill: #ffffff;
+}
+
+.mf-root[data-theme='dark'] .mf-circuit-node-ring {
+  stroke: rgba(255, 255, 255, 0.25);
+}
+
+.mf-root[data-theme='dark'] .mf-circuit-node:hover .mf-circuit-node-ring {
+  stroke: rgba(255, 255, 255, 0.6);
+}
+
+.mf-root[data-theme='dark'] .mf-circuit-node-tooltip {
+  color: #94a3b8;
 }
 
 .mf-root[data-theme='dark'] .mf-flow-dot {
