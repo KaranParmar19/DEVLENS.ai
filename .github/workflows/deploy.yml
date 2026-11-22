@@ -86,12 +86,9 @@ jobs:
         if: env.RAILWAY_TOKEN != ''
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        uses: railway-app/deploy-action@v1
-        with:
-          service: devlens-api
-          token: ${{ secrets.RAILWAY_TOKEN }}
-          environment: production
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        run: |
+          npm install -g @railway/cli
+          railway up --service devlens-api
 
   # ── Deploy Frontend to Cloudflare Workers ────────────────────────────────────
   deploy-frontend:
