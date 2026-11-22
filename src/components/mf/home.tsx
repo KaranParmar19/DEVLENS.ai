@@ -5,13 +5,12 @@ import {
   Terminal,
   ArrowUpRight,
 } from "lucide-react";
-import { Pill, Reveal, SiteLayout } from "./site-layout";
+import { Reveal, SiteLayout } from "./site-layout";
 import { StatsSection } from "@/components/ui/stats-section";
 import { PolaroidLineCarousel } from "@/components/ui/polaroid-carousel";
 import { FAQSection } from "@/components/ui/faq-section";
 import { MorphText } from "@/components/ui/morph-text";
 import { PlumblinePipeline } from "@/components/ui/plumbline";
-import { VenomButton } from "@/components/ui/venom-button";
 import { Volvelle } from "@/components/ui/volvelle";
 
 const FEATURES = [
@@ -1782,7 +1781,9 @@ export function HomePage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
           >
-            <Pill live>Tree-sitter AST Graph + Verified Code Search</Pill>
+            <span className="mf-logo" aria-label="DevLens.ai" style={{ gap: 0 }}>
+              DevLens.<span style={{ color: "var(--mf-ink-3, #7a7a7a)" }}>ai</span>
+            </span>
           </motion.div>
 
           <motion.h1
@@ -1814,23 +1815,12 @@ export function HomePage() {
                 repository in seconds. Every answer links back to the exact file and line number.
               </p>
 
-              {/* WebGL Magnetic Symbiote CTA + Live Sandbox Anchor */}
+              {/* Primary Action CTA + Live Sandbox Anchor */}
               <div className="mf-hero-cta-row">
-                <div className="mf-venom-stage">
-                  <VenomButton
-                    text="Open Workspace"
-                    link="/dashboard"
-                    buttonHeight={54}
-                    sidePadding={30}
-                    customCursor={true}
-                    quality="balanced"
-                    font={{
-                      fontFamily: "Geist",
-                      fontSize: 16,
-                      fontWeight: 600,
-                    }}
-                  />
-                </div>
+                <Link to="/dashboard" className="mf-btn">
+                  <span>Open Workspace</span>
+                  <span className="mf-arrow" aria-hidden="true">→</span>
+                </Link>
 
                 <button
                   type="button"
