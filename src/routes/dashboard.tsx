@@ -231,18 +231,26 @@ function DashboardPage() {
   const [health, setHealth] = useState<"idle" | "waking" | "ok" | "down">("idle");
   const retryCountRef = useRef(0);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const history = useMemo(() => repoHistory.getAll(), [version, repo]);
+  const [clientMounted, setClientMounted] = useState(false);
 
-  const [dismissedRepos, setDismissedRepos] = useState<string[]>(() => {
+  // Hydrate browser-only localStorage state after mount to prevent React #418 hydration mismatches
+  const [dismissedRepos, setDismissedRepos] = useState<string[]>([]);
+
+  useEffect(() => {
+    setClientMounted(true);
     try {
-      if (typeof window === "undefined" || typeof localStorage === "undefined") return [];
       const raw = localStorage.getItem("devlens_dismissed_repos");
-      return raw ? JSON.parse(raw) : [];
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) setDismissedRepos(parsed);
+      }
     } catch {
-      return [];
+      // ignore storage errors
     }
-  });
+  }, []);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const history = useMemo(() => (clientMounted ? repoHistory.getAll() : []), [clientMounted, version, repo]);
 
   const handleDeleteRepo = useCallback((entry: RepoHistoryEntry) => {
     repoHistory.remove(entry.id, entry.repoLabel, entry.repoUrl);
@@ -273,7 +281,7 @@ function DashboardPage() {
     setVersion((v) => v + 1);
   }, []);
 
-  const { user, isAuthenticated, loginWithGitHub, loginWithToken, logout } = useAuth();
+  const { user, isAuthenticated, authHydrated, loginWithGitHub, loginWithToken, logout } = useAuth();
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [patInput, setPatInput] = useState("");
   const [patLoading, setPatLoading] = useState(false);
@@ -404,6 +412,26 @@ function DashboardPage() {
   );
 
   if (repo) {
+    if (!authHydrated) {
+      return (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "#08080a",
+            color: "#f4f4f5",
+            display: "grid",
+            placeItems: "center",
+            fontFamily: "var(--mf-mono, monospace)",
+            fontSize: "0.75rem",
+            letterSpacing: "0.06em",
+          }}
+        >
+          INITIALIZING WORKSPACE...
+        </div>
+      );
+    }
+
     if (!isAuthenticated) {
       return (
         <GitHubAuthGate

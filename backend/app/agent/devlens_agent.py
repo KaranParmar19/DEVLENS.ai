@@ -370,6 +370,8 @@ class DevLensAgent:
             "temperature": 0.2,
             "max_tokens": 4096,
             "streaming": True,
+            "timeout": 35,
+            "max_retries": 0,
         }
         if settings.openai_api_base:
             llm_kwargs["base_url"] = settings.openai_api_base
@@ -1074,7 +1076,8 @@ class DevLensAgent:
         all_known_paths = set(file_metrics.keys())
         raw_output = ""
 
-        # Attempt LLM call with 1 retry on invalid JSON
+        # Attempt LLM call with strict per-call timeout so Render proxy never hangs at 95%.
+        # Only retry once on malformed JSON; break immediately on timeout or provider failure.
         for attempt in range(2):
             try:
                 if attempt == 0:
@@ -1086,7 +1089,7 @@ class DevLensAgent:
                         HumanMessage(content="Your previous response was not valid JSON matching the requested schema. Return ONLY a valid JSON object matching the schema with no extra commentary."),
                     ]
 
-                res = await self.llm.ainvoke(messages)
+                res = await asyncio.wait_for(self.llm.ainvoke(messages), timeout=35.0)
                 raw_output = res.content or ""
 
                 clean_json = raw_output.strip()
@@ -1101,8 +1104,14 @@ class DevLensAgent:
                 data = json.loads(clean_json)
                 parsed_schema = OnboardingDocSchema.model_validate(data)
                 break
-            except Exception as parse_err:
+            except asyncio.TimeoutError:
+                logger.warning("onboarding_llm_timeout_using_fallback", attempt=attempt)
+                break
+            except (json.JSONDecodeError, ValueError) as parse_err:
                 logger.warning("onboarding_json_attempt_failed", attempt=attempt, error=str(parse_err))
+            except Exception as llm_err:
+                logger.warning("onboarding_llm_provider_error_using_fallback", attempt=attempt, error=str(llm_err))
+                break
 
         if not parsed_schema:
             logger.warning("onboarding_json_failed_using_facts_fallback")

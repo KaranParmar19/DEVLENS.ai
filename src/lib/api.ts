@@ -215,11 +215,32 @@ export const api = {
       `/api/v1/sessions/${sessionId}/file?path=${encodeURIComponent(path)}`,
     ),
 
-  // Onboarding doc
-  getOnboardingDoc: (sessionId: string) =>
-    apiFetch<{ markdown: string; structured?: Record<string, unknown> | null; repo: string }>(
-      `/api/v1/sessions/${sessionId}/onboarding`,
-    ),
+  // Onboarding doc (bounded by a 60s AbortController so the UI never hangs indefinitely)
+  getOnboardingDoc: async (sessionId: string) => {
+    const controller = new AbortController();
+    const timer =
+      typeof window !== "undefined"
+        ? window.setTimeout(() => controller.abort(), 60_000)
+        : undefined;
+    try {
+      return await apiFetch<{
+        markdown: string;
+        structured?: Record<string, unknown> | null;
+        repo: string;
+      }>(`/api/v1/sessions/${sessionId}/onboarding`, {
+        signal: controller.signal,
+      });
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        throw new Error(
+          "Onboarding generation timed out while waiting for the backend. Click Retry to regenerate.",
+        );
+      }
+      throw err;
+    } finally {
+      if (timer !== undefined) window.clearTimeout(timer);
+    }
+  },
 
   // Commits & Architectural Drift
   getCommits: (sessionId: string) =>

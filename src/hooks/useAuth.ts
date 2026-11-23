@@ -12,24 +12,11 @@ const STORAGE_KEY_TOKEN = "devlens_session_token";
 const STORAGE_KEY_USER = "devlens_user";
 
 export function useAuth() {
-  const [user, setUser] = useState<AuthUser | null>(() => {
-    if (typeof window === "undefined") return null;
-    const token = localStorage.getItem(STORAGE_KEY_TOKEN);
-    const storedUser = localStorage.getItem(STORAGE_KEY_USER);
-    if (token && storedUser) {
-      try {
-        const parsed = JSON.parse(storedUser);
-        if (parsed && typeof parsed.username === "string" && parsed.username.trim()) {
-          return { token, ...parsed };
-        }
-      } catch {
-        // invalid JSON
-      }
-    }
-    return null;
-  });
+  // Always initialize to null for SSR/client hydration parity (prevents React error #418)
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [authHydrated, setAuthHydrated] = useState(false);
 
-  // Catch OAuth redirect callback parameters (?token=...&username=...)
+  // Hydrate auth from OAuth callback query params or localStorage after mount
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -47,11 +34,15 @@ export function useAuth() {
         name: name || undefined,
       };
 
-      localStorage.setItem(STORAGE_KEY_TOKEN, token);
-      localStorage.setItem(
-        STORAGE_KEY_USER,
-        JSON.stringify({ username, avatarUrl: avatar, name })
-      );
+      try {
+        localStorage.setItem(STORAGE_KEY_TOKEN, token);
+        localStorage.setItem(
+          STORAGE_KEY_USER,
+          JSON.stringify({ username, avatarUrl: avatar, name })
+        );
+      } catch {
+        // storage unavailable
+      }
 
       setUser(authUser);
 
@@ -64,7 +55,24 @@ export function useAuth() {
       const newSearch = params.toString();
       const newUrl = window.location.pathname + (newSearch ? `?${newSearch}` : "");
       window.history.replaceState({}, document.title, newUrl);
+      setAuthHydrated(true);
+      return;
     }
+
+    try {
+      const storedToken = localStorage.getItem(STORAGE_KEY_TOKEN);
+      const storedUser = localStorage.getItem(STORAGE_KEY_USER);
+      if (storedToken && storedUser) {
+        const parsed = JSON.parse(storedUser);
+        if (parsed && typeof parsed.username === "string" && parsed.username.trim()) {
+          setUser({ token: storedToken, ...parsed });
+        }
+      }
+    } catch {
+      // invalid JSON or restricted storage
+    }
+
+    setAuthHydrated(true);
   }, []);
 
   const loginWithGitHub = useCallback(() => {
@@ -103,6 +111,7 @@ export function useAuth() {
   return {
     user,
     isAuthenticated: !!user,
+    authHydrated,
     loginWithGitHub,
     loginWithToken,
     logout,

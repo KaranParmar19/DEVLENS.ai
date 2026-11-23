@@ -46,13 +46,8 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
   const [activeFile, setActiveFile] = useState<string | null>(null);
   const [branch, setBranch] = useState("main");
   const [selectedLang, setSelectedLang] = useState<string | null>(null);
-  const [theme, setTheme] = useState<"dark" | "light">(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("devlens-studio-theme");
-      if (saved === "light" || saved === "dark") return saved;
-    }
-    return "dark";
-  });
+  // Deterministic SSR defaults; hydrated from localStorage & viewport in useEffect below
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
 
   const toggleTheme = useCallback(() => {
     setTheme((curr) => {
@@ -66,21 +61,8 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
 
   const isLight = theme === "light";
 
-  const [explorerWidth, setExplorerWidth] = useState<number>(() => {
-    if (typeof window !== "undefined") {
-      const saved = Number(localStorage.getItem("devlens-explorer-width"));
-      if (saved >= 180 && saved <= 480) return saved;
-    }
-    return 260;
-  });
-
-  const [copilotWidth, setCopilotWidth] = useState<number>(() => {
-    if (typeof window !== "undefined") {
-      const saved = Number(localStorage.getItem("devlens-copilot-width"));
-      if (saved >= 280 && saved <= 600) return saved;
-    }
-    return 340;
-  });
+  const [explorerWidth, setExplorerWidth] = useState<number>(260);
+  const [copilotWidth, setCopilotWidth] = useState<number>(340);
 
   const handleResizeExplorer = useCallback((deltaX: number) => {
     setExplorerWidth((curr) => {
@@ -116,18 +98,33 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
     }
   }, []);
 
-  const [explorerCollapsed, setExplorerCollapsed] = useState(() => {
-    if (typeof window !== "undefined") {
-      return window.innerWidth < 960;
+  const [explorerCollapsed, setExplorerCollapsed] = useState(false);
+  const [copilotCollapsed, setCopilotCollapsed] = useState(false);
+
+  // Hydrate persisted studio layout preferences after mount to prevent React #418 SSR mismatches
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const savedTheme = localStorage.getItem("devlens-studio-theme");
+      if (savedTheme === "light" || savedTheme === "dark") {
+        setTheme(savedTheme);
+      }
+      const savedExplorer = Number(localStorage.getItem("devlens-explorer-width"));
+      if (savedExplorer >= 180 && savedExplorer <= 480) {
+        setExplorerWidth(savedExplorer);
+      }
+      const savedCopilot = Number(localStorage.getItem("devlens-copilot-width"));
+      if (savedCopilot >= 280 && savedCopilot <= 600) {
+        setCopilotWidth(savedCopilot);
+      }
+    } catch {
+      // ignore storage errors
     }
-    return false;
-  });
-  const [copilotCollapsed, setCopilotCollapsed] = useState(() => {
-    if (typeof window !== "undefined") {
-      return window.innerWidth < 960;
+    if (window.innerWidth < 960) {
+      setExplorerCollapsed(true);
+      setCopilotCollapsed(true);
     }
-    return false;
-  });
+  }, []);
   const [isProcessingDone, setIsProcessingDone] = useState(!!(jobId && sessionId));
   const [onboardingDoc, setOnboardingDoc] = useState<string | undefined>(undefined);
   const [onboardingLoading, setOnboardingLoading] = useState(false);
