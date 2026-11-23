@@ -979,7 +979,12 @@ class DevLensAgent:
         Outputs a machine-validated JSON schema and transforms it into verified markdown.
         """
         import json
-        from app.core.facts_extractor import FactsExtractor, build_deterministic_fallback_doc
+        from app.core.facts_extractor import (
+            FactsExtractor,
+            build_deterministic_fallback_doc,
+            compose_how_it_works_paragraphs,
+            compose_repo_overview_paragraphs,
+        )
         from app.agent.prompts import ONBOARDING_DOC_JSON_PROMPT
         from app.schemas.onboarding import (
             OnboardingDocSchema,
@@ -1228,16 +1233,13 @@ class DevLensAgent:
             f"and {facts.get('total_edges', 0)} dependency edges "
             f"({facts.get('cycles_count', 0)} circular import cycles).{lang_summary}"
         )
-        if cleaned_summary:
+        if cleaned_summary and len(cleaned_summary) >= 160:
             parsed_schema.summary = cleaned_summary
-        elif facts.get("readme_summary"):
-            parsed_schema.summary = facts["readme_summary"]
+        elif cleaned_summary:
+            composed_overview = compose_repo_overview_paragraphs(facts, self.graph_cache)
+            parsed_schema.summary = f"{cleaned_summary}\n\n{composed_overview}"
         else:
-            if facts.get("entry_points"):
-                ep_names = ", ".join(f"`{PurePosixPath(ep['path']).name}`" for ep in facts["entry_points"][:3])
-                parsed_schema.summary = f"Core architecture for {parsed_schema.repo_name}, structured around primary entry points {ep_names}."
-            else:
-                parsed_schema.summary = f"Architectural overview and subsystem breakdown for {parsed_schema.repo_name}."
+            parsed_schema.summary = compose_repo_overview_paragraphs(facts, self.graph_cache)
 
         if not parsed_schema.overview_highlights:
             gen_highlights = []
@@ -1318,10 +1320,14 @@ class DevLensAgent:
                 f"and {facts.get('total_edges', 0)} resolved import edges."
             )
 
-        if cleaned_how_prose:
+        if cleaned_how_prose and len(cleaned_how_prose) >= 160:
             parsed_schema.how_it_works = f"{cleaned_how_prose}\n\n" + "\n".join(how_lines)
+        elif cleaned_how_prose:
+            composed_how = compose_how_it_works_paragraphs(facts, self.graph_cache)
+            parsed_schema.how_it_works = f"{cleaned_how_prose}\n\n{composed_how}\n\n" + "\n".join(how_lines)
         else:
-            parsed_schema.how_it_works = "\n".join(how_lines)
+            composed_how = compose_how_it_works_paragraphs(facts, self.graph_cache)
+            parsed_schema.how_it_works = f"{composed_how}\n\n" + "\n".join(how_lines)
 
         # 1. Overwrite quick start with ground truth from manifest
         test_cmd = manifest.get("test_command")

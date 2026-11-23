@@ -2382,12 +2382,296 @@ def build_architecture_mermaid(facts: dict[str, Any], graph_cache: dict[str, Any
     return "\n".join(lines)
 
 
+def _join_natural_list(items: list[str]) -> str:
+    """Join 1-N items into clean English prose ('a', 'a and b', 'a, b, and c')."""
+    clean = [item.strip() for item in items if item and item.strip()]
+    if not clean:
+        return ""
+    if len(clean) == 1:
+        return clean[0]
+    if len(clean) == 2:
+        return f"{clean[0]} and {clean[1]}"
+    return f"{', '.join(clean[:-1])}, and {clean[-1]}"
+
+
+def _ensure_period(text: str) -> str:
+    cleaned = text.strip()
+    if not cleaned:
+        return ""
+    if cleaned[-1] in ".!?":
+        return cleaned
+    return f"{cleaned}."
+
+
+def compose_repo_overview_paragraphs(
+    facts: dict[str, Any],
+    graph_cache: dict[str, Any] | None = None,
+) -> str:
+    """
+    Compose 2 cohesive, plain-English onboarding paragraphs explaining what the
+    repository contains, how its packages and modules are organized, and how its
+    main entry points connect to shared hubs. Grounded strictly in verified facts.
+    """
+    repo_name = facts.get("repo_full_name", "This repository")
+    total_modules = int(facts.get("total_modules", 0) or 0)
+    source_modules = int(facts.get("source_modules_count", total_modules) or total_modules)
+    total_edges = int(facts.get("total_edges", 0) or 0)
+    cycles_count = int(facts.get("cycles_count", 0) or 0)
+    manifest = facts.get("manifest", {}) or {}
+
+    # Paragraph 1: What the repo is, its layout, languages, and core stack
+    p1_sentences: list[str] = []
+    readme_summary = str(facts.get("readme_summary") or "").strip()
+    if readme_summary:
+        p1_sentences.append(_ensure_period(readme_summary))
+
+    langs = [
+        f"{lang} ({cnt})"
+        for lang, cnt in sorted(
+            (facts.get("language_breakdown") or {}).items(),
+            key=lambda kv: -kv[1],
+        )[:4]
+    ]
+    folders = [
+        str(fb.get("path", "")).strip().rstrip("/")
+        for fb in (facts.get("folder_breakdown") or [])
+        if str(fb.get("path", "")).strip().rstrip("/") not in ("", ".", "root")
+    ]
+    mono_pkgs = [
+        str(pkg.get("folder", "")).strip().rstrip("/")
+        for pkg in (manifest.get("monorepo_packages") or [])
+        if str(pkg.get("folder", "")).strip()
+    ]
+
+    mod_word = "source module" if source_modules == 1 else "source modules"
+    edge_word = "import edge" if total_edges == 1 else "import edges"
+    if mono_pkgs:
+        pkg_str = _join_natural_list([f"`{p}/`" for p in mono_pkgs[:4]])
+        structure_line = (
+            f"{repo_name} is organized as a multi-package repository with {pkg_str}, "
+            f"covering {source_modules} {mod_word} across {total_modules} indexed files and {total_edges} resolved {edge_word}."
+        )
+    elif len(folders) >= 2:
+        dir_str = _join_natural_list([f"`{f}/`" for f in folders[:4]])
+        structure_line = (
+            f"{repo_name} splits its codebase across {dir_str}, "
+            f"covering {source_modules} {mod_word} across {total_modules} indexed files and {total_edges} resolved {edge_word}."
+        )
+    else:
+        structure_line = (
+            f"The indexed snapshot of {repo_name} contains {total_modules} files "
+            f"({source_modules} {mod_word}) connected by {total_edges} resolved {edge_word}."
+        )
+    p1_sentences.append(structure_line)
+
+    if langs:
+        p1_sentences.append(f"Primary languages in the graph are {_join_natural_list(langs)}.")
+
+    raw_stack = manifest.get("runtime_dependencies") or manifest.get("tech_stack") or []
+    grouped_stack = group_tech_stack([str(s) for s in raw_stack], max_groups=6) if raw_stack else []
+    if grouped_stack:
+        p1_sentences.append(
+            f"Declared runtime dependencies center on {_join_natural_list(grouped_stack)}."
+        )
+
+    # Paragraph 2: Entry points, shared hubs, cross-folder flow, and graph health
+    p2_sentences: list[str] = []
+    entry_points = facts.get("entry_points") or []
+    if entry_points:
+        ep_refs = _join_natural_list([f"[[{ep['path']}]]" for ep in entry_points[:3]])
+        ep_verb = "acts as the primary entry point" if len(entry_points) == 1 else "serve as primary entry points"
+        p2_sentences.append(f"Execution starts where {ep_refs} {ep_verb} for local module imports.")
+
+    high_risk = facts.get("high_risk_files") or []
+    if high_risk:
+        top_hr = high_risk[0]
+        dep_cnt = int(top_hr.get("dependents_count", 0) or 0)
+        dep_word = "module imports" if dep_cnt == 1 else "modules import"
+        p2_sentences.append(
+            f"Shared internal logic concentrates around [[{top_hr['path']}]], which {dep_cnt} {dep_word} directly "
+            f"(coupling {float(top_hr.get('coupling', 0.0)):.2f})."
+        )
+
+    all_edges = _extract_graph_edges(graph_cache)
+    cross_counts: dict[tuple[str, str], int] = {}
+    for src, dst in all_edges:
+        sd = src.split("/")[0] if "/" in src else "root"
+        dd = dst.split("/")[0] if "/" in dst else "root"
+        if sd != dd:
+            cross_counts[(sd, dd)] = cross_counts.get((sd, dd), 0) + 1
+    if cross_counts:
+        top_pair, cnt = sorted(cross_counts.items(), key=lambda kv: -kv[1])[0]
+        imp_word = "import" if cnt == 1 else "imports"
+        p2_sentences.append(
+            f"Across top-level directories, `{top_pair[0]}/` pulls from `{top_pair[1]}/` through {cnt} verified {imp_word}."
+        )
+
+    if cycles_count == 0:
+        p2_sentences.append(
+            "The dependency graph is acyclic with 0 circular import cycles, so changes trace cleanly from entry files down to leaf helpers."
+        )
+    else:
+        cycle_word = "cycle" if cycles_count == 1 else "cycles"
+        p2_sentences.append(
+            f"The graph contains {cycles_count} circular import {cycle_word}, so edits inside cyclic modules should be checked against both directions of the loop."
+        )
+
+    paragraphs = [" ".join(p1_sentences)]
+    if p2_sentences:
+        paragraphs.append(" ".join(p2_sentences))
+    return "\n\n".join(paragraphs)
+
+
+def compose_how_it_works_paragraphs(
+    facts: dict[str, Any],
+    graph_cache: dict[str, Any] | None = None,
+) -> str:
+    """
+    Compose 2 cohesive paragraphs tracing real startup/import flow from verified
+    entry points through shared hubs so a new developer understands how files fit together.
+    """
+    all_edges = _extract_graph_edges(graph_cache)
+    outgoing_map: dict[str, list[str]] = {}
+    incoming_map: dict[str, list[str]] = {}
+    for src, dst in all_edges:
+        outgoing_map.setdefault(src, []).append(dst)
+        incoming_map.setdefault(dst, []).append(src)
+
+    entry_points = facts.get("entry_points") or []
+    high_risk = facts.get("high_risk_files") or []
+    folders = [
+        fb for fb in (facts.get("folder_breakdown") or [])
+        if str(fb.get("path", "")).strip().rstrip("/") not in ("", ".", "root")
+    ]
+
+    # Paragraph 1: Trace concrete entry points -> direct local imports
+    flow_sentences: list[str] = []
+    traced_any = False
+    for ep in entry_points[:3]:
+        ep_path = ep.get("path", "")
+        if not ep_path:
+            continue
+        ep_imports = outgoing_map.get(ep_path) or ep.get("dependencies") or []
+        if ep_imports:
+            traced_any = True
+            shown = _join_natural_list([f"[[{p}]]" for p in ep_imports[:4]])
+            extra = f" (plus {len(ep_imports) - 4} more local files)" if len(ep_imports) > 4 else ""
+            flow_sentences.append(
+                f"[[{ep_path}]] coordinates execution by importing {shown}{extra}."
+            )
+    if not traced_any:
+        if entry_points:
+            ep_refs = _join_natural_list([f"[[{ep['path']}]]" for ep in entry_points[:3]])
+            flow_sentences.append(
+                f"Top-level execution begins at {ep_refs}, which form the outer boundary of the local dependency graph."
+            )
+        elif folders:
+            top_dirs = _join_natural_list([f"`{str(fb['path']).strip().rstrip('/')}/`" for fb in folders[:3]])
+            flow_sentences.append(
+                f"Code is grouped under {top_dirs}, with modules organized by feature and runtime layer."
+            )
+        else:
+            flow_sentences.append(
+                "Source modules sit at the repository root and can be read directly from the Explorer panel."
+            )
+
+    # Paragraph 2: Explain where shared state/logic concentrates and why callers depend on it
+    hub_sentences: list[str] = []
+    if high_risk:
+        for hr in high_risk[:2]:
+            hr_path = hr.get("path", "")
+            if not hr_path:
+                continue
+            callers = incoming_map.get(hr_path) or hr.get("source_dependents") or []
+            dep_cnt = int(hr.get("dependents_count", 0) or 0)
+            if callers:
+                caller_str = _join_natural_list([f"[[{c}]]" for c in callers[:3]])
+                more_c = f" and {len(callers) - 3} other modules" if len(callers) > 3 else ""
+                hub_sentences.append(
+                    f"Downstream, [[{hr_path}]] acts as a shared dependency imported by {caller_str}{more_c}."
+                )
+            elif dep_cnt > 0:
+                dep_word = "module" if dep_cnt == 1 else "modules"
+                hub_sentences.append(
+                    f"Downstream, [[{hr_path}]] is a central dependency referenced by {dep_cnt} {dep_word}."
+                )
+        hub_sentences.append(
+            "When modifying exports or data shapes in these shared modules, inspect their downstream dependents in the Architecture graph before merging."
+        )
+    else:
+        hub_sentences.append(
+            "No single file dominates incoming imports across the repository, which keeps coupling localized when editing individual features."
+        )
+
+    paragraphs = [" ".join(flow_sentences)]
+    if hub_sentences:
+        paragraphs.append(" ".join(hub_sentences))
+    return "\n\n".join(paragraphs)
+
+
+def compose_folder_guide_paragraph(
+    facts: dict[str, Any],
+    cross_folder_counts: dict[tuple[str, str], int],
+) -> str:
+    """Brief framing paragraph explaining top-level directory layout."""
+    folders = [
+        fb for fb in (facts.get("folder_breakdown") or [])
+        if str(fb.get("path", "")).strip().rstrip("/") not in ("", ".")
+    ]
+    if not folders:
+        return "Indexed files sit directly at the repository root without nested feature directories."
+
+    top_names = _join_natural_list(
+        [f"`{str(fb['path']).strip().rstrip('/')}/`" for fb in folders[:4]]
+    )
+    lead = (
+        f"The directory layout groups files into {len(folders)} main areas, led by {top_names}. "
+        "Each folder below lists its indexed file count and representative modules so you can jump straight to the right layer."
+    )
+    if cross_folder_counts:
+        (src_d, dst_d), cnt = sorted(cross_folder_counts.items(), key=lambda kv: -kv[1])[0]
+        imp_word = "import" if cnt == 1 else "imports"
+        lead += f" The strongest cross-directory link runs from `{src_d}/` into `{dst_d}/` ({cnt} {imp_word})."
+    return lead
+
+
+def compose_starter_guide_paragraph(facts: dict[str, Any]) -> str:
+    """Plain-English guidance for a developer picking their first safe change."""
+    entry_points = facts.get("entry_points") or []
+    manifest = facts.get("manifest") or {}
+    test_cmd = manifest.get("test_command")
+    run_cmd = manifest.get("run_command")
+
+    parts: list[str] = []
+    if entry_points:
+        parts.append(
+            f"Start by reading [[{entry_points[0]['path']}]] to trace how the application initializes, then pick a low-coupling file below where edits stay isolated."
+        )
+    else:
+        parts.append(
+            "Start with a low-coupling leaf file below so your first change affects as few downstream callers as possible."
+        )
+
+    if test_cmd and test_cmd not in ("no tests found", "not declared in repo"):
+        parts.append(f"Run `{test_cmd}` after editing to verify existing behavior stays intact.")
+    elif run_cmd and run_cmd not in ("no run command declared", "not declared in repo"):
+        parts.append(
+            f"No automated test runner is declared in the repository manifest, so verify changes by running `{run_cmd}` locally."
+        )
+    else:
+        parts.append(
+            "No automated test command is declared in the repository manifest, so review direct callers in the Architecture graph before shipping changes."
+        )
+    return " ".join(parts)
+
+
 def build_deterministic_fallback_doc(
     facts: dict[str, Any],
     graph_cache: dict[str, Any] | None = None,
 ) -> str:
     """
-    Generate a 100% facts-based deterministic onboarding document.
+    Generate a 100% facts-based deterministic onboarding document with clear
+    explanatory paragraphs and verified citations.
     No LLM hallucination, no placeholder router.ts/db.ts, no fake invariants,
     and no backtick-wrapped double-bracket citations.
     """
@@ -2575,16 +2859,22 @@ def build_deterministic_fallback_doc(
 
     folder_map_lines = "\n".join(folder_entries) or "- No directory structure identified."
 
-    overview = (
-        facts.get("readme_summary")
-        or f"Repository containing {facts.get('total_modules', 0)} indexed modules across {facts.get('total_edges', 0)} dependency edges."
-    )
+    overview_paragraphs = compose_repo_overview_paragraphs(facts, graph_cache)
+    how_it_works_paragraphs = compose_how_it_works_paragraphs(facts, graph_cache)
+    folder_intro = compose_folder_guide_paragraph(facts, cross_folder_counts)
+    starter_intro = compose_starter_guide_paragraph(facts)
 
     cycles_count = facts.get("cycles_count", 0)
     cycle_notice = (
         f"> [!CAUTION]\n> **Circular Import Cycles Detected ({cycles_count})**:\n> Cycle clusters exist in the dependency tree. Avoid introducing cross-cycle imports."
         if cycles_count > 0
         else "> [!NOTE]\n> **Acyclic Architecture**: 0 circular dependency cycles detected across the dependency graph."
+    )
+
+    blast_intro = (
+        "The modules below sit at the center of the local import graph. Any signature, export, or return-shape change here propagates directly to the listed callers, so review their dependents before refactoring."
+        if facts.get("high_risk_files")
+        else "Incoming imports are evenly distributed across the repository, with no single bottleneck module creating wide blast radius."
     )
 
     footer = format_snapshot_footer(facts)
@@ -2597,7 +2887,7 @@ def build_deterministic_fallback_doc(
 {arch_diagram}
 ```
 
-{overview}
+{overview_paragraphs}
 
 - **Total Indexed Files**: {facts.get('total_modules', 0)} (Source Modules: {facts.get('source_modules_count', facts.get('total_modules', 0))})
 - **Directed Graph Edges**: {facts.get('total_edges', 0)}
@@ -2611,15 +2901,24 @@ def build_deterministic_fallback_doc(
 {deps_section}
 
 ## 3. Folder Map
+{folder_intro}
+
 {folder_map_lines}
 
-## 4. Key Ingress Entry Points
+## 4. How It Works
+{how_it_works_paragraphs}
+
+### Key Ingress Entry Points
 {entry_lines}
 
 ## 5. Files to Handle Carefully (High Blast Radius)
+{blast_intro}
+
 {high_risk_lines}
 
 ## 6. Candidate Starter Tasks
+{starter_intro}
+
 {starter_lines}
 {footer}
 """

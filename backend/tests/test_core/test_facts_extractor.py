@@ -1393,6 +1393,28 @@ def test_architecture_mermaid_excludes_dotfiles_and_fallback_has_no_backtick_dou
     assert "Imported by: [[collector/src/index.js]]" in doc
     assert "Cross-Subsystem Dependencies" in doc
     assert "`dashboard/` depends on `collector/` (1 import)" in doc
+    assert "## 4. How It Works" in doc
+    assert "coordinates execution by importing [[collector/src/routes/ingest.js]]" in doc
+    assert "Downstream, [[collector/src/routes/ingest.js]] acts as a shared dependency" in doc
+    assert "Start by reading [[collector/src/index.js]]" in doc
+
+    # Antislop copy checks: zero em dashes and zero AI marketing buzzwords
+    assert "—" not in doc
+    assert "–" not in doc
+    lower_doc = doc.lower()
+    for buzzword in (
+        "seamless",
+        "robust",
+        "unlock",
+        "elevate",
+        "cutting-edge",
+        "effortless",
+        "revolutionary",
+        "delve",
+        "ai-powered",
+        "game-changer",
+    ):
+        assert buzzword not in lower_doc
 
 
 
