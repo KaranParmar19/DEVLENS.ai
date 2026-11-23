@@ -2061,16 +2061,257 @@ def _sanitize_mermaid_label(text: str) -> str:
     return cleaned.strip()[:72]
 
 
+_NON_ARCH_EXACT_NAMES = {
+    ".gitignore",
+    ".dockerignore",
+    ".editorconfig",
+    ".eslintrc",
+    ".eslintrc.json",
+    ".prettierrc",
+    ".prettierrc.json",
+    ".env",
+    ".env.example",
+    "readme.md",
+    "readme.rst",
+    "readme.txt",
+    "license",
+    "license.md",
+    "dockerfile",
+    "docker-compose.yml",
+    "docker-compose.yaml",
+    "package.json",
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock",
+    "bun.lock",
+    "tsconfig.json",
+    "jsconfig.json",
+    "requirements.txt",
+    "pyproject.toml",
+    "makefile",
+}
+
+_NON_ARCH_EXTENSIONS = {
+    ".md",
+    ".txt",
+    ".rst",
+    ".lock",
+    ".svg",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".ico",
+    ".woff",
+    ".woff2",
+    ".map",
+}
+
+
+def _is_architecture_source_file(path: str) -> bool:
+    """Return True when a path represents an executable or structural source module."""
+    clean = path.strip().replace("\\", "/")
+    if not clean:
+        return False
+    name = PurePosixPath(clean).name.lower()
+    if name in _NON_ARCH_EXACT_NAMES or name.startswith(".env"):
+        return False
+    ext = PurePosixPath(clean).suffix.lower()
+    if ext in _NON_ARCH_EXTENSIONS:
+        return False
+    return True
+
+
+def _extract_graph_edges(graph_cache: dict[str, Any] | None) -> list[tuple[str, str]]:
+    """Normalize graph_cache edges into (source, target) tuples."""
+    if not isinstance(graph_cache, dict):
+        return []
+    raw_edges = graph_cache.get("edges", []) or []
+    edges: list[tuple[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for edge in raw_edges:
+        if isinstance(edge, (list, tuple)) and len(edge) >= 2:
+            src, dst = str(edge[0]).strip(), str(edge[1]).strip()
+        elif isinstance(edge, dict):
+            src = str(edge.get("source", "")).strip()
+            dst = str(edge.get("target", "")).strip()
+        else:
+            continue
+        if src and dst and src != dst and (src, dst) not in seen:
+            seen.add((src, dst))
+            edges.append((src, dst))
+    return edges
+
+
+def _short_disambiguated_label(path: str, duplicate_basenames: set[str]) -> str:
+    """Return a compact, disambiguated module label for Mermaid boxes."""
+    parts = [p for p in path.replace("\\", "/").split("/") if p]
+    if not parts:
+        return _sanitize_mermaid_label(path)
+    base = parts[-1]
+    if base in duplicate_basenames and len(parts) >= 2:
+        # Include parent folder (or two parents when filename is generic like page.jsx/index.js)
+        if base.lower() in {"index.js", "index.ts", "index.tsx", "page.jsx", "page.tsx", "route.ts", "route.js", "__init__.py"} and len(parts) >= 3:
+            return _sanitize_mermaid_label("/".join(parts[-2:]))
+        return _sanitize_mermaid_label("/".join(parts[-2:]))
+    return _sanitize_mermaid_label(base)
+
+
 def build_architecture_mermaid(facts: dict[str, Any], graph_cache: dict[str, Any] | None = None) -> str:
     """
-    Build a deterministic Mermaid graph TD diagram from verified repository entry points,
-    high-risk shared modules, folder groupings, and import edges.
+    Build a connected, multi-layer Mermaid graph TD architecture diagram from
+    verified repository import edges, entry points, high-risk shared hubs, and
+    top-level subsystems. Excludes dotfiles/config noise so the diagram shows
+    real runtime architecture rather than disconnected boxes.
     """
-    entry_points = facts.get("entry_points", [])[:3]
-    high_risk = facts.get("high_risk_files", [])[:4]
-    folders = facts.get("folder_breakdown", [])[:5]
+    all_edges = [
+        (src, dst)
+        for src, dst in _extract_graph_edges(graph_cache)
+        if _is_architecture_source_file(src) and _is_architecture_source_file(dst)
+    ]
+
+    entry_points = [
+        ep for ep in facts.get("entry_points", [])
+        if ep.get("path") and _is_architecture_source_file(str(ep["path"]))
+    ]
+    high_risk = [
+        hr for hr in facts.get("high_risk_files", [])
+        if hr.get("path") and _is_architecture_source_file(str(hr["path"]))
+    ]
+    folders = [
+        fb for fb in facts.get("folder_breakdown", [])
+        if str(fb.get("path", "")).strip().rstrip("/") not in ("", ".", "root")
+    ]
 
     lines = ["graph TD"]
+
+    # Primary path: build a connected module/subsystem graph directly from verified import edges
+    if all_edges:
+        in_deg: dict[str, int] = {}
+        out_deg: dict[str, int] = {}
+        outgoing: dict[str, list[str]] = {}
+        incoming: dict[str, list[str]] = {}
+        for src, dst in all_edges:
+            out_deg[src] = out_deg.get(src, 0) + 1
+            in_deg[dst] = in_deg.get(dst, 0) + 1
+            outgoing.setdefault(src, []).append(dst)
+            incoming.setdefault(dst, []).append(src)
+
+        selected: list[str] = []
+        selected_set: set[str] = set()
+
+        def _add_node(p: str) -> None:
+            if p not in selected_set and len(selected) < 10:
+                selected_set.add(p)
+                selected.append(p)
+
+        # Seed with verified connected entry points and top shared hubs
+        for ep in entry_points:
+            p = str(ep["path"])
+            if out_deg.get(p, 0) > 0 or in_deg.get(p, 0) > 0:
+                _add_node(p)
+                if len(selected) >= 3:
+                    break
+
+        for hr in high_risk:
+            p = str(hr["path"])
+            if in_deg.get(p, 0) > 0 or out_deg.get(p, 0) > 0:
+                _add_node(p)
+                if len(selected) >= 6:
+                    break
+
+        # Pull direct targets/callers of seeded nodes so every seeded node has visible edges
+        for seed in list(selected):
+            for tgt in sorted(outgoing.get(seed, []), key=lambda x: -(in_deg.get(x, 0) + out_deg.get(x, 0)))[:2]:
+                _add_node(tgt)
+            for caller in sorted(incoming.get(seed, []), key=lambda x: -out_deg.get(x, 0))[:1]:
+                _add_node(caller)
+
+        # Fill remaining slots from highest-connectivity edges if needed
+        if len(selected) < 6:
+            ranked_edges = sorted(
+                all_edges,
+                key=lambda e: -(in_deg.get(e[1], 0) + out_deg.get(e[0], 0)),
+            )
+            for src, dst in ranked_edges:
+                _add_node(src)
+                _add_node(dst)
+                if len(selected) >= 10:
+                    break
+
+        # Keep only edges connecting selected nodes; drop isolated selected nodes
+        active_edges = [
+            (src, dst) for src, dst in all_edges
+            if src in selected_set and dst in selected_set
+        ][:14]
+
+        if active_edges:
+            connected_nodes: list[str] = []
+            connected_set: set[str] = set()
+            for src, dst in active_edges:
+                if src not in connected_set:
+                    connected_set.add(src)
+                    connected_nodes.append(src)
+                if dst not in connected_set:
+                    connected_set.add(dst)
+                    connected_nodes.append(dst)
+
+            basename_counts: dict[str, int] = {}
+            for p in connected_nodes:
+                b = PurePosixPath(p).name
+                basename_counts[b] = basename_counts.get(b, 0) + 1
+            dup_names = {b for b, c in basename_counts.items() if c > 1}
+
+            ep_paths = {str(ep["path"]) for ep in entry_points}
+            hr_map = {str(hr["path"]): hr for hr in high_risk}
+
+            node_ids: dict[str, str] = {}
+            node_labels: dict[str, str] = {}
+            ep_cursor = 0
+            core_cursor = 0
+            mod_cursor = 0
+
+            for p in connected_nodes:
+                short = _short_disambiguated_label(p, dup_names)
+                if p in ep_paths:
+                    node_ids[p] = f"EP_{ep_cursor}"
+                    node_labels[p] = f"Entry: {short}"
+                    ep_cursor += 1
+                elif p in hr_map:
+                    node_ids[p] = f"CORE_{core_cursor}"
+                    deps_cnt = hr_map[p].get("dependents_count", 0)
+                    node_labels[p] = f"Core: {short} ({deps_cnt} deps)"
+                    core_cursor += 1
+                else:
+                    node_ids[p] = f"MOD_{mod_cursor}"
+                    node_labels[p] = short
+                    mod_cursor += 1
+
+            # Group into clean subgraphs by top-level directory when multiple subsystems exist
+            groups: dict[str, list[str]] = {}
+            for p in connected_nodes:
+                parts = p.replace("\\", "/").split("/")
+                group_key = parts[0] if len(parts) > 1 else "root"
+                groups.setdefault(group_key, []).append(p)
+
+            if len(groups) >= 2:
+                for g_idx, (group_name, paths_in_group) in enumerate(groups.items()):
+                    safe_group = _sanitize_mermaid_label(f"{group_name}/" if group_name != "root" else "Root Modules")
+                    lines.append(f'    subgraph SG_{g_idx}["{safe_group}"]')
+                    for p in paths_in_group:
+                        lines.append(f'        {node_ids[p]}["{node_labels[p]}"]')
+                    lines.append("    end")
+            else:
+                for p in connected_nodes:
+                    lines.append(f'    {node_ids[p]}["{node_labels[p]}"]')
+
+            for src, dst in active_edges:
+                lines.append(f'    {node_ids[src]} -->|"imports"| {node_ids[dst]}')
+
+            return "\n".join(lines)
+
+    # Secondary path (when graph_cache is unavailable or has no direct edges):
+    # Connect entry points -> high-risk hubs -> subsystems cleanly with zero orphan nodes.
     node_ids: dict[str, str] = {}
 
     def _node_id(key: str, prefix: str, idx: int) -> str:
@@ -2078,86 +2319,62 @@ def build_architecture_mermaid(facts: dict[str, Any], graph_cache: dict[str, Any
             node_ids[key] = f"{prefix}_{idx}"
         return node_ids[key]
 
-    # Entry points row
-    for idx, ep in enumerate(entry_points):
-        p = ep.get("path", "")
-        if not p:
-            continue
+    ep_ids: list[str] = []
+    for idx, ep in enumerate(entry_points[:3]):
+        p = str(ep["path"])
         nid = _node_id(p, "EP", idx)
         short_name = _sanitize_mermaid_label(PurePosixPath(p).name or p)
         lines.append(f'    {nid}["Entry: {short_name}"]')
+        ep_ids.append(nid)
 
-    # Core / shared hubs row
-    for idx, hr in enumerate(high_risk):
-        p = hr.get("path", "")
-        if not p or p in node_ids:
+    core_ids: list[str] = []
+    for idx, hr in enumerate(high_risk[:4]):
+        p = str(hr["path"])
+        if p in node_ids:
             continue
         nid = _node_id(p, "CORE", idx)
         short_name = _sanitize_mermaid_label(PurePosixPath(p).name or p)
         deps_cnt = hr.get("dependents_count", 0)
         lines.append(f'    {nid}["Core: {short_name} ({deps_cnt} deps)"]')
+        core_ids.append(nid)
 
-    # Folder subsystem nodes when few entry/core nodes exist
-    folder_nodes: list[tuple[str, str]] = []
-    for idx, fb in enumerate(folders):
+    folder_ids: list[str] = []
+    for idx, fb in enumerate(folders[:4]):
         fpath = str(fb.get("path", "")).strip().rstrip("/")
-        if not fpath or fpath == ".":
-            continue
         fid = f"DIR_{idx}"
         cnt = int(fb.get("file_count", 0) or 0)
         plural = "1 file" if cnt == 1 else f"{cnt} files"
         label = _sanitize_mermaid_label(f"{fpath}/ ({plural})")
         lines.append(f'    {fid}["{label}"]')
-        folder_nodes.append((fpath, fid))
+        folder_ids.append(fid)
 
-    # Connect edges from graph_cache between tracked entry/core nodes
-    edge_count = 0
     seen_edges: set[tuple[str, str]] = set()
-    raw_edges = (graph_cache or {}).get("edges", []) if isinstance(graph_cache, dict) else []
-    for edge in raw_edges:
-        if isinstance(edge, (list, tuple)) and len(edge) >= 2:
-            src, dst = str(edge[0]), str(edge[1])
-        elif isinstance(edge, dict):
-            src, dst = str(edge.get("source", "")), str(edge.get("target", ""))
-        else:
-            continue
-        if src in node_ids and dst in node_ids and src != dst:
-            pair = (node_ids[src], node_ids[dst])
-            if pair not in seen_edges:
-                seen_edges.add(pair)
-                lines.append(f'    {pair[0]} -->|"imports"| {pair[1]}')
-                edge_count += 1
-                if edge_count >= 12:
-                    break
-
-    # If no direct edges between top nodes, connect entry points to core/folders via folder containment
-    if edge_count == 0:
-        for ep in entry_points:
-            ep_id = node_ids.get(ep.get("path", ""))
-            if not ep_id:
-                continue
-            for hr in high_risk[:2]:
-                hr_id = node_ids.get(hr.get("path", ""))
-                if hr_id and hr_id != ep_id:
-                    pair = (ep_id, hr_id)
-                    if pair not in seen_edges:
-                        seen_edges.add(pair)
-                        lines.append(f'    {ep_id} -->|"uses"| {hr_id}')
-                        edge_count += 1
-            for fpath, fid in folder_nodes[:3]:
-                pair = (ep_id, fid)
-                if pair not in seen_edges:
-                    seen_edges.add(pair)
-                    lines.append(f'    {ep_id} -->|"orchestrates"| {fid}')
-                    edge_count += 1
-
-    # Need at least 2 lines beyond header to be a useful diagram
-    if len(lines) <= 2:
+    if ep_ids and core_ids:
+        for ep_id in ep_ids:
+            for cid in core_ids[:2]:
+                if (ep_id, cid) not in seen_edges:
+                    seen_edges.add((ep_id, cid))
+                    lines.append(f'    {ep_id} -->|"uses"| {cid}')
+        for cid in core_ids[:2]:
+            for fid in folder_ids[:3]:
+                if (cid, fid) not in seen_edges:
+                    seen_edges.add((cid, fid))
+                    lines.append(f'    {cid} -->|"part of"| {fid}')
+    elif ep_ids and folder_ids:
+        for ep_id in ep_ids:
+            for fid in folder_ids[:3]:
+                if (ep_id, fid) not in seen_edges:
+                    seen_edges.add((ep_id, fid))
+                    lines.append(f'    {ep_id} -->|"coordinates"| {fid}')
+    else:
         repo_label = _sanitize_mermaid_label(facts.get("repo_full_name", "Repository"))
         lines.append(f'    ROOT["{repo_label}"]')
-        if folder_nodes:
-            for _, fid in folder_nodes[:4]:
+        if folder_ids:
+            for fid in folder_ids[:4]:
                 lines.append(f'    ROOT -->|"contains"| {fid}')
+        elif core_ids:
+            for cid in core_ids[:4]:
+                lines.append(f'    ROOT -->|"contains"| {cid}')
         else:
             lines.append(f'    MODS["{facts.get("total_modules", 0)} Indexed Modules"]')
             lines.append('    ROOT -->|"indexes"| MODS')
@@ -2165,37 +2382,88 @@ def build_architecture_mermaid(facts: dict[str, Any], graph_cache: dict[str, Any
     return "\n".join(lines)
 
 
-def build_deterministic_fallback_doc(facts: dict[str, Any]) -> str:
+def build_deterministic_fallback_doc(
+    facts: dict[str, Any],
+    graph_cache: dict[str, Any] | None = None,
+) -> str:
     """
     Generate a 100% facts-based deterministic onboarding document.
-    No LLM hallucination, no placeholder router.ts/db.ts, no fake invariants.
+    No LLM hallucination, no placeholder router.ts/db.ts, no fake invariants,
+    and no backtick-wrapped double-bracket citations.
     """
     repo_name = facts.get("repo_full_name", "Repository")
+    all_edges = _extract_graph_edges(graph_cache)
+    outgoing_map: dict[str, list[str]] = {}
+    incoming_map: dict[str, list[str]] = {}
+    for src, dst in all_edges:
+        outgoing_map.setdefault(src, []).append(dst)
+        incoming_map.setdefault(dst, []).append(src)
 
-    entry_lines = "\n".join(
-        f"- `[[{ep['path']}]]`: Entry point ("
-        f"{ep['dependents_count']} {'downstream dependent' if ep['dependents_count'] == 1 else 'downstream dependents'}, "
-        f"{ep['dependencies_count']} {'dependency' if ep['dependencies_count'] == 1 else 'dependencies'})"
-        for ep in facts.get("entry_points", [])
-    ) or "- No explicit entry point declared."
+    # Entry points with real imported module details and clearer role classification
+    entry_items: list[str] = []
+    for ep in facts.get("entry_points", []):
+        ep_path = ep["path"]
+        dep_out = ep["dependencies_count"]
+        dep_in = ep["dependents_count"]
+        base_lower = PurePosixPath(ep_path).name.lower()
+        is_classic_entry = any(
+            kw in base_lower
+            for kw in ("index.", "main.", "server.", "app.", "page.", "route.", "cli.", "seed.", "worker.")
+        )
+        role_label = "Runtime entry point" if is_classic_entry else "Root module"
+        dep_in_label = "downstream dependent" if dep_in == 1 else "downstream dependents"
+        dep_out_label = "local dependency" if dep_out == 1 else "local dependencies"
+        line = f"- [[{ep_path}]]: {role_label} ({dep_in} {dep_in_label}, {dep_out} {dep_out_label})"
+        direct_imports = outgoing_map.get(ep_path, [])
+        if direct_imports:
+            sample_imports = ", ".join(f"[[{p}]]" for p in direct_imports[:4])
+            more = f" (+{len(direct_imports) - 4} more)" if len(direct_imports) > 4 else ""
+            line += f"\n  Imports: {sample_imports}{more}."
+        entry_items.append(line)
+    entry_lines = "\n".join(entry_items) or "- No explicit entry point declared."
 
-    high_risk_lines = "\n".join(
-        f"- `[[{hr['path']}]]` (Risk: {hr.get('risk_level', 'High')}, "
-        f"{hr['dependents_count']} {'direct dependent' if hr['dependents_count'] == 1 else 'direct dependents'}, "
-        f"coupling: {hr['coupling']:.2f})\n"
-        f"  Dependents: {hr['dependents_count']} (Source: {hr.get('source_dependents_count', 0)}, "
-        f"Tests: {hr.get('test_dependents_count', 0)}), Outgoing dependencies: {hr.get('dependencies_count', 0)}."
-        for hr in facts.get("high_risk_files", [])
-    ) or "- No single-point high-risk modules identified."
+    # High-risk hubs with downstream caller evidence
+    high_risk_items: list[str] = []
+    for hr in facts.get("high_risk_files", []):
+        hr_path = hr["path"]
+        dep_in = hr["dependents_count"]
+        dep_label = "direct dependent" if dep_in == 1 else "direct dependents"
+        item_text = (
+            f"- [[{hr_path}]] (Risk: {hr.get('risk_level', 'High')}, "
+            f"{dep_in} {dep_label}, coupling: {hr['coupling']:.2f})\n"
+            f"  Dependents: {dep_in} (Source: {hr.get('source_dependents_count', 0)}, "
+            f"Tests: {hr.get('test_dependents_count', 0)}), Outgoing dependencies: {hr.get('dependencies_count', 0)}."
+        )
+        callers = incoming_map.get(hr_path, [])
+        if callers:
+            caller_refs = ", ".join(f"[[{c}]]" for c in callers[:4])
+            more = f" (+{len(callers) - 4} more)" if len(callers) > 4 else ""
+            item_text += f"\n  Imported by: {caller_refs}{more}."
+        high_risk_items.append(item_text)
+    high_risk_lines = "\n".join(high_risk_items) or "- No single-point high-risk modules identified."
 
     if facts.get("candidate_starters"):
-        starter_lines = "\n".join(
-            f"- `[[{cs['path']}]]` ({cs['line_count']} lines, "
-            f"{cs['dependents_count']} {'downstream dependent' if cs['dependents_count'] == 1 else 'downstream dependents'})\n"
-            f"  Source dependents: {cs.get('source_dependents_count', 0)}, Test dependents: {cs.get('test_dependents_count', 0)}."
-            + (f" Verified test: `[[{cs['nearby_test']}]]`." if cs.get("nearby_test") else " No dedicated test file detected.")
-            for cs in facts.get("candidate_starters", [])
-        )
+        starter_items: list[str] = []
+        for cs in facts.get("candidate_starters", []):
+            cs_deps = cs["dependents_count"]
+            cs_dep_label = "downstream dependent" if cs_deps == 1 else "downstream dependents"
+            test_suffix = (
+                f" Verified test: [[{cs['nearby_test']}]]."
+                if cs.get("nearby_test")
+                else " No dedicated test file detected."
+            )
+            purpose = str(cs.get("verified_purpose") or "").strip()
+            purpose_line = (
+                f"\n  Observed role: {purpose}"
+                if purpose and purpose.lower() != "purpose not verified"
+                else ""
+            )
+            starter_items.append(
+                f"- [[{cs['path']}]] ({cs['line_count']} lines, {cs_deps} {cs_dep_label})\n"
+                f"  Source dependents: {cs.get('source_dependents_count', 0)}, "
+                f"Test dependents: {cs.get('test_dependents_count', 0)}.{test_suffix}{purpose_line}"
+            )
+        starter_lines = "\n".join(starter_items)
     else:
         empty_reason = facts.get("starter_empty_reason") or "0 candidate starter modules identified."
         starter_lines = f"- {empty_reason}"
@@ -2290,6 +2558,21 @@ def build_deterministic_fallback_doc(facts: dict[str, Any]) -> str:
         sample = f", e.g. {fb['sample_files']}" if fb.get("sample_files") else ""
         folder_entries.append(f"- `{clean_p}/` ({plural}{sample})")
 
+    # Compute verified cross-folder subsystem dependencies when edges exist
+    cross_folder_counts: dict[tuple[str, str], int] = {}
+    for src, dst in all_edges:
+        src_dir = src.split("/")[0] if "/" in src else "root"
+        dst_dir = dst.split("/")[0] if "/" in dst else "root"
+        if src_dir != dst_dir:
+            cross_folder_counts[(src_dir, dst_dir)] = cross_folder_counts.get((src_dir, dst_dir), 0) + 1
+
+    if cross_folder_counts:
+        top_cross = sorted(cross_folder_counts.items(), key=lambda kv: -kv[1])[:5]
+        folder_entries.append("\n### Cross-Subsystem Dependencies")
+        for (src_d, dst_d), count in top_cross:
+            edge_word = "import" if count == 1 else "imports"
+            folder_entries.append(f"- `{src_d}/` depends on `{dst_d}/` ({count} {edge_word})")
+
     folder_map_lines = "\n".join(folder_entries) or "- No directory structure identified."
 
     overview = (
@@ -2305,7 +2588,7 @@ def build_deterministic_fallback_doc(facts: dict[str, Any]) -> str:
     )
 
     footer = format_snapshot_footer(facts)
-    arch_diagram = build_architecture_mermaid(facts)
+    arch_diagram = build_architecture_mermaid(facts, graph_cache)
 
     return f"""# {repo_name}: Onboarding Guide
 

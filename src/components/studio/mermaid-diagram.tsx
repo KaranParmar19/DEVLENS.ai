@@ -17,7 +17,7 @@ export function MermaidDiagramCard({
   theme = "dark",
   compact = false,
 }: MermaidDiagramCardProps) {
-  const reactId = useId().replace(/:/g, "");
+  const reactId = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const isLight = theme === "light";
 
   const [svgMarkup, setSvgMarkup] = useState<string | null>(null);
@@ -49,6 +49,9 @@ export function MermaidDiagramCard({
             useMaxWidth: true,
             htmlLabels: true,
             curve: "basis",
+            nodeSpacing: 36,
+            rankSpacing: 44,
+            padding: 14,
           },
           themeVariables: isLight
             ? {
@@ -59,6 +62,9 @@ export function MermaidDiagramCard({
                 lineColor: "#52525b",
                 secondaryColor: "#e4e4e7",
                 tertiaryColor: "#f4f4f7",
+                clusterBkg: "#eef0f5",
+                clusterBorder: "#a1a1aa",
+                fontSize: "13px",
                 fontFamily: "var(--mf-font, 'Geist', sans-serif)",
               }
             : {
@@ -69,6 +75,9 @@ export function MermaidDiagramCard({
                 lineColor: "#a1a1aa",
                 secondaryColor: "#1f1f27",
                 tertiaryColor: "#14141a",
+                clusterBkg: "#14141b",
+                clusterBorder: "#3f3f46",
+                fontSize: "13px",
                 fontFamily: "var(--mf-font, 'Geist', sans-serif)",
               },
         });

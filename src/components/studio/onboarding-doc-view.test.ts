@@ -3,6 +3,8 @@ import {
   extractHeadings,
   extractHeroSplit,
   buildClientMermaidFallback,
+  parseBracketCitation,
+  hasMermaidEdges,
 } from "./onboarding-doc-view";
 
 describe("Code Wiki OnboardingDocView helpers", () => {
@@ -74,5 +76,59 @@ Clients manage OAuth2 refresh and caching in [[src/client.py]].
   it("returns null fallback diagram when graphData is null or empty", () => {
     expect(buildClientMermaidFallback(null)).toBeNull();
     expect(buildClientMermaidFallback({ nodes: [], edges: [] })).toBeNull();
+  });
+
+  it("filters out dotfiles and config noise and builds connected subgraphs for multi-package repos", () => {
+    const fallback = buildClientMermaidFallback({
+      nodes: [
+        { id: ".gitignore", label: ".gitignore", path: ".gitignore" },
+        { id: "README.md", label: "README.md", path: "README.md" },
+        { id: ".dockerignore", label: ".dockerignore", path: ".dockerignore" },
+        { id: "Dockerfile", label: "Dockerfile", path: "Dockerfile" },
+        { id: "package.json", label: "package.json", path: "package.json" },
+        { id: "collector/src/index.js", label: "index.js", path: "collector/src/index.js", is_entry: true },
+        { id: "collector/src/routes/ingest.js", label: "ingest.js", path: "collector/src/routes/ingest.js" },
+        { id: "dashboard/src/app/demo/page.jsx", label: "page.jsx", path: "dashboard/src/app/demo/page.jsx", is_entry: true },
+        { id: "dashboard/src/app/projects/page.jsx", label: "page.jsx", path: "dashboard/src/app/projects/page.jsx" },
+        { id: "dashboard/src/components/EndpointsTable.jsx", label: "EndpointsTable.jsx", path: "dashboard/src/components/EndpointsTable.jsx" },
+      ],
+      edges: [
+        ["collector/src/index.js", "collector/src/routes/ingest.js"],
+        ["dashboard/src/app/demo/page.jsx", "dashboard/src/components/EndpointsTable.jsx"],
+        ["dashboard/src/app/projects/page.jsx", "dashboard/src/components/EndpointsTable.jsx"],
+      ],
+    });
+
+    expect(fallback).not.toBeNull();
+    expect(fallback).not.toContain(".gitignore");
+    expect(fallback).not.toContain("README.md");
+    expect(fallback).not.toContain("Dockerfile");
+    expect(fallback).toContain('subgraph SG_0["collector/"]');
+    expect(fallback).toContain('subgraph SG_1["dashboard/"]');
+    expect(fallback).toContain("demo/page.jsx");
+    expect(fallback).toContain("projects/page.jsx");
+    expect(hasMermaidEdges(fallback!)).toBe(true);
+  });
+
+  it("parses bare, backtick-wrapped, line-range, and dynamic-route bracket citations cleanly", () => {
+    expect(parseBracketCitation("[[collector/src/index.js]]")).toEqual({
+      filePath: "collector/src/index.js",
+      lineRange: undefined,
+      displayLabel: "collector/src/index.js",
+    });
+
+    expect(parseBracketCitation("`[[collector/src/seed.js]]`")).toEqual({
+      filePath: "collector/src/seed.js",
+      lineRange: undefined,
+      displayLabel: "collector/src/seed.js",
+    });
+
+    expect(parseBracketCitation("[[dashboard/src/app/projects/[id]/page.jsx:12-40]]")).toEqual({
+      filePath: "dashboard/src/app/projects/[id]/page.jsx",
+      lineRange: "12-40",
+      displayLabel: "projects/[id]/page.jsx:12-40",
+    });
+
+    expect(parseBracketCitation("`npm run dev`")).toBeNull();
   });
 });

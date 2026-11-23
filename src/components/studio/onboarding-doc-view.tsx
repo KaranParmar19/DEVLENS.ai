@@ -121,32 +121,274 @@ export function extractHeroSplit(rawMd: string): HeroSplitData | null {
   };
 }
 
+const NON_ARCH_EXACT_NAMES = new Set([
+  ".gitignore",
+  ".dockerignore",
+  ".editorconfig",
+  ".eslintrc",
+  ".eslintrc.json",
+  ".prettierrc",
+  ".prettierrc.json",
+  ".env",
+  ".env.example",
+  "readme.md",
+  "readme.rst",
+  "readme.txt",
+  "license",
+  "license.md",
+  "dockerfile",
+  "docker-compose.yml",
+  "docker-compose.yaml",
+  "package.json",
+  "package-lock.json",
+  "pnpm-lock.yaml",
+  "yarn.lock",
+  "bun.lock",
+  "tsconfig.json",
+  "jsconfig.json",
+  "requirements.txt",
+  "pyproject.toml",
+  "makefile",
+]);
+
+const NON_ARCH_EXTENSIONS = new Set([
+  ".md",
+  ".txt",
+  ".rst",
+  ".lock",
+  ".svg",
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".ico",
+  ".woff",
+  ".woff2",
+  ".map",
+]);
+
+function isArchSourcePath(rawPath: string): boolean {
+  const clean = rawPath.trim().replace(/\\/g, "/");
+  if (!clean) return false;
+  const base = (clean.split("/").pop() || clean).toLowerCase();
+  if (NON_ARCH_EXACT_NAMES.has(base) || base.startsWith(".env")) return false;
+  const dotIdx = base.lastIndexOf(".");
+  if (dotIdx > 0) {
+    const ext = base.slice(dotIdx);
+    if (NON_ARCH_EXTENSIONS.has(ext)) return false;
+  }
+  return true;
+}
+
+function sanitizeMermaidLabel(text: string): string {
+  return text.replace(/["'`[\]{}()<>]/g, "").trim().slice(0, 64) || "Module";
+}
+
+export function hasMermaidEdges(code: string): boolean {
+  return /(-->|-\.->|==>|---|--o|--x|\|\|--|\}o--|\}--)/.test(code);
+}
+
+export function parseBracketCitation(
+  rawToken: string,
+): { filePath: string; lineRange?: string; displayLabel: string } | null {
+  let inner = rawToken.trim();
+  if (inner.startsWith("`") && inner.endsWith("`") && inner.length >= 2) {
+    inner = inner.slice(1, -1).trim();
+  }
+  if (!inner.startsWith("[[") || !inner.endsWith("]]")) {
+    return null;
+  }
+  const content = inner.slice(2, -2).trim();
+  if (!content) return null;
+
+  const lineMatch = content.match(/^(.*):([0-9]+(?:-[0-9]+)?)$/);
+  const filePath = (lineMatch ? lineMatch[1] : content).trim();
+  const lineRange = lineMatch ? lineMatch[2] : undefined;
+  if (!filePath) return null;
+
+  const normalized = filePath.replace(/\\/g, "/");
+  const segments = normalized.split("/").filter(Boolean);
+  const compactPath =
+    segments.length <= 3 ? normalized : `${segments.slice(-3).join("/")}`;
+  const displayLabel = lineRange ? `${compactPath}:${lineRange}` : compactPath;
+
+  return { filePath, lineRange, displayLabel };
+}
+
 export function buildClientMermaidFallback(graphData?: GraphData | null): string | null {
   if (!graphData?.nodes || graphData.nodes.length === 0) return null;
-  const nodes = graphData.nodes.slice(0, 6);
-  const nodeMap = new Map<string, string>();
+
+  const nodeById = new Map<string, (typeof graphData.nodes)[number]>();
+  for (const n of graphData.nodes) {
+    nodeById.set(n.id, n);
+  }
+
+  const normalizedEdges: Array<[string, string]> = [];
+  const seenEdgeKeys = new Set<string>();
+  const outDeg = new Map<string, number>();
+  const inDeg = new Map<string, number>();
+  const outgoing = new Map<string, string[]>();
+  const incoming = new Map<string, string[]>();
+
+  for (const e of graphData.edges ?? []) {
+    const rawSrc = Array.isArray(e) ? e[0] : (e as unknown as { source: string }).source;
+    const rawTgt = Array.isArray(e) ? e[1] : (e as unknown as { target: string }).target;
+    if (!rawSrc || !rawTgt || rawSrc === rawTgt) continue;
+    const srcNode = nodeById.get(rawSrc);
+    const tgtNode = nodeById.get(rawTgt);
+    const srcPath = srcNode?.path || srcNode?.label || rawSrc;
+    const tgtPath = tgtNode?.path || tgtNode?.label || rawTgt;
+    if (!isArchSourcePath(srcPath) || !isArchSourcePath(tgtPath)) continue;
+
+    const key = `${rawSrc}->${rawTgt}`;
+    if (seenEdgeKeys.has(key)) continue;
+    seenEdgeKeys.add(key);
+    normalizedEdges.push([rawSrc, rawTgt]);
+    outDeg.set(rawSrc, (outDeg.get(rawSrc) ?? 0) + 1);
+    inDeg.set(rawTgt, (inDeg.get(rawTgt) ?? 0) + 1);
+    outgoing.set(rawSrc, [...(outgoing.get(rawSrc) ?? []), rawTgt]);
+    incoming.set(rawTgt, [...(incoming.get(rawTgt) ?? []), rawSrc]);
+  }
+
   const lines = ["graph TD"];
-  nodes.forEach((n, idx) => {
-    const id = `MOD_${idx}`;
-    const rawName = n.path?.split("/").pop() || n.label || `Module_${idx}`;
-    const cleanName = rawName.replace(/[^a-zA-Z0-9_.-]/g, "_");
-    nodeMap.set(n.id, id);
-    lines.push(`    ${id}["${cleanName}"]`);
-  });
-  if (graphData.edges) {
-    let edgeCount = 0;
-    for (const e of graphData.edges) {
-      const rawSrc = Array.isArray(e) ? e[0] : (e as unknown as { source: string }).source;
-      const rawTgt = Array.isArray(e) ? e[1] : (e as unknown as { target: string }).target;
-      const srcId = nodeMap.get(rawSrc);
-      const tgtId = nodeMap.get(rawTgt);
-      if (srcId && tgtId && srcId !== tgtId) {
-        lines.push(`    ${srcId} -->|"imports"| ${tgtId}`);
-        edgeCount++;
-        if (edgeCount >= 8) break;
+
+  if (normalizedEdges.length > 0) {
+    const selectedIds: string[] = [];
+    const selectedSet = new Set<string>();
+    const addId = (id: string) => {
+      if (!selectedSet.has(id) && selectedIds.length < 10) {
+        selectedSet.add(id);
+        selectedIds.push(id);
+      }
+    };
+
+    // Prefer connected entry points and high-out-degree orchestrators first
+    const connectedNodes = graphData.nodes
+      .filter((n) => (outDeg.get(n.id) ?? 0) + (inDeg.get(n.id) ?? 0) > 0)
+      .sort((a, b) => {
+        const aEntry = a.is_entry ? 1 : 0;
+        const bEntry = b.is_entry ? 1 : 0;
+        if (bEntry !== aEntry) return bEntry - aEntry;
+        const aScore = (inDeg.get(a.id) ?? 0) * 2 + (outDeg.get(a.id) ?? 0);
+        const bScore = (inDeg.get(b.id) ?? 0) * 2 + (outDeg.get(b.id) ?? 0);
+        return bScore - aScore;
+      });
+
+    for (const n of connectedNodes.slice(0, 4)) {
+      addId(n.id);
+    }
+
+    // Pull immediate targets and callers so every seeded node has visible arrows
+    for (const seed of [...selectedIds]) {
+      const targets = (outgoing.get(seed) ?? []).sort(
+        (a, b) =>
+          (inDeg.get(b) ?? 0) + (outDeg.get(b) ?? 0) - ((inDeg.get(a) ?? 0) + (outDeg.get(a) ?? 0)),
+      );
+      for (const t of targets.slice(0, 2)) addId(t);
+      const callers = (incoming.get(seed) ?? []).sort(
+        (a, b) => (outDeg.get(b) ?? 0) - (outDeg.get(a) ?? 0),
+      );
+      for (const c of callers.slice(0, 1)) addId(c);
+    }
+
+    if (selectedIds.length < 6) {
+      const rankedEdges = [...normalizedEdges].sort(
+        (a, b) =>
+          (inDeg.get(b[1]) ?? 0) +
+          (outDeg.get(b[0]) ?? 0) -
+          ((inDeg.get(a[1]) ?? 0) + (outDeg.get(a[0]) ?? 0)),
+      );
+      for (const [src, tgt] of rankedEdges) {
+        addId(src);
+        addId(tgt);
+        if (selectedIds.length >= 10) break;
       }
     }
+
+    const activeEdges = normalizedEdges
+      .filter(([src, tgt]) => selectedSet.has(src) && selectedSet.has(tgt))
+      .slice(0, 14);
+
+    if (activeEdges.length > 0) {
+      const finalIds: string[] = [];
+      const finalSet = new Set<string>();
+      for (const [src, tgt] of activeEdges) {
+        if (!finalSet.has(src)) {
+          finalSet.add(src);
+          finalIds.push(src);
+        }
+        if (!finalSet.has(tgt)) {
+          finalSet.add(tgt);
+          finalIds.push(tgt);
+        }
+      }
+
+      const pathFor = (id: string) => {
+        const n = nodeById.get(id);
+        return (n?.path || n?.label || id).replace(/\\/g, "/");
+      };
+
+      const basenameCounts = new Map<string, number>();
+      for (const id of finalIds) {
+        const base = pathFor(id).split("/").pop() || id;
+        basenameCounts.set(base, (basenameCounts.get(base) ?? 0) + 1);
+      }
+
+      const labelFor = (id: string) => {
+        const p = pathFor(id);
+        const parts = p.split("/").filter(Boolean);
+        const base = parts[parts.length - 1] || p;
+        if ((basenameCounts.get(base) ?? 0) > 1 && parts.length >= 2) {
+          return sanitizeMermaidLabel(parts.slice(-2).join("/"));
+        }
+        return sanitizeMermaidLabel(base);
+      };
+
+      const mmdIds = new Map<string, string>();
+      finalIds.forEach((id, idx) => mmdIds.set(id, `MOD_${idx}`));
+
+      // Group into top-level subgraphs when multiple directories exist
+      const groups = new Map<string, string[]>();
+      for (const id of finalIds) {
+        const parts = pathFor(id).split("/").filter(Boolean);
+        const dirKey = parts.length > 1 ? parts[0] : "root";
+        groups.set(dirKey, [...(groups.get(dirKey) ?? []), id]);
+      }
+
+      if (groups.size >= 2) {
+        let gIdx = 0;
+        for (const [dirName, ids] of groups.entries()) {
+          const safeGroup = sanitizeMermaidLabel(dirName === "root" ? "Root Modules" : `${dirName}/`);
+          lines.push(`    subgraph SG_${gIdx++}["${safeGroup}"]`);
+          for (const id of ids) {
+            lines.push(`        ${mmdIds.get(id)}["${labelFor(id)}"]`);
+          }
+          lines.push("    end");
+        }
+      } else {
+        for (const id of finalIds) {
+          lines.push(`    ${mmdIds.get(id)}["${labelFor(id)}"]`);
+        }
+      }
+
+      for (const [src, tgt] of activeEdges) {
+        lines.push(`    ${mmdIds.get(src)} -->|"imports"| ${mmdIds.get(tgt)}`);
+      }
+      return lines.join("\n");
+    }
   }
+
+  // Fallback when graph has zero edges: group top source files under their top-level folders
+  const sourceNodes = graphData.nodes.filter((n) => isArchSourcePath(n.path || n.label || n.id));
+  const pool = (sourceNodes.length > 0 ? sourceNodes : graphData.nodes).slice(0, 6);
+  const rootId = "REPO_ROOT";
+  lines.push(`    ${rootId}["Indexed Source Modules"]`);
+  pool.forEach((n, idx) => {
+    const id = `MOD_${idx}`;
+    const rawName = (n.path || n.label || `Module_${idx}`).split("/").pop() || `Module_${idx}`;
+    lines.push(`    ${id}["${sanitizeMermaidLabel(rawName)}"]`);
+    lines.push(`    ${rootId} -->|"contains"| ${id}`);
+  });
   return lines.length >= 3 ? lines.join("\n") : null;
 }
 
@@ -587,10 +829,47 @@ export function OnboardingDocView({
   const borderLine = isLight ? "rgba(0, 0, 0, 0.1)" : "rgba(255, 255, 255, 0.11)";
   const accentLink = isLight ? "#1d4ed8" : "#60a5fa";
 
-  // Helper to parse [[path]], [label](target), **bold**, `code`, and *italic*
-  const renderFormattedInline = (text: string): React.ReactNode[] => {
+  // Helper to render a clickable file citation chip without raw [[ ]] brackets
+  const renderCitationChip = (
+    filePath: string,
+    displayLabel: string,
+    key: string,
+    bold = false,
+  ): React.ReactNode => (
+    <button
+      key={key}
+      type="button"
+      onClick={() => onSelectFile?.(filePath)}
+      disabled={!onSelectFile}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        padding: "1px 7px",
+        margin: "0 2px",
+        borderRadius: 4,
+        background: isLight ? "rgba(0, 0, 0, 0.06)" : "rgba(255, 255, 255, 0.08)",
+        border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.16)" : "rgba(255, 255, 255, 0.18)"}`,
+        color: textPrimary,
+        fontFamily: "var(--mf-mono, monospace)",
+        fontSize: "0.75rem",
+        fontWeight: bold ? 600 : 400,
+        cursor: onSelectFile ? "pointer" : "default",
+        verticalAlign: "baseline",
+      }}
+      title={onSelectFile ? `Inspect ${filePath}` : filePath}
+    >
+      <span aria-hidden="true" style={{ opacity: 0.6 }}>
+        /
+      </span>
+      <span>{displayLabel}</span>
+    </button>
+  );
+
+  // Helper to parse `[[path]]`, [[path]], [label](target), **bold**, `code`, and *italic*
+  const renderFormattedInline = (text: string, depth = 0): React.ReactNode[] => {
     const tokenRegex =
-      /(\[\[[a-zA-Z0-9_./\\-]+(?::[0-9-]+)?\]\]|\[[^\]]+\]\([^)]+\)|\*\*[^*]+\*\*|`[^`]+`|\*[^*]+\*)/g;
+      /(`\[\[[^\r\n`]+?\]\]`|\[\[[^\r\n]+?\]\]|\[[^\]]+\]\([^)]+\)|\*\*[^*]+\*\*|`[^`]+`|\*[^*]+\*)/g;
     const parts: React.ReactNode[] = [];
     let lastIndex = 0;
     let match: RegExpExecArray | null;
@@ -602,41 +881,15 @@ export function OnboardingDocView({
       }
 
       const token = match[0];
+      const citation = parseBracketCitation(token);
 
-      if (token.startsWith("[[") && token.endsWith("]]")) {
-        const rawContent = token.slice(2, -2);
-        const [filePath, lineRange] = rawContent.split(":");
-        const fileName = filePath.split("/").pop() || filePath;
-        const displayLabel = lineRange ? `${fileName}:${lineRange}` : fileName;
-
+      if (citation) {
         parts.push(
-          <button
-            key={`chip-${keyIdx++}`}
-            type="button"
-            onClick={() => onSelectFile?.(filePath)}
-            disabled={!onSelectFile}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4,
-              padding: "1px 7px",
-              margin: "0 2px",
-              borderRadius: 4,
-              background: isLight ? "rgba(0, 0, 0, 0.06)" : "rgba(255, 255, 255, 0.08)",
-              border: `1px solid ${isLight ? "rgba(0, 0, 0, 0.16)" : "rgba(255, 255, 255, 0.18)"}`,
-              color: textPrimary,
-              fontFamily: "var(--mf-mono, monospace)",
-              fontSize: "0.75rem",
-              cursor: onSelectFile ? "pointer" : "default",
-              verticalAlign: "baseline",
-            }}
-            title={onSelectFile ? `Inspect ${filePath}` : filePath}
-          >
-            <span aria-hidden="true" style={{ opacity: 0.6 }}>
-              /
-            </span>
-            <span>{displayLabel}</span>
-          </button>,
+          renderCitationChip(
+            citation.filePath,
+            citation.displayLabel,
+            `chip-${depth}-${keyIdx++}`,
+          ),
         );
       } else if (token.startsWith("[") && token.includes("](") && token.endsWith(")")) {
         const closeBracket = token.indexOf("](");
@@ -647,7 +900,7 @@ export function OnboardingDocView({
         if (isExternal) {
           parts.push(
             <a
-              key={`ext-${keyIdx++}`}
+              key={`ext-${depth}-${keyIdx++}`}
               href={target}
               target="_blank"
               rel="noopener noreferrer"
@@ -666,7 +919,7 @@ export function OnboardingDocView({
           if (isRepoFile && onSelectFile) {
             parts.push(
               <button
-                key={`ref-${keyIdx++}`}
+                key={`ref-${depth}-${keyIdx++}`}
                 type="button"
                 onClick={() => onSelectFile(target)}
                 style={{
@@ -688,7 +941,7 @@ export function OnboardingDocView({
           } else {
             parts.push(
               <a
-                key={`anchor-${keyIdx++}`}
+                key={`anchor-${depth}-${keyIdx++}`}
                 href={`#${cleanTarget}`}
                 style={{
                   color: accentLink,
@@ -702,29 +955,59 @@ export function OnboardingDocView({
           }
         }
       } else if (token.startsWith("**") && token.endsWith("**")) {
-        parts.push(
-          <strong key={`b-${keyIdx++}`} style={{ fontWeight: 600, color: textPrimary }}>
-            {token.slice(2, -2)}
-          </strong>,
-        );
+        const inner = token.slice(2, -2);
+        const boldCitation = parseBracketCitation(inner);
+        if (boldCitation) {
+          parts.push(
+            renderCitationChip(
+              boldCitation.filePath,
+              boldCitation.displayLabel,
+              `bchip-${depth}-${keyIdx++}`,
+              true,
+            ),
+          );
+        } else {
+          parts.push(
+            <strong key={`b-${depth}-${keyIdx++}`} style={{ fontWeight: 600, color: textPrimary }}>
+              {depth < 2 ? renderFormattedInline(inner, depth + 1) : inner}
+            </strong>,
+          );
+        }
       } else if (token.startsWith("`") && token.endsWith("`")) {
-        parts.push(
-          <code
-            key={`c-${keyIdx++}`}
-            style={{
-              fontFamily: "var(--mf-mono, monospace)",
-              fontSize: "0.8125rem",
-              background: isLight ? "rgba(0, 0, 0, 0.06)" : "rgba(255, 255, 255, 0.09)",
-              padding: "2px 6px",
-              borderRadius: 4,
-              color: textPrimary,
-            }}
-          >
-            {token.slice(1, -1)}
-          </code>,
-        );
+        const inner = token.slice(1, -1);
+        const codeCitation = parseBracketCitation(inner);
+        if (codeCitation) {
+          parts.push(
+            renderCitationChip(
+              codeCitation.filePath,
+              codeCitation.displayLabel,
+              `cchip-${depth}-${keyIdx++}`,
+            ),
+          );
+        } else {
+          parts.push(
+            <code
+              key={`c-${depth}-${keyIdx++}`}
+              style={{
+                fontFamily: "var(--mf-mono, monospace)",
+                fontSize: "0.8125rem",
+                background: isLight ? "rgba(0, 0, 0, 0.06)" : "rgba(255, 255, 255, 0.09)",
+                padding: "2px 6px",
+                borderRadius: 4,
+                color: textPrimary,
+              }}
+            >
+              {inner}
+            </code>,
+          );
+        }
       } else if (token.startsWith("*") && token.endsWith("*")) {
-        parts.push(<em key={`i-${keyIdx++}`}>{token.slice(1, -1)}</em>);
+        const inner = token.slice(1, -1);
+        parts.push(
+          <em key={`i-${depth}-${keyIdx++}`}>
+            {depth < 2 ? renderFormattedInline(inner, depth + 1) : inner}
+          </em>,
+        );
       }
 
       lastIndex = match.index + match[0].length;
@@ -1341,7 +1624,17 @@ export function OnboardingDocView({
   const heroSplit = useMemo(() => {
     if (!markdownContent) return null;
     const split = extractHeroSplit(markdownContent);
-    if (split) return split;
+    if (split) {
+      // Upgrade disconnected diagrams (zero edges) automatically when real graph edges are available
+      if (
+        !hasMermaidEdges(split.mermaidCode) &&
+        clientFallbackMermaid &&
+        hasMermaidEdges(clientFallbackMermaid)
+      ) {
+        return { ...split, mermaidCode: clientFallbackMermaid };
+      }
+      return split;
+    }
     if (clientFallbackMermaid) {
       const lines = markdownContent.split("\n");
       let sec1Idx = -1;

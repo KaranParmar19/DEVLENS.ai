@@ -467,7 +467,7 @@ class DevLensAgent:
         if any(w in query_lower for w in ("entry", "start", "main", "architecture", "overview")):
             entry_nodes = [n for n in nodes if n.get("is_entry")]
             if entry_nodes:
-                entry_lines = [f"- `[[{n['id']}]]` ({n.get('desc', 'Entry module')})" for n in entry_nodes[:6]]
+                entry_lines = [f"- [[{n['id']}]] ({n.get('desc', 'Entry module')})" for n in entry_nodes[:6]]
                 context_sections.append("### Architectural Entry Points:\n" + "\n".join(entry_lines))
                 for n in entry_nodes[:6]:
                     sources.add(n["id"])
@@ -530,7 +530,7 @@ class DevLensAgent:
             if nodes:
                 lines.append("**Sample Key Modules:**")
                 for n in nodes[:5]:
-                    lines.append(f"- `[[{n['id']}]]` ({n.get('desc', 'N/A')})")
+                    lines.append(f"- [[{n['id']}]] ({n.get('desc', 'N/A')})")
 
         return _clean_antislop("\n".join(lines))
 
@@ -855,7 +855,7 @@ class DevLensAgent:
                     cnt = 0
                 plural = "1 file" if cnt == 1 else f"{cnt} files"
                 samples = f", e.g. {fb['sample_files']}" if fb.get("sample_files") else ""
-                folder_entries.append(f"- **`{clean_p}/`** ({plural}{sample})")
+                folder_entries.append(f"- **`{clean_p}/`** ({plural}{samples})")
 
         if folder_entries:
             lines.append(f"\n## {sec_idx}. Folder Map")
@@ -985,6 +985,7 @@ class DevLensAgent:
             OnboardingDocSchema,
             CarefulFileItem,
             GotchaItem,
+            GlossaryItem,
             StarterTaskItem,
             FolderMapItem,
             QuickStartInfo,
@@ -1100,7 +1101,7 @@ class DevLensAgent:
 
         if not parsed_schema:
             logger.warning("onboarding_json_failed_using_facts_fallback")
-            return build_deterministic_fallback_doc(facts)
+            return build_deterministic_fallback_doc(facts, self.graph_cache)
 
         # ── Post-processing Validation & Grounding Enforcement ──────────────────
         manifest = facts.get("manifest", {})

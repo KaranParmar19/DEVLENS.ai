@@ -292,12 +292,14 @@ export function CopilotRail({
     setTimeout(() => setCopiedCodeIdx(null), 1500);
   };
 
-  // Helper to render inline file citations [[path/file]] as clickable pills
+  // Helper to render inline file citations [[path/file]] or `[[path/file]]` as clickable pills
   const renderFormattedText = (text: string) => {
-    const parts = text.split(/(\[\[.*?\]\])/g);
+    const parts = text.split(/(`\[\[.*?\]\]`|\[\[.*?\]\])/g);
     return parts.map((part, idx) => {
-      if (part.startsWith("[[") && part.endsWith("]]")) {
-        const filePath = part.slice(2, -2).trim();
+      const cleanToken =
+        part.startsWith("`") && part.endsWith("`") && part.length >= 2 ? part.slice(1, -1) : part;
+      if (cleanToken.startsWith("[[") && cleanToken.endsWith("]]")) {
+        const filePath = cleanToken.slice(2, -2).trim();
         return (
           <button
             key={idx}

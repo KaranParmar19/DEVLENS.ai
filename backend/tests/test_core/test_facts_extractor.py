@@ -1331,6 +1331,71 @@ def test_multiple_er_and_sequence_diagrams_render_without_limit():
     assert "sequenceDiagram" in rendered
 
 
+def test_architecture_mermaid_excludes_dotfiles_and_fallback_has_no_backtick_double_brackets():
+    from app.core.facts_extractor import build_architecture_mermaid
+
+    graph_cache = {
+        "nodes": [
+            {"id": ".gitignore"},
+            {"id": "README.md"},
+            {"id": "Dockerfile"},
+            {"id": "collector/src/index.js"},
+            {"id": "collector/src/routes/ingest.js"},
+            {"id": "dashboard/src/app/demo/page.jsx"},
+            {"id": "dashboard/src/components/EndpointsTable.jsx"},
+        ],
+        "edges": [
+            ["collector/src/index.js", "collector/src/routes/ingest.js"],
+            ["dashboard/src/app/demo/page.jsx", "dashboard/src/components/EndpointsTable.jsx"],
+            ["dashboard/src/components/EndpointsTable.jsx", "collector/src/routes/ingest.js"],
+        ],
+    }
+    facts = {
+        "repo_full_name": "KaranParmar19/Lantern",
+        "total_modules": 7,
+        "source_modules_count": 4,
+        "total_edges": 3,
+        "cycles_count": 0,
+        "entry_points": [
+            {"path": "collector/src/index.js", "dependents_count": 0, "dependencies_count": 1},
+            {"path": "dashboard/src/app/demo/page.jsx", "dependents_count": 0, "dependencies_count": 1},
+        ],
+        "high_risk_files": [
+            {
+                "path": "collector/src/routes/ingest.js",
+                "risk_level": "High",
+                "dependents_count": 2,
+                "source_dependents_count": 2,
+                "test_dependents_count": 0,
+                "dependencies_count": 0,
+                "coupling": 0.65,
+            }
+        ],
+        "folder_breakdown": [
+            {"path": "collector", "file_count": 2, "sample_files": "index.js, ingest.js"},
+            {"path": "dashboard", "file_count": 2, "sample_files": "page.jsx, EndpointsTable.jsx"},
+        ],
+    }
+
+    diagram = build_architecture_mermaid(facts, graph_cache)
+    assert ".gitignore" not in diagram
+    assert "README.md" not in diagram
+    assert "Dockerfile" not in diagram
+    assert 'subgraph SG_0["collector/"]' in diagram
+    assert 'subgraph SG_1["dashboard/"]' in diagram
+    assert '-->|"imports"|' in diagram
+
+    doc = build_deterministic_fallback_doc(facts, graph_cache)
+    assert "`[[" not in doc
+    assert "]]`" not in doc
+    assert "[[collector/src/index.js]]" in doc
+    assert "Imports: [[collector/src/routes/ingest.js]]" in doc
+    assert "Imported by: [[collector/src/index.js]]" in doc
+    assert "Cross-Subsystem Dependencies" in doc
+    assert "`dashboard/` depends on `collector/` (1 import)" in doc
+
+
+
 
 
 
