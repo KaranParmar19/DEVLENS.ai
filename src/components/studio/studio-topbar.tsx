@@ -16,6 +16,7 @@ interface StudioTopbarProps {
   onClose: () => void;
   theme?: "dark" | "light";
   onToggleTheme?: () => void;
+  onStartTour?: () => void;
 }
 
 const BRANCHES = ["main", "master", "develop", "staging"];
@@ -33,6 +34,7 @@ export function StudioTopbar({
   onClose,
   theme = "dark",
   onToggleTheme,
+  onStartTour,
 }: StudioTopbarProps) {
   const repoLabel = repoUrl.replace(/^https?:\/\/(www\.)?github\.com\//, "").replace(/\.git$/, "");
   const [branchOpen, setBranchOpen] = useState(false);
@@ -216,6 +218,7 @@ export function StudioTopbar({
       >
         <div
           className="dx-studio-tabs-nav"
+          data-tour="studio-tabs"
           style={{
             display: "flex",
             gap: 4,
@@ -426,6 +429,39 @@ export function StudioTopbar({
             )}
           </AnimatePresence>
         </div>
+
+        {/* Workspace Guided Tour Trigger */}
+        {onStartTour && (
+          <button
+            type="button"
+            className="dx-studio-tour-btn"
+            data-tour="studio-tour-trigger"
+            onClick={onStartTour}
+            aria-label="Start workspace tour"
+            title="Start workspace walkthrough"
+            style={{
+              fontFamily: "var(--mf-mono, monospace)",
+              fontSize: "0.6875rem",
+              textTransform: "uppercase",
+              letterSpacing: "0.04em",
+              color: isLight ? "#09090b" : "#f4f4f5",
+              background: isLight ? "rgba(9, 9, 11, 0.04)" : "rgba(255, 255, 255, 0.06)",
+              border: `1px solid ${isLight ? "#71717a" : "#6b6b76"}`,
+              borderRadius: 6,
+              minHeight: 32,
+              padding: "0 10px",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 5,
+              transition: "background-color 0.15s ease, border-color 0.15s ease, transform 0.12s ease",
+              flexShrink: 0,
+            }}
+          >
+            <span aria-hidden="true">?</span>
+            <span>Tour</span>
+          </button>
+        )}
 
         {/* Theme Toggle Button */}
         {onToggleTheme && (

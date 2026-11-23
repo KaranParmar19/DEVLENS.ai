@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useAnalysis } from "@/hooks/useAnalysis";
 import { useChat } from "@/hooks/useChat";
@@ -17,6 +17,12 @@ import { CodeFlowStepper } from "./code-flow-stepper";
 import { OnboardingDocView } from "./onboarding-doc-view";
 import { DriftTimelineView } from "./drift-timeline-view";
 import { CopilotRail } from "./copilot-rail";
+import { WorkspaceTour } from "./workspace-tour";
+import {
+  hasCompletedWorkspaceTour,
+  markWorkspaceTourCompleted,
+  type TourStepStateSync,
+} from "./workspace-tour-config";
 import {
   generateJsonExport,
   generateMermaidDiagram,
@@ -137,6 +143,79 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
 
   // Repository is considered ready once WebSocket signals complete or pre-indexed props were provided
   const isRepoReady = Boolean(analysisState.isComplete || (jobId && sessionId && isProcessingDone));
+  const isStudioVisible = Boolean(isAuthenticated && (isProcessingDone || analysisState.isComplete));
+
+  // First-run post-parse interactive workspace tour state
+  const [tourOpen, setTourOpen] = useState(false);
+  const tourAutoTriggeredRef = useRef(false);
+  const preTourPanelsRef = useRef<{ explorer: boolean; copilot: boolean } | null>(null);
+  const panelStateRef = useRef({ explorer: explorerCollapsed, copilot: copilotCollapsed });
+  panelStateRef.current = { explorer: explorerCollapsed, copilot: copilotCollapsed };
+
+  useEffect(() => {
+    if (!isStudioVisible || tourAutoTriggeredRef.current) return;
+    if (hasCompletedWorkspaceTour()) {
+      tourAutoTriggeredRef.current = true;
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      if (tourAutoTriggeredRef.current) return;
+      tourAutoTriggeredRef.current = true;
+      preTourPanelsRef.current = { ...panelStateRef.current };
+      setTourOpen(true);
+    }, 450);
+
+    return () => window.clearTimeout(timer);
+  }, [isStudioVisible]);
+
+  const handleStartTour = useCallback(() => {
+    preTourPanelsRef.current = {
+      explorer: explorerCollapsed,
+      copilot: copilotCollapsed,
+    };
+    setTourOpen(true);
+  }, [explorerCollapsed, copilotCollapsed]);
+
+  const handleSyncTourStepState = useCallback((sync: TourStepStateSync) => {
+    const isNarrow = typeof window !== "undefined" && window.innerWidth < 768;
+    if (sync.tab) {
+      setActiveTab(sync.tab);
+    }
+    if (sync.expandExplorer) {
+      setExplorerCollapsed(false);
+      if (isNarrow) setCopilotCollapsed(true);
+    }
+    if (sync.expandCopilot) {
+      setCopilotCollapsed(false);
+      if (isNarrow) setExplorerCollapsed(true);
+    }
+  }, []);
+
+  const restoreMobilePanelsAfterTour = useCallback(() => {
+    if (
+      typeof window !== "undefined" &&
+      window.innerWidth < 768 &&
+      preTourPanelsRef.current
+    ) {
+      setExplorerCollapsed(preTourPanelsRef.current.explorer);
+      setCopilotCollapsed(preTourPanelsRef.current.copilot);
+    }
+    preTourPanelsRef.current = null;
+  }, []);
+
+  const handleCompleteTour = useCallback(() => {
+    markWorkspaceTourCompleted();
+    setTourOpen(false);
+    restoreMobilePanelsAfterTour();
+    showToast("Tour complete. Reopen anytime from Tour in the top bar.");
+  }, [restoreMobilePanelsAfterTour, showToast]);
+
+  const handleSkipTour = useCallback(() => {
+    markWorkspaceTourCompleted();
+    setTourOpen(false);
+    restoreMobilePanelsAfterTour();
+  }, [restoreMobilePanelsAfterTour]);
 
   const fetchOnboardingDoc = useCallback(() => {
     const sid = analysisState.sessionId ?? sessionId;
@@ -414,6 +493,7 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
         onClose={onClose}
         theme={theme}
         onToggleTheme={toggleTheme}
+        onStartTour={handleStartTour}
       />
 
       {/* 3-Pane Studio Workspace Layout */}
@@ -461,7 +541,11 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
         )}
 
         {/* Center Stage: Architecture | Code Flow | Drift Timeline | Onboarding Doc */}
-        <main className="dx-workspace-center-stage" style={{ flex: 1, position: "relative", overflow: "hidden", minWidth: 0 }}>
+        <main
+          className="dx-workspace-center-stage"
+          data-tour="studio-canvas"
+          style={{ flex: 1, position: "relative", overflow: "hidden", minWidth: 0 }}
+        >
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -570,6 +654,7 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
       {/* Bottom Architecture Health & Telemetry Strip */}
       <footer
         className="dx-studio-footer"
+        data-tour="studio-footer"
         style={{
           minHeight: 32,
           borderTop: isLight
@@ -621,6 +706,16 @@ export function StudioWorkspace({ repoUrl, jobId, sessionId, onClose }: StudioWo
           </span>
         </div>
       </footer>
+
+      {/* First-Run & On-Demand Guided Workspace Tour */}
+      <WorkspaceTour
+        open={tourOpen}
+        repoLabel={repoLabel}
+        theme={theme}
+        onSyncStepState={handleSyncTourStepState}
+        onComplete={handleCompleteTour}
+        onSkip={handleSkipTour}
+      />
 
       {/* Floating Monoform Action Toast */}
       <AnimatePresence>
