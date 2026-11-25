@@ -188,6 +188,34 @@ export function hasMermaidEdges(code: string): boolean {
   return /(-->|-\.->|==>|---|--o|--x|\|\|--|\}o--|\}--)/.test(code);
 }
 
+/**
+ * Cleans raw HTML presentation tags (such as <h1 align="center"> or <strong> copied from
+ * GitHub READMEs) outside of inline backtick code spans so prose never displays literal HTML tags.
+ */
+export function stripRawHtmlTags(text: string): string {
+  if (!text || !text.includes("<")) return text;
+  // Split around inline code spans so code like `<div>` or `Array<string>` stays intact
+  const segments = text.split(/(`[^`]+`)/g);
+  return segments
+    .map((seg, idx) => {
+      if (idx % 2 === 1) return seg;
+      return seg
+        .replace(/<!--[\s\S]*?-->/g, "")
+        .replace(/<\s*(?:strong|b)\b[^>]*>([\s\S]*?)<\s*\/\s*(?:strong|b)\s*>/gi, "**$1**")
+        .replace(/<\s*(?:em|i)\b[^>]*>([\s\S]*?)<\s*\/\s*(?:em|i)\s*>/gi, "*$1*")
+        .replace(/<\s*br\s*\/?\s*>/gi, " ")
+        .replace(
+          /<\s*\/?\s*(?:h[1-6]|p|div|span|center|strong|b|em|i|a|img|small|sub|sup|hr|picture|source|section|article|header|footer|ul|ol|li)\b[^>]*>/gi,
+          "",
+        )
+        .replace(/&amp;/g, "&")
+        .replace(/&nbsp;/g, " ")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'");
+    })
+    .join("");
+}
+
 export function parseBracketCitation(
   rawToken: string,
 ): { filePath: string; lineRange?: string; displayLabel: string } | null {
@@ -867,7 +895,8 @@ export function OnboardingDocView({
   );
 
   // Helper to parse `[[path]]`, [[path]], [label](target), **bold**, `code`, and *italic*
-  const renderFormattedInline = (text: string, depth = 0): React.ReactNode[] => {
+  const renderFormattedInline = (rawText: string, depth = 0): React.ReactNode[] => {
+    const text = depth === 0 ? stripRawHtmlTags(rawText) : rawText;
     const tokenRegex =
       /(`\[\[[^\r\n`]+?\]\]`|\[\[[^\r\n]+?\]\]|\[[^\]]+\]\([^)]+\)|\*\*[^*]+\*\*|`[^`]+`|\*[^*]+\*)/g;
     const parts: React.ReactNode[] = [];

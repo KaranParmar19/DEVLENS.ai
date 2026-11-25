@@ -1640,9 +1640,23 @@ class FactsExtractor:
                 if in_md_code:
                     continue
 
-                if stripped.startswith(("[![", "<", "[!DOCTYPE", "![", "<img", "<div", "</div", "<p", "</p")):
+                # Strip HTML comments, images, and presentation tags while preserving tagline text
+                stripped_no_html = re.sub(r"<!--.*?-->", "", stripped)
+                stripped_no_html = re.sub(r"<img\b[^>]*>", "", stripped_no_html, flags=re.IGNORECASE)
+                stripped_no_html = re.sub(r"<br\s*/?>", " ", stripped_no_html, flags=re.IGNORECASE)
+                stripped_no_html = re.sub(
+                    r"</?(?:h[1-6]|p|div|span|center|strong|b|em|i|a|small|sub|sup|hr|picture|source)\b[^>]*>",
+                    "",
+                    stripped_no_html,
+                    flags=re.IGNORECASE,
+                ).strip()
+
+                if stripped.startswith(("[![", "[!DOCTYPE", "![")) or not stripped_no_html:
                     continue
                 if "shields.io" in stripped.lower() or "badge.svg" in stripped.lower():
+                    continue
+                # Skip standalone HTML heading lines (e.g. <h1 align="center">Project Name</h1>)
+                if re.match(r"^<h[1-6]\b", stripped, flags=re.IGNORECASE):
                     continue
 
                 if is_rst:
@@ -1663,7 +1677,7 @@ class FactsExtractor:
                     if stripped.startswith("#"):
                         continue
 
-                clean_lines.append(line)
+                clean_lines.append(stripped_no_html)
 
             cleaned = "\n".join(clean_lines)
             paragraphs: list[str] = []

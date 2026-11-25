@@ -5,6 +5,7 @@ import {
   buildClientMermaidFallback,
   parseBracketCitation,
   hasMermaidEdges,
+  stripRawHtmlTags,
 } from "./onboarding-doc-view";
 
 describe("Code Wiki OnboardingDocView helpers", () => {
@@ -130,5 +131,15 @@ Clients manage OAuth2 refresh and caching in [[src/client.py]].
     });
 
     expect(parseBracketCitation("`npm run dev`")).toBeNull();
+  });
+
+  it("strips raw HTML README tags while converting strong/em and preserving inline code", () => {
+    expect(stripRawHtmlTags('<h1 align="center">Lantern APM</h1>')).toBe("Lantern APM");
+    expect(
+      stripRawHtmlTags("<strong>Lightweight, self-hosted APM for Node.js</strong>"),
+    ).toBe("**Lightweight, self-hosted APM for Node.js**");
+    expect(stripRawHtmlTags("Renders `<div>` via `React.FC<Props>` cleanly.")).toBe(
+      "Renders `<div>` via `React.FC<Props>` cleanly.",
+    );
   });
 });

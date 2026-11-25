@@ -325,8 +325,18 @@ def _clean_antislop(text: str) -> str:
     if not text:
         return text
 
+    # 0. Strip stray presentation HTML tags copied from README headers (never code fences)
+    cleaned = re.sub(r"<!--.*?-->", "", text)
+    cleaned = re.sub(r"<br\s*/?>", " ", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(
+        r"</?(?:h[1-6]|p|div|span|center|strong|b|em|i|a|img|small|sub|sup|hr|picture|source)\b[^>]*>",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+
     # 1. R-02: Replace em dash (—) and en dash (–)
-    cleaned = re.sub(r"\s*[\u2014]\s*", ", ", text)
+    cleaned = re.sub(r"\s*[\u2014]\s*", ", ", cleaned)
     cleaned = re.sub(r"\s+--\s+", ", ", cleaned)
     cleaned = cleaned.replace("\u2013", "-")
 
